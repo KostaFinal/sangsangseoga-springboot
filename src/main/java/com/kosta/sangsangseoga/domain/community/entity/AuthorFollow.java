@@ -1,4 +1,17 @@
 package com.kosta.sangsangseoga.domain.community.entity;
 
-public class AuthorFollow {
+import com.kosta.sangsangseoga.global.common.BaseEntity;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import javax.persistence.*;
+
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "author_follow")
+public class AuthorFollow extends BaseEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 }

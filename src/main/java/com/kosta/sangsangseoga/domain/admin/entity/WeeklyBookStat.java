@@ -1,4 +1,17 @@
 package com.kosta.sangsangseoga.domain.admin.entity;
 
-public class WeeklyBookStat {
+import com.kosta.sangsangseoga.global.common.BaseEntity;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import javax.persistence.*;
+
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "weekly_book_stat")
+public class WeeklyBookStat extends BaseEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 }

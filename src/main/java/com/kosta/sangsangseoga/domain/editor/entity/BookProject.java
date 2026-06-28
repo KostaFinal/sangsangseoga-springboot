@@ -1,4 +1,17 @@
 package com.kosta.sangsangseoga.domain.editor.entity;
 
-public class BookProject {
+import com.kosta.sangsangseoga.global.common.BaseEntity;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import javax.persistence.*;
+
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "book_project")
+public class BookProject extends BaseEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 }

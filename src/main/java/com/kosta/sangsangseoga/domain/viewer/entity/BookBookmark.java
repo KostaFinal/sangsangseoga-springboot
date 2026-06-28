@@ -1,4 +1,17 @@
 package com.kosta.sangsangseoga.domain.viewer.entity;
 
-public class BookBookmark {
+import com.kosta.sangsangseoga.global.common.BaseEntity;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import javax.persistence.*;
+
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "book_bookmark")
+public class BookBookmark extends BaseEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 }
