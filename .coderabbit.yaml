@@ -1,0 +1,111 @@
+language: "ko-KR"
+
+tone_instructions: |
+  리뷰는 명확하고 실용적으로 작성해주세요.
+  문제점과 개선 방향을 구체적인 코드 예시와 함께 제안해주세요.
+  심각도(critical / major / minor)를 앞에 표기해주세요.
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+
+  path_filters:
+    - "!src/main/generated/**"
+    - "!.idea/**"
+    - "!build/**"
+    - "!**/*.md"
+
+  path_instructions:
+
+    - path: "src/main/java/**/domain/**/entity/**/*.java"
+      instructions: |
+        JPA 엔티티 리뷰 기준:
+        - 모든 연관관계는 FetchType.LAZY 여야 합니다. EAGER 사용 시 반드시 지적해주세요.
+        - @NoArgsConstructor(access = AccessLevel.PROTECTED) 가 선언되어 있어야 합니다.
+        - BaseEntity 상속 규칙: createdAt + updatedAt 두 필드가 모두 있는 테이블만 상속합니다.
+          createdAt만 있는 엔티티는 @EntityListeners(AuditingEntityListener.class) + @CreatedDate 를 직접 선언해야 합니다.
+        - TEXT 타입 컬럼에는 @Column(columnDefinition = "TEXT") 가 있어야 합니다.
+        - JSON 타입 컬럼에는 @Column(columnDefinition = "JSON") 가 있어야 합니다.
+        - @UniqueConstraint 사용 시 컬럼명은 반드시 @Column(name = "...") 으로 명시된 물리 컬럼명을 사용해야 합니다.
+        - enum 필드는 @Enumerated(EnumType.STRING) 을 사용해야 합니다. ORDINAL 사용 금지.
+        - 엔티티에 비즈니스 로직 메서드가 없으면 지적해주세요 (도메인 모델 빈약 여부).
+        - setter 메서드 또는 public 필드 노출 여부를 확인해주세요.
+
+    - path: "src/main/java/**/domain/**/enums/**/*.java"
+      instructions: |
+        Enum 리뷰 기준:
+        - DB 스키마의 ENUM 값과 일치하는지 확인해주세요.
+        - 새로운 enum 값 추가 시 기존 데이터 마이그레이션 영향을 언급해주세요.
+
+    - path: "src/main/java/**/domain/**/*Repository*.java"
+      instructions: |
+        Repository 리뷰 기준:
+        - JpaRepository 또는 QuerydslRepositorySupport 상속 여부를 확인해주세요.
+        - N+1 문제가 발생할 수 있는 쿼리 메서드에는 @EntityGraph 또는 fetch join 사용을 권장해주세요.
+        - 복잡한 동적 쿼리는 QueryDSL로 구현하는 것을 권장해주세요.
+        - 페이징이 필요한 목록 조회에 Pageable 파라미터가 없으면 지적해주세요.
+        - count 쿼리가 필요한 Page 반환 메서드에는 countQuery를 분리하는 것을 권장해주세요.
+
+    - path: "src/main/java/**/domain/**/*Service*.java"
+      instructions: |
+        Service 리뷰 기준:
+        - 클래스 레벨 @Transactional(readOnly = true) + 쓰기 메서드에 @Transactional 패턴을 권장합니다.
+        - 엔티티 조회 실패 시 CustomException(ErrorCode.XXX_NOT_FOUND) 를 던져야 합니다. Optional.get() 직접 호출 금지.
+        - Service에서 다른 도메인 Repository를 직접 주입하는 경우, 도메인 경계를 침범하는지 검토해주세요.
+        - 트랜잭션 범위 밖에서 지연 로딩을 호출하는 LazyInitializationException 위험 지점을 찾아주세요.
+        - DTO 변환은 Service 또는 별도 Mapper에서 수행하고, 엔티티를 Controller로 직접 반환하는 것을 금지해주세요.
+
+    - path: "src/main/java/**/domain/**/*Controller*.java"
+      instructions: |
+        Controller 리뷰 기준:
+        - 응답은 반드시 ApiResponse<T> 로 감싸서 반환해야 합니다.
+        - @Valid / @Validated 를 이용한 요청 값 검증이 있어야 합니다.
+        - 인증이 필요한 API에 @AuthenticationPrincipal 또는 SecurityContext 사용 여부를 확인해주세요.
+        - Controller에 비즈니스 로직이 포함되어 있으면 반드시 지적해주세요.
+        - REST 설계: 리소스 명은 복수형 명사, HTTP 메서드를 올바르게 사용하는지 확인해주세요.
+
+    - path: "src/main/java/**/domain/**/*Dto*.java,src/main/java/**/domain/**/*Request*.java,src/main/java/**/domain/**/*Response*.java"
+      instructions: |
+        DTO 리뷰 기준:
+        - 요청 DTO에 @Valid 검증 어노테이션(@NotBlank, @NotNull 등)이 적절히 있는지 확인해주세요.
+        - 엔티티를 직접 포함하는 DTO는 순환 직렬화 위험이 있으므로 지적해주세요.
+        - 응답 DTO가 불필요하게 민감한 정보(password 등)를 포함하는지 확인해주세요.
+
+    - path: "src/main/java/**/global/exception/**/*.java"
+      instructions: |
+        예외 처리 리뷰 기준:
+        - 새로운 비즈니스 예외는 ErrorCode enum에 추가하고 CustomException을 사용해야 합니다.
+        - GlobalExceptionHandler에서 처리되지 않는 예외 타입이 있으면 지적해주세요.
+        - HTTP 상태 코드와 ErrorCode의 status 값이 일치하는지 확인해주세요.
+
+    - path: "src/main/java/**/global/jwt/**/*.java"
+      instructions: |
+        JWT / 보안 리뷰 기준:
+        - 토큰 만료 처리, 서명 검증 누락 여부를 확인해주세요.
+        - JWT payload에 민감한 정보(password, 주민번호 등)가 포함되어 있으면 반드시 지적해주세요.
+        - 토큰 탈취 대응(Refresh Token rotation, 블랙리스트 등) 전략이 있는지 언급해주세요.
+
+    - path: "src/main/java/**/global/config/SecurityConfig.java"
+      instructions: |
+        Spring Security 리뷰 기준:
+        - CSRF 설정이 적절한지 확인해주세요 (REST API는 disable 허용, 이유 명시 필요).
+        - permitAll() 범위가 과도하게 넓지 않은지 확인해주세요.
+        - 인증/인가 실패 핸들러가 적절히 등록되어 있는지 확인해주세요.
+
+    - path: "build.gradle"
+      instructions: |
+        Gradle 리뷰 기준:
+        - 의존성 버전 충돌 또는 deprecated 라이브러리 사용 여부를 확인해주세요.
+        - testImplementation 이어야 할 의존성이 implementation에 있는지 확인해주세요.
+        - QueryDSL APT 설정이 올바른지 확인해주세요.
+
+chat:
+  auto_reply: true
