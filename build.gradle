@@ -30,11 +30,34 @@ dependencies {
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testAnnotationProcessor 'org.projectlombok:lombok'
-	
+
 	// Source: https://mvnrepository.com/artifact/com.auth0/java-jwt
 	implementation("com.auth0:java-jwt:3.19.2")
+
+	// QueryDSL
+	implementation 'com.querydsl:querydsl-jpa:5.0.0'
+	annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jpa'
+	annotationProcessor 'javax.annotation:javax.annotation-api'
+	annotationProcessor 'javax.persistence:javax.persistence-api'
+}
+
+def querydslSrcDir = 'src/main/generated'
+
+sourceSets {
+	main {
+		java {
+			srcDirs += [querydslSrcDir]
+		}
+	}
+}
+
+compileJava.options.annotationProcessorGeneratedSourcesDirectory = file(querydslSrcDir)
+
+clean {
+	delete file(querydslSrcDir)
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+	jvmArgs '-Dfile.encoding=UTF-8'
 }
