@@ -1,17 +1,18 @@
-package com.kosta.sangsangseoga.domain.editor.entity;
+package com.kosta.sangsangseoga.domain.friendLibrary.entity;
 
-import com.kosta.sangsangseoga.global.common.BaseEntity;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "fairy_tale_setting")
-public class FairyTaleSetting extends BaseEntity {
+@EntityListeners(AuditingEntityListener.class)
+@Table(name = "author_follow")
+public class AuthorFollow {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

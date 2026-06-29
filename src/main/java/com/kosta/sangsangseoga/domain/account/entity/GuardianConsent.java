@@ -1,16 +1,17 @@
 package com.kosta.sangsangseoga.domain.account.entity;
 
-import com.kosta.sangsangseoga.global.common.BaseEntity;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
 import javax.persistence.*;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "guardian_consent")
-public class GuardianConsent extends BaseEntity {
+public class GuardianConsent {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

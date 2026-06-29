@@ -1,16 +1,17 @@
 package com.kosta.sangsangseoga.domain.account.entity;
 
-import com.kosta.sangsangseoga.global.common.BaseEntity;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
 import javax.persistence.*;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "guardian_link")
-public class GuardianLink extends BaseEntity {
+public class GuardianLink {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
