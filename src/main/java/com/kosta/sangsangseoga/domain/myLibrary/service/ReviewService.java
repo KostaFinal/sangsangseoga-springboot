@@ -1,4 +1,4 @@
-package com.kosta.sangsangseoga.domain.friendLibrary.service;
+package com.kosta.sangsangseoga.domain.myLibrary.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

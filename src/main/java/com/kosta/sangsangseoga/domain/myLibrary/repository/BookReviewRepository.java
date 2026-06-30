@@ -1,4 +1,4 @@
-package com.kosta.sangsangseoga.domain.friendLibrary.repository;
+package com.kosta.sangsangseoga.domain.myLibrary.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

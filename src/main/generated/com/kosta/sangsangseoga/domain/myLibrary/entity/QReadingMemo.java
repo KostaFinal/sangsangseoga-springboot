@@ -6,6 +6,8 @@ import com.querydsl.core.types.dsl.*;
 
 import com.querydsl.core.types.PathMetadata;
 import javax.annotation.processing.Generated;
+
+import com.kosta.sangsangseoga.domain.myLibrary.entity.ReadingMemo;
 import com.querydsl.core.types.Path;
 
 
