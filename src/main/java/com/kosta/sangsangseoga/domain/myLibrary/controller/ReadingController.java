@@ -1,4 +1,4 @@
-package com.kosta.sangsangseoga.domain.reading.controller;
+package com.kosta.sangsangseoga.domain.myLibrary.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;

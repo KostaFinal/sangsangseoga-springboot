@@ -11,16 +11,16 @@ import com.querydsl.core.types.dsl.PathInits;
 
 
 /**
- * QBookLike is a Querydsl query type for BookLike
+ * QBookmark is a Querydsl query type for Bookmark
  */
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
-public class QBookLike extends EntityPathBase<BookLike> {
+public class QBookmark extends EntityPathBase<Bookmark> {
 
-    private static final long serialVersionUID = 688560884L;
+    private static final long serialVersionUID = 689536522L;
 
     private static final PathInits INITS = PathInits.DIRECT2;
 
-    public static final QBookLike bookLike = new QBookLike("bookLike");
+    public static final QBookmark bookmark = new QBookmark("bookmark");
 
     public final com.kosta.sangsangseoga.domain.book.entity.QBook book;
 
@@ -30,23 +30,25 @@ public class QBookLike extends EntityPathBase<BookLike> {
 
     public final com.kosta.sangsangseoga.domain.account.entity.QMember member;
 
-    public QBookLike(String variable) {
-        this(BookLike.class, forVariable(variable), INITS);
+    public final NumberPath<Integer> pageNo = createNumber("pageNo", Integer.class);
+
+    public QBookmark(String variable) {
+        this(Bookmark.class, forVariable(variable), INITS);
     }
 
-    public QBookLike(Path<? extends BookLike> path) {
+    public QBookmark(Path<? extends Bookmark> path) {
         this(path.getType(), path.getMetadata(), PathInits.getFor(path.getMetadata(), INITS));
     }
 
-    public QBookLike(PathMetadata metadata) {
+    public QBookmark(PathMetadata metadata) {
         this(metadata, PathInits.getFor(metadata, INITS));
     }
 
-    public QBookLike(PathMetadata metadata, PathInits inits) {
-        this(BookLike.class, metadata, inits);
+    public QBookmark(PathMetadata metadata, PathInits inits) {
+        this(Bookmark.class, metadata, inits);
     }
 
-    public QBookLike(Class<? extends BookLike> type, PathMetadata metadata, PathInits inits) {
+    public QBookmark(Class<? extends Bookmark> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
         this.book = inits.isInitialized("book") ? new com.kosta.sangsangseoga.domain.book.entity.QBook(forProperty("book"), inits.get("book")) : null;
         this.member = inits.isInitialized("member") ? new com.kosta.sangsangseoga.domain.account.entity.QMember(forProperty("member")) : null;

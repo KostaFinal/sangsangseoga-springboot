@@ -1,4 +1,4 @@
-package com.kosta.sangsangseoga.domain.reading.entity;
+package com.kosta.sangsangseoga.domain.myLibrary.entity;
 
 import static com.querydsl.core.types.PathMetadataFactory.*;
 
@@ -15,7 +15,7 @@ import com.querydsl.core.types.Path;
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
 public class QReadingMemo extends EntityPathBase<ReadingMemo> {
 
-    private static final long serialVersionUID = -1206308253L;
+    private static final long serialVersionUID = 2111265056L;
 
     public static final QReadingMemo readingMemo = new QReadingMemo("readingMemo");
 

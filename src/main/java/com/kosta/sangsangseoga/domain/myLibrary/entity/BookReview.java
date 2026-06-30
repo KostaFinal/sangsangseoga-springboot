@@ -1,4 +1,4 @@
-package com.kosta.sangsangseoga.domain.reading.entity;
+package com.kosta.sangsangseoga.domain.myLibrary.entity;
 
 import com.kosta.sangsangseoga.global.common.BaseEntity;
 import lombok.AccessLevel;
@@ -10,8 +10,8 @@ import javax.persistence.*;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "reading_memo")
-public class ReadingMemo extends BaseEntity {
+@Table(name = "book_review")
+public class BookReview extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

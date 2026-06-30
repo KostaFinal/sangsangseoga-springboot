@@ -1,4 +1,4 @@
-package com.kosta.sangsangseoga.domain.reading.entity;
+package com.kosta.sangsangseoga.domain.myLibrary.entity;
 
 import com.kosta.sangsangseoga.global.common.BaseEntity;
 import lombok.AccessLevel;

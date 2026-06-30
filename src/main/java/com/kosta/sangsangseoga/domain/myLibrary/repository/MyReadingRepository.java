@@ -1,7 +1,8 @@
-package com.kosta.sangsangseoga.domain.reading.repository;
+package com.kosta.sangsangseoga.domain.myLibrary.repository;
 
-import com.kosta.sangsangseoga.domain.reading.entity.MyReading;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.kosta.sangsangseoga.domain.myLibrary.entity.MyReading;
 
 public interface MyReadingRepository extends JpaRepository<MyReading, Long> {
 }

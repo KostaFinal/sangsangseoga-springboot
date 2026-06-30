@@ -1,4 +1,4 @@
-package com.kosta.sangsangseoga.domain.friendLibrary.entity;
+package com.kosta.sangsangseoga.domain.myLibrary.entity;
 
 import static com.querydsl.core.types.PathMetadataFactory.*;
 
@@ -15,7 +15,7 @@ import com.querydsl.core.types.Path;
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
 public class QBookReview extends EntityPathBase<BookReview> {
 
-    private static final long serialVersionUID = 450461557L;
+    private static final long serialVersionUID = 258774311L;
 
     public static final QBookReview bookReview = new QBookReview("bookReview");
 

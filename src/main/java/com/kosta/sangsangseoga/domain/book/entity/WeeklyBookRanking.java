@@ -1,4 +1,4 @@
-package com.kosta.sangsangseoga.domain.admin.entity;
+package com.kosta.sangsangseoga.domain.book.entity;
 
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -12,7 +12,7 @@ import javax.persistence.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "weekly_book_stat")
-public class WeeklyBookStat {
+public class WeeklyBookRanking {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
