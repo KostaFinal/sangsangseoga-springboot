@@ -57,6 +57,16 @@ clean {
 	delete file(querydslSrcDir)
 }
 
+// 자바 컴파일 시 인코딩을 UTF-8로 강제 지정합니다.
+tasks.withType(JavaCompile) {
+	options.encoding = 'UTF-8'
+}
+
+// 리소스 파일(properties, yml 등)을 복사할 때도 인코딩을 UTF-8로 지정합니다.
+tasks.withType(ProcessResources) {
+	filteringCharset = 'UTF-8'
+}
+
 tasks.named('test') {
 	useJUnitPlatform()
 	jvmArgs '-Dfile.encoding=UTF-8'
