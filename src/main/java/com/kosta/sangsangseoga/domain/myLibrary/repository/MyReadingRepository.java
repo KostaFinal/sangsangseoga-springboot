@@ -10,13 +10,13 @@ import com.kosta.sangsangseoga.domain.myLibrary.entity.MyReading;
 import com.kosta.sangsangseoga.domain.myLibrary.enums.ReadingStatus;
 public interface MyReadingRepository extends JpaRepository<MyReading, Long> {
 	
-	//ÀĞ°í ½ÍÀº Ã¥ ¸ñ·Ï Á¶È¸
+	//ì½ê³  ì‹¶ì€ ì±… ëª©ë¡ ì¡°íšŒ
 	List<MyReading> findByMember_IdAndReadingStatus(
 			Long memberId,
 			ReadingStatus readingStatus
 	);
 	
-	// ³»°¡ ÂòÇÑ Ã¥ÀÌ ¸Â´ÂÁö È®ÀÎ
+	// ë‚´ê°€ ì°œí•œ ì±…ì´ ë§ëŠ”ì§€ í™•ì¸
 	Optional<MyReading> findByMember_IdAndBook_IdAndReadingStatus(
 			Long memberId,
 			Long bookId,

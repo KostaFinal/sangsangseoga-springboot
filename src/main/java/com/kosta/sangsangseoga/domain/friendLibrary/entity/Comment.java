@@ -24,14 +24,14 @@ public class Comment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "book_id", nullable = false)
-    private Book book;
+    private Book book; 
 
-    
+    // 탈퇴 시 NULL로 익명화하기 위해 nullable
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     private Member member;
 
-    
+    // 답글 대상 댓글. 일반 댓글이면 NULL. 1depth만 허용 (replyTo 자체가 reply면 안 됨 - 서비스단에서 검증)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reply_to_id")
     private Comment replyTo;

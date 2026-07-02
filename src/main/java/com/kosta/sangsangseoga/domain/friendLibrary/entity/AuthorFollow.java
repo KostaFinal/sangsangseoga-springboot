@@ -26,12 +26,12 @@ public class AuthorFollow {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ÆÈ·Î¿ì ÇÑ È¸¿ø
+    // íŒ”ë¡œìš° í•œ íšŒì›
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "follower_id", nullable = false)
     private Member follower;
 
-    // ÆÈ·Î¿ì ´çÇÑ ÀÛ°¡ (member·Î °ü¸®)
+    // íŒ”ë¡œìš° ë‹¹í•œ ì‘ê°€ (memberë¡œ ê´€ë¦¬)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id", nullable = false)
     private Member author;
