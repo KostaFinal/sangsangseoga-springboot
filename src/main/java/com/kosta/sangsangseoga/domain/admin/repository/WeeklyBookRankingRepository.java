@@ -4,5 +4,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.kosta.sangsangseoga.domain.book.entity.WeeklyBookRanking;
 
-public interface WeeklyBookStatRepository extends JpaRepository<WeeklyBookRanking, Long> {
+public interface WeeklyBookRankingRepository extends JpaRepository<WeeklyBookRanking, Long> {
 }
