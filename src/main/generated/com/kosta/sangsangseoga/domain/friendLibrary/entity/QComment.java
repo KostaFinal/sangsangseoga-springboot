@@ -35,7 +35,7 @@ public class QComment extends EntityPathBase<Comment> {
 
     public final BooleanPath isDeleted = createBoolean("isDeleted");
 
-    public final com.kosta.sangsangseoga.domain.account.entity.QMember member;
+    public final com.kosta.sangsangseoga.domain.member.entity.QMember member;
 
     public final QComment replyTo;
 
@@ -61,7 +61,7 @@ public class QComment extends EntityPathBase<Comment> {
     public QComment(Class<? extends Comment> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
         this.book = inits.isInitialized("book") ? new com.kosta.sangsangseoga.domain.book.entity.QBook(forProperty("book"), inits.get("book")) : null;
-        this.member = inits.isInitialized("member") ? new com.kosta.sangsangseoga.domain.account.entity.QMember(forProperty("member")) : null;
+        this.member = inits.isInitialized("member") ? new com.kosta.sangsangseoga.domain.member.entity.QMember(forProperty("member")) : null;
         this.replyTo = inits.isInitialized("replyTo") ? new QComment(forProperty("replyTo"), inits.get("replyTo")) : null;
     }
 

@@ -1,7 +1,7 @@
 package com.kosta.sangsangseoga.domain.friendLibrary.service;
  
-import com.kosta.sangsangseoga.domain.account.entity.Member;
-import com.kosta.sangsangseoga.domain.account.repository.MemberRepository;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.dto.CommentDto;

@@ -1,6 +1,6 @@
 package com.kosta.sangsangseoga.domain.friendLibrary.repository;
  
-import com.kosta.sangsangseoga.domain.account.entity.Member;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.friendLibrary.entity.Report;
 import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportTargetType;
 import org.springframework.data.jpa.repository.JpaRepository;
