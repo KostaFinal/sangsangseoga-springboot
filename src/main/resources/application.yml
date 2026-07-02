@@ -1,0 +1,85 @@
+# ===================================================================
+# 1. 공통 설정 (로컬과 운영 모두 적용됨)
+# ===================================================================
+spring:
+  application:
+    name: sangsangseoga
+  mandatory-file-encoding: UTF-8
+
+  # 아무런 옵션 없이 서버를 켜면 자동으로 로컬 개발 환경(dev)이 실행됩니다.
+  profiles:
+    default: dev
+
+server:
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+
+jwt:
+  access-token-expiration: 3600000       # 1시간 (밀리초)
+  refresh-token-expiration: 2592000000   # 30일 (밀리초)
+
+---
+# ===================================================================
+# 2. 로컬 개발 환경 (dev) - 기본 실행 환경
+# ===================================================================
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: jdbc:mariadb://localhost:3306/sangsangseoga
+    username: ${DB_USERNAME:root} # 환경변수 없으면 root 사용
+    password: ${DB_PASSWORD:}     # 환경변수 없으면 빈값 사용
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update            # 개발 단계에서는 테이블 자동 생성/수정
+    properties:
+      hibernate:
+        format_sql: true
+        highlight_sql: true
+        use_sql_comments: true
+
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+
+# 로컬 개발용 상세 로그 및 JWT 기본값
+logging:
+  level:
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+jwt:
+  secret-key: ${JWT_SECRET_KEY:defaultSecretKeySecretKeySecretKeySecretKeySecretKey}
+
+---
+# ===================================================================
+# 3. 실제 배포 환경 (prod) - 보안 및 성능 최적화
+# ===================================================================
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: jdbc:mariadb://${PROD_DB_HOST}:3306/sangsangseoga # 운영 DB 호스트 주소 필수
+    username: ${PROD_DB_USERNAME} # 기본값 없음 (배포 환경변수 필수 주입)
+    password: ${PROD_DB_PASSWORD} # 기본값 없음 (배포 환경변수 필수 주입)
+
+  jpa:
+    show-sql: false               # 성능을 위해 쿼리 콘솔 출력 차단
+    hibernate:
+      ddl-auto: validate          # 운영 서버의 실제 데이터 보호를 위해 테이블 구조 검증만 수행
+
+  redis:
+    host: ${PROD_REDIS_HOST}      # 운영 Redis 주소 필수
+    port: ${PROD_REDIS_PORT:6379}
+
+jwt:
+  secret-key: ${JWT_SECRET_KEY}   # 기본값 없음 (누락 시 서버 구동 실패 처리로 해킹 방지)
