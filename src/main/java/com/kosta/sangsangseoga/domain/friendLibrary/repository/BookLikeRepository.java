@@ -1,6 +1,6 @@
 package com.kosta.sangsangseoga.domain.friendLibrary.repository;
 
-import com.kosta.sangsangseoga.domain.account.entity.Member;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.domain.friendLibrary.entity.BookLike;
 
@@ -10,9 +10,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BookLikeRepository extends JpaRepository<BookLike, Long> {
 	
-	 // È¸¿øÀÌ ÇØ´ç Ã¥¿¡ ÁÁ¾Æ¿ä¸¦ ´­·¶´ÂÁö ¿©ºÎ È®ÀÎ
+	 // È¸ï¿½ï¿½ï¿½ï¿½ ï¿½Ø´ï¿½ Ã¥ï¿½ï¿½ ï¿½ï¿½ï¿½Æ¿ä¸¦ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½
     boolean existsByMemberAndBook(Member member, Book book);
  
-    // È¸¿ø°ú Ã¥À¸·Î ÁÁ¾Æ¿ä row Á¶È¸ (ÁÁ¾Æ¿ä Ãë¼Ò ½Ã »ç¿ë)
+    // È¸ï¿½ï¿½ï¿½ï¿½ Ã¥ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Æ¿ï¿½ row ï¿½ï¿½È¸ (ï¿½ï¿½ï¿½Æ¿ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½)
     Optional<BookLike> findByMemberAndBook(Member member, Book book);
+
+    // íšŒì› íƒˆí‡´ ì‹œ í•´ë‹¹ íšŒì›ì˜ ì¢‹ì•„ìš” ì „ì²´ ì‚­ì œ
+    void deleteAllByMember(Member member);
+
+    // ì±… ì‚­ì œ ì‹œ í•´ë‹¹ ì±…ì˜ ì¢‹ì•„ìš” ì „ì²´ ì‚­ì œ
+    void deleteAllByBook(Book book);
 }

@@ -22,6 +22,8 @@ public interface MyReadingRepository extends JpaRepository<MyReading, Long> {
 			Long bookId,
 			ReadingStatus readingStatus
 	);
-	
+
+	// 책 삭제 시 해당 책의 독서 기록 전체 삭제
+	void deleteAllByBook_Id(Long bookId);
 
 }

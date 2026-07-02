@@ -1,6 +1,7 @@
 package com.kosta.sangsangseoga.domain.book.repository;
 
 import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +11,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface BookRepository extends JpaRepository<Book, Long> {
+
+    // 회원 탈퇴 시 처리 대상인 본인 소유 책 목록 조회
+    List<Book> findAllByMember(Member member);
 
     // 이번 주 등록된 책 중 score(조회수×1 + 좋아요×3) 기준 상위 5개 조회
     // 동점 시 등록일 최신순
