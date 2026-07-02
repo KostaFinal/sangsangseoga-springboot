@@ -16,10 +16,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ApiResponse<Void>> handleCustomException(CustomException e) {
         ErrorCode errorCode = e.getErrorCode();
-
-        // 디버깅 및 모니터링을 위한 경고 로그
         log.warn("CustomException 발생: {} - {}", errorCode.name(), e.getMessage());
-
         return ResponseEntity
                 .status(errorCode.getStatus())
                 .body(ApiResponse.error(errorCode.name(), e.getMessage()));
@@ -30,13 +27,10 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
-        // 서버 콘솔/로그 파일에는 추적 가능한 StackTrace를 포함한 에러 로그를 남깁니다.
         log.error("에러 발생: ", e);
-
-        ErrorCode serverError = ErrorCode.INTERNAL_SERVER_ERROR;
-
+        ErrorCode serverError = CommonErrorCode.INTERNAL_SERVER_ERROR;
         return ResponseEntity
-                .status(serverError.getStatus()) // 500
+                .status(serverError.getStatus())
                 .body(ApiResponse.error(serverError.name(), serverError.getMessage()));
     }
 }
