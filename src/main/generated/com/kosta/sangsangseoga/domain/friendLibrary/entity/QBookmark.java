@@ -28,7 +28,7 @@ public class QBookmark extends EntityPathBase<Bookmark> {
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
-    public final com.kosta.sangsangseoga.domain.account.entity.QMember member;
+    public final com.kosta.sangsangseoga.domain.member.entity.QMember member;
 
     public final NumberPath<Integer> pageNo = createNumber("pageNo", Integer.class);
 
@@ -51,7 +51,7 @@ public class QBookmark extends EntityPathBase<Bookmark> {
     public QBookmark(Class<? extends Bookmark> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
         this.book = inits.isInitialized("book") ? new com.kosta.sangsangseoga.domain.book.entity.QBook(forProperty("book"), inits.get("book")) : null;
-        this.member = inits.isInitialized("member") ? new com.kosta.sangsangseoga.domain.account.entity.QMember(forProperty("member")) : null;
+        this.member = inits.isInitialized("member") ? new com.kosta.sangsangseoga.domain.member.entity.QMember(forProperty("member")) : null;
     }
 
 }

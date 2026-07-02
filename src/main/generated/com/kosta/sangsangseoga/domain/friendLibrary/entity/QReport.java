@@ -28,13 +28,13 @@ public class QReport extends EntityPathBase<Report> {
 
     public final DateTimePath<java.time.LocalDateTime> processedAt = createDateTime("processedAt", java.time.LocalDateTime.class);
 
-    public final com.kosta.sangsangseoga.domain.account.entity.QMember processedBy;
+    public final com.kosta.sangsangseoga.domain.member.entity.QMember processedBy;
 
     public final EnumPath<com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportReason> reason = createEnum("reason", com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportReason.class);
 
     public final StringPath reasonDetail = createString("reasonDetail");
 
-    public final com.kosta.sangsangseoga.domain.account.entity.QMember reporter;
+    public final com.kosta.sangsangseoga.domain.member.entity.QMember reporter;
 
     public final EnumPath<com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportStatus> status = createEnum("status", com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportStatus.class);
 
@@ -60,8 +60,8 @@ public class QReport extends EntityPathBase<Report> {
 
     public QReport(Class<? extends Report> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
-        this.processedBy = inits.isInitialized("processedBy") ? new com.kosta.sangsangseoga.domain.account.entity.QMember(forProperty("processedBy")) : null;
-        this.reporter = inits.isInitialized("reporter") ? new com.kosta.sangsangseoga.domain.account.entity.QMember(forProperty("reporter")) : null;
+        this.processedBy = inits.isInitialized("processedBy") ? new com.kosta.sangsangseoga.domain.member.entity.QMember(forProperty("processedBy")) : null;
+        this.reporter = inits.isInitialized("reporter") ? new com.kosta.sangsangseoga.domain.member.entity.QMember(forProperty("reporter")) : null;
     }
 
 }
