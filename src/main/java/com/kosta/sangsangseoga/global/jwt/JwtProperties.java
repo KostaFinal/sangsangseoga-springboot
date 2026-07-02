@@ -12,4 +12,5 @@ import org.springframework.stereotype.Component;
 public class JwtProperties {
     private String secretKey = "defaultSecretKeySecretKeySecretKeySecretKeySecretKey";
     private long accessTokenExpiration = 3600000;
+    private long refreshTokenExpiration = 2592000000L;
 }
