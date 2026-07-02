@@ -7,6 +7,7 @@ import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.book.repository.WeeklyBookRankingRepository;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,7 +73,7 @@ public class WeeklyBookRankingServiceImpl implements WeeklyBookRankingService {
         LocalDate weekStartDate = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDateTime weekStartDateTime = weekStartDate.atStartOfDay();
 
-        List<Book> books = bookRepository.findTop5NewReleases(weekStartDateTime);
+        List<Book> books = bookRepository.findTop5NewReleases(weekStartDateTime, PageRequest.of(0, 5));
 
         List<WeeklyBookRankingDto.RankItem> items = new ArrayList<>();
         for (int i = 0; i < books.size(); i++) {
