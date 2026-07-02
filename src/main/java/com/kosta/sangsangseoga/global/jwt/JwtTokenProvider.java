@@ -16,6 +16,9 @@ import java.util.Date;
 public class JwtTokenProvider {
 
     private static final String CLAIM_ROLE = "role";
+    private static final String CLAIM_TOKEN_TYPE = "tokenType";
+    private static final String TOKEN_TYPE_ACCESS = "access";
+    private static final String TOKEN_TYPE_REFRESH = "refresh";
 
     private final JwtProperties jwtProperties;
 
@@ -23,6 +26,7 @@ public class JwtTokenProvider {
         return JWT.create()
                 .withSubject(String.valueOf(memberId))
                 .withClaim(CLAIM_ROLE, role)
+                .withClaim(CLAIM_TOKEN_TYPE, TOKEN_TYPE_ACCESS)
                 .withIssuedAt(new Date())
                 .withExpiresAt(Date.from(Instant.now().plusMillis(jwtProperties.getAccessTokenExpiration())))
                 .sign(algorithm());
@@ -31,14 +35,21 @@ public class JwtTokenProvider {
     public String createRefreshToken(Long memberId) {
         return JWT.create()
                 .withSubject(String.valueOf(memberId))
+                .withClaim(CLAIM_TOKEN_TYPE, TOKEN_TYPE_REFRESH)
                 .withIssuedAt(new Date())
                 .withExpiresAt(Date.from(Instant.now().plusMillis(jwtProperties.getRefreshTokenExpiration())))
                 .sign(algorithm());
     }
 
+    /**
+     * Access Token 전용 검증. tokenType=access가 아니면(예: Refresh Token을 그대로 전달) 실패 처리한다.
+     */
     public boolean validateToken(String token) {
         try {
-            JWT.require(algorithm()).build().verify(token);
+            JWT.require(algorithm())
+                    .withClaim(CLAIM_TOKEN_TYPE, TOKEN_TYPE_ACCESS)
+                    .build()
+                    .verify(token);
             return true;
         } catch (JWTVerificationException e) {
             return false;
@@ -56,12 +67,16 @@ public class JwtTokenProvider {
     }
 
     /**
-     * 만료/위조를 구분해야 하는 호출부(토큰 재발급 등)를 위한 검증.
+     * Refresh Token 전용 검증. 만료/위조를 구분해야 하는 호출부(토큰 재발급)를 위한 것이다.
+     * tokenType=refresh가 아니면(예: Access Token 오용) ActionTokenInvalidException을 던진다.
      * 만료 시 ActionTokenExpiredException, 그 외 위변조 시 ActionTokenInvalidException을 던진다.
      */
-    public DecodedJWT verify(String token) {
+    public DecodedJWT verifyRefreshToken(String token) {
         try {
-            return JWT.require(algorithm()).build().verify(token);
+            return JWT.require(algorithm())
+                    .withClaim(CLAIM_TOKEN_TYPE, TOKEN_TYPE_REFRESH)
+                    .build()
+                    .verify(token);
         } catch (TokenExpiredException e) {
             throw new ActionTokenExpiredException();
         } catch (JWTVerificationException e) {
