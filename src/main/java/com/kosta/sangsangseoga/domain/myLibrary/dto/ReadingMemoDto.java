@@ -1,5 +1,5 @@
 package com.kosta.sangsangseoga.domain.myLibrary.dto;
-
+ 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +15,6 @@ import java.time.LocalDateTime;
 public class ReadingMemoDto {
  
     private Long id;
-    private Long memberId;
     private Long bookId;
     private Integer pageNo;
     private String content;

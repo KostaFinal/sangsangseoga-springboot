@@ -1,11 +1,12 @@
 package com.kosta.sangsangseoga.domain.book.dto;
-
+ 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
  
 import java.time.LocalDate;
+import java.util.List;
  
 @Data
 @NoArgsConstructor
@@ -13,8 +14,22 @@ import java.time.LocalDate;
 @Builder
 public class WeeklyBookRankingDto {
  
-    private Long id;
-    private Long bookId;
+    private List<RankItem> items;
     private LocalDate weekStartDate;
-    private Integer score;
+ 
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class RankItem {
+ 
+        private Integer rankNum;
+        private Long bookId;
+        private String title;
+        private String authorNickname;
+        private Long coverImageId;
+        private Integer viewCount;
+        private Integer likeCount;
+        private Integer score;
+    }
 }

@@ -26,11 +26,9 @@ public class WeeklyBookRanking {
     @JoinColumn(name = "book_id", nullable = false)
     private Book book;
  
-    // 집계 주 시작일 (매주 월요일)
     @Column(nullable = false)
     private LocalDate weekStartDate;
  
-    // 인기 점수: 조회수×1 + 좋아요×3
     @Column(nullable = false)
     private Integer score;
 }
