@@ -1,20 +1,37 @@
 package com.kosta.sangsangseoga.domain.book.entity;
 
-import lombok.AccessLevel;
-import lombok.Getter;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
+ 
 import javax.persistence.*;
-
+import java.time.LocalDate;
+ 
+@Data
+@EqualsAndHashCode(callSuper = false)
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@EntityListeners(AuditingEntityListener.class)
-@Table(name = "weekly_book_stat")
+@Builder
+@Table(name = "weekly_book_ranking")
 public class WeeklyBookRanking {
-
+ 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+ 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "book_id", nullable = false)
+    private Book book;
+ 
+    // 집계 주 시작일 (매주 월요일)
+    @Column(nullable = false)
+    private LocalDate weekStartDate;
+ 
+    // 인기 점수: 조회수×1 + 좋아요×3
+    @Column(nullable = false)
+    private Integer score;
 }
+ 
