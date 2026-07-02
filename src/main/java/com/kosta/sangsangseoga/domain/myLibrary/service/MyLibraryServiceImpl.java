@@ -45,7 +45,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	@Override
 	public void updateReadingProgress(Long memberId, Long bookId, ReadingProgressRequestDto readingProgressRequestDto)
 			throws Exception {
-		MyReading myReading = myReadingRepository.findByMember_IdAndBook_IdAndReadingStatus(memberId, bookId, ReadingStatus.READING).orElseThrow(()-> new Exception("ÀĞ´Â ÁßÀÎ Ã¥ÀÌ Á¸ÀçÇÏÁö ¾Ê½À´Ï´Ù."));
+		MyReading myReading = myReadingRepository.findByMember_IdAndBook_IdAndReadingStatus(memberId, bookId, ReadingStatus.READING).orElseThrow(()-> new Exception("ì½ëŠ” ì¤‘ì¸ ì±…ì´ ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤."));
 		myReading.updateProgress(readingProgressRequestDto.getCurrentPage(), readingProgressRequestDto.getProgress());
 	}
 

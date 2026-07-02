@@ -43,12 +43,12 @@ public class MyReading extends BaseEntity {
     private Long id;
 
     
-    //ȸ��
+    //회원
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
     
-    //å
+    //책
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "book_id", nullable = false)
     private Book book;
