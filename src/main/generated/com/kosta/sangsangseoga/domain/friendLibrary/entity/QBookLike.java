@@ -7,6 +7,7 @@ import com.querydsl.core.types.dsl.*;
 import com.querydsl.core.types.PathMetadata;
 import javax.annotation.processing.Generated;
 import com.querydsl.core.types.Path;
+import com.querydsl.core.types.dsl.PathInits;
 
 
 /**
@@ -17,20 +18,38 @@ public class QBookLike extends EntityPathBase<BookLike> {
 
     private static final long serialVersionUID = 688560884L;
 
+    private static final PathInits INITS = PathInits.DIRECT2;
+
     public static final QBookLike bookLike = new QBookLike("bookLike");
+
+    public final com.kosta.sangsangseoga.domain.book.entity.QBook book;
+
+    public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt", java.time.LocalDateTime.class);
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
+    public final com.kosta.sangsangseoga.domain.account.entity.QMember member;
+
     public QBookLike(String variable) {
-        super(BookLike.class, forVariable(variable));
+        this(BookLike.class, forVariable(variable), INITS);
     }
 
     public QBookLike(Path<? extends BookLike> path) {
-        super(path.getType(), path.getMetadata());
+        this(path.getType(), path.getMetadata(), PathInits.getFor(path.getMetadata(), INITS));
     }
 
     public QBookLike(PathMetadata metadata) {
-        super(BookLike.class, metadata);
+        this(metadata, PathInits.getFor(metadata, INITS));
+    }
+
+    public QBookLike(PathMetadata metadata, PathInits inits) {
+        this(BookLike.class, metadata, inits);
+    }
+
+    public QBookLike(Class<? extends BookLike> type, PathMetadata metadata, PathInits inits) {
+        super(type, metadata, inits);
+        this.book = inits.isInitialized("book") ? new com.kosta.sangsangseoga.domain.book.entity.QBook(forProperty("book"), inits.get("book")) : null;
+        this.member = inits.isInitialized("member") ? new com.kosta.sangsangseoga.domain.account.entity.QMember(forProperty("member")) : null;
     }
 
 }
