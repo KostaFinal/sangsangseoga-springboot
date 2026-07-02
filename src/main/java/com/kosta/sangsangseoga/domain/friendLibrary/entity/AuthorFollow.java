@@ -31,6 +31,7 @@ public class AuthorFollow {
     @JoinColumn(name = "follower_id", nullable = false)
     private Member follower;
 
+
     // 팔로우 당한 작가 (member로 관리)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id", nullable = false)

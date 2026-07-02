@@ -24,7 +24,7 @@ public class Comment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "book_id", nullable = false)
-    private Book book;
+    private Book book; 
 
     // 탈퇴 시 NULL로 익명화하기 위해 nullable
     @ManyToOne(fetch = FetchType.LAZY)

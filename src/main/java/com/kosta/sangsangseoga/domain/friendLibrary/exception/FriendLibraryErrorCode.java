@@ -27,7 +27,9 @@ public enum FriendLibraryErrorCode implements ErrorCode {
 
     // ===== Report =====
     REPORT_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 신고한 대상입니다."),
-    REPORT_TARGET_NOT_FOUND(HttpStatus.NOT_FOUND, "신고 대상을 찾을 수 없습니다.");
+    REPORT_TARGET_NOT_FOUND(HttpStatus.NOT_FOUND, "신고 대상을 찾을 수 없습니다."),
+    MISSING_PARAMETER(HttpStatus.BAD_REQUEST, "필수 파라미터가 누락되었습니다."),
+    TARGET_NOT_FOUND(HttpStatus.NOT_FOUND, "대상을 찾을 수 없습니다.");
 
     private final HttpStatus status;
     private final String message;
