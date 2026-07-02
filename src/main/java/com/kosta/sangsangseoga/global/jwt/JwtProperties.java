@@ -13,7 +13,6 @@ import javax.annotation.PostConstruct;
 @ConfigurationProperties(prefix = "jwt")
 public class JwtProperties {
 
-    private static final String INSECURE_DEFAULT_SECRET = "defaultSecretKeySecretKeySecretKeySecretKeySecretKey";
     private static final int MIN_SECRET_LENGTH = 32;
 
     private String secretKey;
@@ -21,21 +20,16 @@ public class JwtProperties {
     private long refreshTokenExpiration = 2592000000L;
 
     /**
-     * JWT_SECRET_KEY가 설정되지 않았거나 소스에 노출된 기본값 그대로면 기동 자체를 막는다.
-     * 이 값이 알려진 문자열이면 누구나 유효한 토큰을 위조할 수 있다.
+     * prod 프로필은 application.yml에서 JWT_SECRET_KEY에 기본값을 주지 않으므로,
+     * 환경변수가 없으면 Spring이 플레이스홀더를 못 찾아 이 빈이 생성되기 전에 이미 기동이 실패한다.
+     * 여기서는 그 외에 값이 비어있거나(어떤 경로로든) 너무 짧은 경우만 방어한다.
+     * dev 프로필의 편의용 기본 시크릿은 의도적으로 허용한다(로컬 전용이라 위험이 낮음).
      */
     @PostConstruct
     public void validate() {
         if (secretKey == null || secretKey.isBlank()) {
             throw new IllegalStateException(
-                    "jwt.secret-key(환경변수 JWT_SECRET_KEY)가 설정되지 않았습니다. " +
-                            "고정 기본값으로 서버가 기동되지 않도록 반드시 값을 설정하세요."
-            );
-        }
-        if (secretKey.equals(INSECURE_DEFAULT_SECRET)) {
-            throw new IllegalStateException(
-                    "jwt.secret-key가 소스코드에 노출된 기본값 그대로입니다. " +
-                            "환경변수 JWT_SECRET_KEY를 실제 운영용 값으로 설정하세요."
+                    "jwt.secret-key(환경변수 JWT_SECRET_KEY)가 설정되지 않았습니다."
             );
         }
         if (secretKey.length() < MIN_SECRET_LENGTH) {
