@@ -21,7 +21,9 @@ import com.kosta.sangsangseoga.global.jwt.ActionTokenInvalidException;
 import com.kosta.sangsangseoga.global.jwt.ActionTokenProvider;
 import com.kosta.sangsangseoga.global.jwt.JwtTokenProvider;
 import com.kosta.sangsangseoga.global.jwt.RefreshTokenService;
+import com.kosta.sangsangseoga.global.event.AfterCommitTask;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +51,7 @@ public class AuthService {
     private final ActionTokenProvider actionTokenProvider;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 회원가입. 이메일/비밀번호/닉네임/생년월일 형식은 SignupRequestDto의 Bean Validation(@Valid)이
@@ -79,7 +82,8 @@ public class AuthService {
 
         String accessToken = jwtTokenProvider.createAccessToken(member.getId(), member.getRole().name());
         String refreshToken = jwtTokenProvider.createRefreshToken(member.getId());
-        refreshTokenService.save(member.getId(), refreshToken);
+        Long memberId = member.getId();
+        eventPublisher.publishEvent(new AfterCommitTask(this, () -> refreshTokenService.save(memberId, refreshToken)));
 
         return SignupResponseDto.builder()
                 .memberId(member.getId())
@@ -221,7 +225,12 @@ public class AuthService {
         if (tokenFingerprint == null || !tokenFingerprint.equals(currentFingerprint)) {
             throw new CustomException(AuthErrorCode.INVALID_RESET_TOKEN);
         }
-        actionTokenProvider.consume(decoded);
+
+        try {
+            actionTokenProvider.consume(decoded);
+        } catch (ActionTokenInvalidException e) {
+            throw new CustomException(AuthErrorCode.INVALID_RESET_TOKEN);
+        }
 
         member.changePassword(passwordEncoder.encode(request.getNewPassword()));
     }
