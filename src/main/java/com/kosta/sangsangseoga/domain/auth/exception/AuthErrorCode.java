@@ -23,10 +23,10 @@ public enum AuthErrorCode implements ErrorCode {
     WEAK_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호는 영문, 숫자, 특수문자를 조합해 8자 이상이어야 합니다."),
 
     // ===== Signup =====
+    // 이메일/닉네임/비밀번호/생년월일 형식 검증은 SignupRequestDto의 Bean Validation이 담당하며,
+    // 실패 시 GlobalExceptionHandler가 공통 BAD_REQUEST 코드로 응답한다.
     DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "이미 가입된 이메일 주소입니다."),
-    DUPLICATE_NICKNAME(HttpStatus.BAD_REQUEST, "이미 사용 중인 닉네임입니다."),
-    INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "올바른 이메일 형식이 아닙니다."),
-    INVALID_NICKNAME_FORMAT(HttpStatus.BAD_REQUEST, "닉네임은 특수문자를 제외한 2~10자여야 합니다.");
+    DUPLICATE_NICKNAME(HttpStatus.BAD_REQUEST, "이미 사용 중인 닉네임입니다.");
 
     private final HttpStatus status;
     private final String message;

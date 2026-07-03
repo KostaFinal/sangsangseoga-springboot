@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.validation.Valid;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -28,7 +30,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/signup")
-    public ResponseEntity<ApiResponse<SignupResponseDto>> signup(@RequestBody SignupRequestDto request) {
+    public ResponseEntity<ApiResponse<SignupResponseDto>> signup(@Valid @RequestBody SignupRequestDto request) {
         SignupResponseDto response = authService.signup(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }

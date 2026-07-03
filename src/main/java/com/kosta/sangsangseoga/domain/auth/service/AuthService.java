@@ -41,8 +41,6 @@ public class AuthService {
     private static final int MINOR_U14_AGE_LIMIT = 14;
     private static final int ADULT_AGE = 19;
 
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[\\w.%+-]+@[\\w.-]+\\.[A-Za-z]{2,}$");
-    private static final Pattern NICKNAME_PATTERN = Pattern.compile("^[0-9A-Za-z가-힣]{2,10}$");
     private static final Pattern PASSWORD_PATTERN =
             Pattern.compile("^(?=.*[A-Za-z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,}$");
 
@@ -53,19 +51,13 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
 
     /**
-     * 회원가입. 생년월일로 연령대를 판정해 만 14세 미만은 보호자 동의 대기(PENDING) 상태로,
+     * 회원가입. 이메일/비밀번호/닉네임/생년월일 형식은 SignupRequestDto의 Bean Validation(@Valid)이
+     * 컨트롤러 진입 시점에 검증한다. 여기서는 DB 조회가 필요한 중복 검증과 가입 처리를 담당한다.
+     * 생년월일로 연령대를 판정해 만 14세 미만은 보호자 동의 대기(PENDING) 상태로,
      * 그 외는 즉시 활성(ACTIVE) 상태로 가입 처리한다. 가입 직후 자동 로그인을 위해
      * Access/Refresh Token을 함께 발급한다.
      */
     public SignupResponseDto signup(SignupRequestDto request) {
-        if (request.getEmail() == null || !EMAIL_PATTERN.matcher(request.getEmail()).matches()) {
-            throw new CustomException(AuthErrorCode.INVALID_EMAIL_FORMAT);
-        }
-        if (request.getNickname() == null || !NICKNAME_PATTERN.matcher(request.getNickname()).matches()) {
-            throw new CustomException(AuthErrorCode.INVALID_NICKNAME_FORMAT);
-        }
-        validatePassword(request.getPassword());
-
         if (memberRepository.existsByEmail(request.getEmail())) {
             throw new CustomException(AuthErrorCode.DUPLICATE_EMAIL);
         }
@@ -100,9 +92,6 @@ public class AuthService {
     }
 
     private MemberStatus resolveInitialStatus(LocalDate birthDate) {
-        if (birthDate == null) {
-            return MemberStatus.ACTIVE;
-        }
         MemberAgeGroup ageGroup = calculateAgeGroup(birthDate);
         return ageGroup == MemberAgeGroup.MINOR_U14 ? MemberStatus.PENDING : MemberStatus.ACTIVE;
     }
