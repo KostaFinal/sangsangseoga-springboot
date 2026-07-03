@@ -41,6 +41,9 @@ dependencies {
 	annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jpa'
 	annotationProcessor 'javax.annotation:javax.annotation-api'
 	annotationProcessor 'javax.persistence:javax.persistence-api'
+
+	// Swagger (springdoc-openapi) - Spring Boot 2.7 호환 버전
+	implementation 'org.springdoc:springdoc-openapi-ui:1.7.0'
 }
 
 def querydslSrcDir = 'src/main/generated'

@@ -5,6 +5,12 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+### QueryDSL generated sources ###
+src/main/generated/
+
+### Claude Code ###
+.claude/
+
 ### STS ###
 .apt_generated
 .classpath
