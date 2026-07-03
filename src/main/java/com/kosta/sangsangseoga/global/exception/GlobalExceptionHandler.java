@@ -3,8 +3,12 @@ package com.kosta.sangsangseoga.global.exception;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
@@ -20,6 +24,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(errorCode.getStatus())
                 .body(ApiResponse.error(errorCode.name(), e.getMessage()));
+    }
+
+    /**
+     * @Valid로 선언한 Bean Validation(DTO 필드 애너테이션) 실패 처리
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .map(FieldError::getDefaultMessage)
+                .collect(Collectors.joining(", "));
+        log.warn("입력값 검증 실패: {}", message);
+        return ResponseEntity
+                .status(CommonErrorCode.BAD_REQUEST.getStatus())
+                .body(ApiResponse.error(CommonErrorCode.BAD_REQUEST.name(), message));
     }
 
     /**
