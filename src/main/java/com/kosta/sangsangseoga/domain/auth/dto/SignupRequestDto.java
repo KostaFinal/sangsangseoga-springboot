@@ -34,6 +34,6 @@ public class SignupRequestDto {
     private String profileImageUrl;
 
     @NotNull(message = "생년월일을 입력해 주세요.")
-    @Past(message = "생년월일이 올바르지 않습니다.")
+    @Past(message = "생년월일이 올바르지 않습니다.") // 미래 날짜 막음
     private LocalDate birthDate;
 }

@@ -101,6 +101,9 @@ public class AuthService {
     }
 
     private MemberAgeGroup calculateAgeGroup(LocalDate birthDate) {
+        if (birthDate.isAfter(LocalDate.now())) {
+            throw new CustomException(AuthErrorCode.INVALID_BIRTH_DATE);
+        }
         int age = Period.between(birthDate, LocalDate.now()).getYears();
         if (age < MINOR_U14_AGE_LIMIT) {
             return MemberAgeGroup.MINOR_U14;

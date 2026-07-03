@@ -26,7 +26,8 @@ public enum AuthErrorCode implements ErrorCode {
     // 이메일/닉네임/비밀번호/생년월일 형식 검증은 SignupRequestDto의 Bean Validation이 담당하며,
     // 실패 시 GlobalExceptionHandler가 공통 BAD_REQUEST 코드로 응답한다.
     DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "이미 가입된 이메일 주소입니다."),
-    DUPLICATE_NICKNAME(HttpStatus.BAD_REQUEST, "이미 사용 중인 닉네임입니다.");
+    DUPLICATE_NICKNAME(HttpStatus.BAD_REQUEST, "이미 사용 중인 닉네임입니다."),
+    INVALID_BIRTH_DATE(HttpStatus.BAD_REQUEST, "생년월일이 올바르지 않습니다.");
 
     private final HttpStatus status;
     private final String message;
