@@ -22,11 +22,11 @@ public class QAuthorFollow extends EntityPathBase<AuthorFollow> {
 
     public static final QAuthorFollow authorFollow = new QAuthorFollow("authorFollow");
 
-    public final com.kosta.sangsangseoga.domain.account.entity.QMember author;
+    public final com.kosta.sangsangseoga.domain.member.entity.QMember author;
 
     public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt", java.time.LocalDateTime.class);
 
-    public final com.kosta.sangsangseoga.domain.account.entity.QMember follower;
+    public final com.kosta.sangsangseoga.domain.member.entity.QMember follower;
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
@@ -48,8 +48,8 @@ public class QAuthorFollow extends EntityPathBase<AuthorFollow> {
 
     public QAuthorFollow(Class<? extends AuthorFollow> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
-        this.author = inits.isInitialized("author") ? new com.kosta.sangsangseoga.domain.account.entity.QMember(forProperty("author")) : null;
-        this.follower = inits.isInitialized("follower") ? new com.kosta.sangsangseoga.domain.account.entity.QMember(forProperty("follower")) : null;
+        this.author = inits.isInitialized("author") ? new com.kosta.sangsangseoga.domain.member.entity.QMember(forProperty("author")) : null;
+        this.follower = inits.isInitialized("follower") ? new com.kosta.sangsangseoga.domain.member.entity.QMember(forProperty("follower")) : null;
     }
 
 }

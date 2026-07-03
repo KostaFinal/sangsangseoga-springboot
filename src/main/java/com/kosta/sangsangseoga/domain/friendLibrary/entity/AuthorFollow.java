@@ -1,6 +1,6 @@
 package com.kosta.sangsangseoga.domain.friendLibrary.entity;
 
-import com.kosta.sangsangseoga.domain.account.entity.Member;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,6 +30,7 @@ public class AuthorFollow {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "follower_id", nullable = false)
     private Member follower;
+
 
     // 팔로우 당한 작가 (member로 관리)
     @ManyToOne(fetch = FetchType.LAZY)

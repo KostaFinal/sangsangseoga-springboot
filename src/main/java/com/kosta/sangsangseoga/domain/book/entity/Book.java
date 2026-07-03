@@ -1,6 +1,6 @@
 package com.kosta.sangsangseoga.domain.book.entity;
 
-import com.kosta.sangsangseoga.domain.account.entity.Member;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.book.enums.AgeGroup;
 import com.kosta.sangsangseoga.domain.book.enums.BookType;
 import com.kosta.sangsangseoga.domain.book.enums.CreationMode;

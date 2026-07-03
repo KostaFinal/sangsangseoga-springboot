@@ -1,6 +1,6 @@
 package com.kosta.sangsangseoga.domain.friendLibrary.entity;
  
-import com.kosta.sangsangseoga.domain.account.entity.Member;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

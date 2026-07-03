@@ -1,6 +1,6 @@
 package com.kosta.sangsangseoga.domain.friendLibrary.entity;
 
-import com.kosta.sangsangseoga.domain.account.entity.Member;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.global.common.BaseEntity;
 import lombok.AllArgsConstructor;
@@ -24,7 +24,7 @@ public class Comment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "book_id", nullable = false)
-    private Book book;
+    private Book book; 
 
     // 탈퇴 시 NULL로 익명화하기 위해 nullable
     @ManyToOne(fetch = FetchType.LAZY)

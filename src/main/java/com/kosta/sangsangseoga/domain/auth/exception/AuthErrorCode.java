@@ -1,0 +1,32 @@
+package com.kosta.sangsangseoga.domain.auth.exception;
+
+import com.kosta.sangsangseoga.global.exception.ErrorCode;
+import lombok.Getter;
+import org.springframework.http.HttpStatus;
+
+@Getter
+public enum AuthErrorCode implements ErrorCode {
+
+    // ===== Login =====
+    LOGIN_FAILED(HttpStatus.BAD_REQUEST, "이메일 또는 비밀번호가 일치하지 않습니다."),
+    SUSPENDED_MEMBER(HttpStatus.FORBIDDEN, "이용이 정지된 계정입니다. 고객센터에 문의해 주세요."),
+    DELETED_MEMBER(HttpStatus.NOT_FOUND, "존재하지 않거나 탈퇴한 회원 정보입니다."),
+
+    // ===== Logout / Token =====
+    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "조작되었거나 만료된 토큰입니다."),
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "인증 정보가 올바르지 않습니다. 다시 로그인해 주세요."),
+    EXPIRED_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "만료된 세션입니다. 보안을 위해 다시 로그인해 주세요."),
+
+    // ===== Password Reset =====
+    INVALID_RESET_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 비밀번호 재설정 요청입니다."),
+    EXPIRED_RESET_TOKEN(HttpStatus.UNAUTHORIZED, "비밀번호 재설정 링크가 만료되었습니다. 다시 요청해 주세요."),
+    WEAK_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호는 8자 이상이어야 합니다.");
+
+    private final HttpStatus status;
+    private final String message;
+
+    AuthErrorCode(HttpStatus status, String message) {
+        this.status = status;
+        this.message = message;
+    }
+}

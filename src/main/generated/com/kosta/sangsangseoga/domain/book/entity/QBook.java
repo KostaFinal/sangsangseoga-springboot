@@ -49,7 +49,7 @@ public class QBook extends EntityPathBase<Book> {
 
     public final NumberPath<Integer> likeCount = createNumber("likeCount", Integer.class);
 
-    public final com.kosta.sangsangseoga.domain.account.entity.QMember member;
+    public final com.kosta.sangsangseoga.domain.member.entity.QMember member;
 
     public final NumberPath<Integer> pageCount = createNumber("pageCount", Integer.class);
 
@@ -88,7 +88,7 @@ public class QBook extends EntityPathBase<Book> {
 
     public QBook(Class<? extends Book> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
-        this.member = inits.isInitialized("member") ? new com.kosta.sangsangseoga.domain.account.entity.QMember(forProperty("member")) : null;
+        this.member = inits.isInitialized("member") ? new com.kosta.sangsangseoga.domain.member.entity.QMember(forProperty("member")) : null;
     }
 
 }
