@@ -43,8 +43,6 @@ public class QBook extends EntityPathBase<Book> {
 
     public final StringPath description = createString("description");
 
-    public final StringPath genre = createString("genre");
-
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
     public final NumberPath<Integer> likeCount = createNumber("likeCount", Integer.class);

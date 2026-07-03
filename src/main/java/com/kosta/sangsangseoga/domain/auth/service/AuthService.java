@@ -5,10 +5,13 @@ import com.kosta.sangsangseoga.domain.auth.dto.LoginRequestDto;
 import com.kosta.sangsangseoga.domain.auth.dto.LoginResponseDto;
 import com.kosta.sangsangseoga.domain.auth.dto.PasswordResetCompleteDto;
 import com.kosta.sangsangseoga.domain.auth.dto.PasswordResetRequestDto;
+import com.kosta.sangsangseoga.domain.auth.dto.SignupRequestDto;
+import com.kosta.sangsangseoga.domain.auth.dto.SignupResponseDto;
 import com.kosta.sangsangseoga.domain.auth.dto.TokenRefreshRequestDto;
 import com.kosta.sangsangseoga.domain.auth.dto.TokenRefreshResponseDto;
 import com.kosta.sangsangseoga.domain.auth.exception.AuthErrorCode;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.member.enums.MemberAgeGroup;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
@@ -18,12 +21,17 @@ import com.kosta.sangsangseoga.global.jwt.ActionTokenInvalidException;
 import com.kosta.sangsangseoga.global.jwt.ActionTokenProvider;
 import com.kosta.sangsangseoga.global.jwt.JwtTokenProvider;
 import com.kosta.sangsangseoga.global.jwt.RefreshTokenService;
+import com.kosta.sangsangseoga.global.event.AfterCommitTask;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -32,13 +40,85 @@ public class AuthService {
 
     private static final String PASSWORD_RESET_TOKEN_PURPOSE = "PASSWORD_RESET";
     private static final long PASSWORD_RESET_TOKEN_TTL_MILLIS = 30 * 60 * 1000L; // 30분
-    private static final int MIN_PASSWORD_LENGTH = 8;
+    private static final int MINOR_U14_AGE_LIMIT = 14;
+    private static final int ADULT_AGE = 19;
+
+    private static final Pattern PASSWORD_PATTERN =
+            Pattern.compile("^(?=.*[A-Za-z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,}$");
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
     private final ActionTokenProvider actionTokenProvider;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
+    private final ApplicationEventPublisher eventPublisher;
+
+    /**
+     * 회원가입. 이메일/비밀번호/닉네임/생년월일 형식은 SignupRequestDto의 Bean Validation(@Valid)이
+     * 컨트롤러 진입 시점에 검증한다. 여기서는 DB 조회가 필요한 중복 검증과 가입 처리를 담당한다.
+     * 생년월일로 연령대를 판정해 만 14세 미만은 보호자 동의 대기(PENDING) 상태로,
+     * 그 외는 즉시 활성(ACTIVE) 상태로 가입 처리한다. 가입 직후 자동 로그인을 위해
+     * Access/Refresh Token을 함께 발급한다.
+     */
+    public SignupResponseDto signup(SignupRequestDto request) {
+        if (memberRepository.existsByEmail(request.getEmail())) {
+            throw new CustomException(AuthErrorCode.DUPLICATE_EMAIL);
+        }
+        if (memberRepository.existsByNickname(request.getNickname())) {
+            throw new CustomException(AuthErrorCode.DUPLICATE_NICKNAME);
+        }
+
+        MemberStatus initialStatus = resolveInitialStatus(request.getBirthDate());
+
+        Member member = Member.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .nickname(request.getNickname())
+                .profileImageUrl(request.getProfileImageUrl())
+                .birthDate(request.getBirthDate())
+                .status(initialStatus)
+                .build();
+        memberRepository.save(member);
+
+        String accessToken = jwtTokenProvider.createAccessToken(member.getId(), member.getRole().name());
+        String refreshToken = jwtTokenProvider.createRefreshToken(member.getId());
+        Long memberId = member.getId();
+        eventPublisher.publishEvent(new AfterCommitTask(this, () -> refreshTokenService.save(memberId, refreshToken)));
+
+        return SignupResponseDto.builder()
+                .memberId(member.getId())
+                .email(member.getEmail())
+                .nickname(member.getNickname())
+                .role(member.getRole().name())
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+
+    private MemberStatus resolveInitialStatus(LocalDate birthDate) {
+        MemberAgeGroup ageGroup = calculateAgeGroup(birthDate);
+        return ageGroup == MemberAgeGroup.MINOR_U14 ? MemberStatus.PENDING : MemberStatus.ACTIVE;
+    }
+
+    private MemberAgeGroup calculateAgeGroup(LocalDate birthDate) {
+        if (birthDate.isAfter(LocalDate.now())) {
+            throw new CustomException(AuthErrorCode.INVALID_BIRTH_DATE);
+        }
+        int age = Period.between(birthDate, LocalDate.now()).getYears();
+        if (age < MINOR_U14_AGE_LIMIT) {
+            return MemberAgeGroup.MINOR_U14;
+        }
+        if (age < ADULT_AGE) {
+            return MemberAgeGroup.MINOR;
+        }
+        return MemberAgeGroup.ADULT;
+    }
+
+    private void validatePassword(String password) {
+        if (password == null || !PASSWORD_PATTERN.matcher(password).matches()) {
+            throw new CustomException(AuthErrorCode.WEAK_PASSWORD);
+        }
+    }
 
     /**
      * 이메일/비밀번호 로그인. Access/Refresh Token을 동시 발급하고,
@@ -60,7 +140,8 @@ public class AuthService {
 
         String accessToken = jwtTokenProvider.createAccessToken(member.getId(), member.getRole().name());
         String refreshToken = jwtTokenProvider.createRefreshToken(member.getId());
-        refreshTokenService.save(member.getId(), refreshToken);
+        Long memberId = member.getId();
+        eventPublisher.publishEvent(new AfterCommitTask(this, () -> refreshTokenService.save(memberId, refreshToken)));
 
         return LoginResponseDto.builder()
                 .memberId(member.getId())
@@ -128,9 +209,7 @@ public class AuthService {
      * 같은 토큰이 재사용(replay)되는 것을 막는다 (DB에 사용 여부를 별도로 저장하지 않음).
      */
     public void completePasswordReset(PasswordResetCompleteDto request) {
-        if (request.getNewPassword() == null || request.getNewPassword().length() < MIN_PASSWORD_LENGTH) {
-            throw new CustomException(AuthErrorCode.WEAK_PASSWORD);
-        }
+        validatePassword(request.getNewPassword());
 
         DecodedJWT decoded;
         try {
@@ -150,7 +229,12 @@ public class AuthService {
         if (tokenFingerprint == null || !tokenFingerprint.equals(currentFingerprint)) {
             throw new CustomException(AuthErrorCode.INVALID_RESET_TOKEN);
         }
-        actionTokenProvider.consume(decoded);
+
+        try {
+            actionTokenProvider.consume(decoded);
+        } catch (ActionTokenInvalidException e) {
+            throw new CustomException(AuthErrorCode.INVALID_RESET_TOKEN);
+        }
 
         member.changePassword(passwordEncoder.encode(request.getNewPassword()));
     }

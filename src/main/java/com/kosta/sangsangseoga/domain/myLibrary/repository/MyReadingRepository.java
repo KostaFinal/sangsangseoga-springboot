@@ -3,10 +3,12 @@ package com.kosta.sangsangseoga.domain.myLibrary.repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.domain.myLibrary.entity.MyReading;
 import com.kosta.sangsangseoga.domain.myLibrary.enums.ReadingStatus;
 
@@ -39,4 +41,18 @@ public interface MyReadingRepository extends JpaRepository<MyReading, Long> {
 	
 	// 회원의 독서 통계 기록
 	List<MyReading> findByMember_Id(Long memberId);
+	
+	// 협업 필터링: 이 책을 읽은 사람들이 함께 읽은 다른 책 중 가장 많이 겹치는 것
+    // 해당 책 제외, READING 또는 COMPLETED 상태인 것만
+    @Query("SELECT mr.book FROM MyReading mr " +
+           "WHERE mr.member IN (" +
+           "  SELECT mr2.member FROM MyReading mr2 WHERE mr2.book = :book" +
+           "  AND mr2.readingStatus IN ('READING', 'COMPLETED')" +
+           ") " +
+           "AND mr.book != :book " +
+           "AND mr.book.status = 'PUBLISHED' " +
+           "AND mr.readingStatus IN ('READING', 'COMPLETED') " +
+           "GROUP BY mr.book " +
+           "ORDER BY COUNT(mr.member) DESC")
+    List<Book> findCollaborativeRecommendations(@Param("book") Book book, Pageable pageable);
 }

@@ -53,7 +53,6 @@ public class Book extends BaseEntity {
     private String summary;
 
     private String category;
-    private String genre;
     private String targetLang;
     private String styleCode;
 
