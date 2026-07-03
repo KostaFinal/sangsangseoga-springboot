@@ -86,5 +86,12 @@ spring:
     host: ${PROD_REDIS_HOST}      # 운영 Redis 주소 필수
     port: ${PROD_REDIS_PORT:6379}
 
+# 운영 환경에서는 API 구조(엔드포인트/DTO/스키마) 노출을 막기 위해 Swagger를 비활성화
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 jwt:
   secret-key: ${JWT_SECRET_KEY}   # 기본값 없음 (누락 시 서버 구동 실패 처리로 해킹 방지)
