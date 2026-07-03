@@ -33,15 +33,15 @@ public class ReadingMemo extends BaseEntity {
     @JoinColumn(name = "book_id", nullable = false)
     private Book book;
  
-    @Column(nullable = false)
+    @Column(name = "page_no", nullable = false)
     private Integer pageNo;
  
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
  
-    // ¸Þ¸ð À§Ä¡ X ÁÂÇ¥
+    // ï¿½Þ¸ï¿½ ï¿½ï¿½Ä¡ X ï¿½ï¿½Ç¥
     private BigDecimal posX;
  
-    // ¸Þ¸ð À§Ä¡ Y ÁÂÇ¥
+    // ï¿½Þ¸ï¿½ ï¿½ï¿½Ä¡ Y ï¿½ï¿½Ç¥
     private BigDecimal posY;
 }
