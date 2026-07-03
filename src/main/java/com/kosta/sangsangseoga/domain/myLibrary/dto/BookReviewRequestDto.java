@@ -5,9 +5,9 @@ import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-public class ReadingProgressRequestDto {
+public class BookReviewRequestDto {
 	
-	private Integer currentPage;
-	
-	private Integer progress;
+	private Long bookId;
+	private String content;
+	private Boolean isDraft;
 }
