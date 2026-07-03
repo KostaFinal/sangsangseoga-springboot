@@ -10,8 +10,11 @@ import java.util.Optional;
 
 public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
 
-    // 회원의 특정 책 특정 페이지 책갈피 존재 여부 확인
+	// 회원의 특정 책 특정 페이지 책갈피 존재 여부 확인
     boolean existsByMemberAndBookAndPageNo(Member member, Book book, Integer pageNo);
+
+    // 회원의 특정 책에 북마크가 하나라도 있는지 확인 (상세 조회 isBookmarkedByMe용)
+    boolean existsByMemberAndBook(Member member, Book book);
 
     // 회원의 특정 책 특정 페이지 책갈피 조회 (삭제 시 사용)
     Optional<Bookmark> findByMemberAndBookAndPageNo(Member member, Book book, Integer pageNo);
