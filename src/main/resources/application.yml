@@ -38,7 +38,7 @@ spring:
     driver-class-name: org.mariadb.jdbc.Driver
     url: jdbc:mariadb://localhost:3306/sangsangseoga
     username: ${DB_USERNAME:root} # 환경변수 없으면 root 사용
-    password: ${DB_PASSWORD:}     # 환경변수 없으면 빈값 사용
+    password: ${DB_PASSWORD:7564}     # 환경변수 없으면 빈값 사용
 
   jpa:
     show-sql: true
