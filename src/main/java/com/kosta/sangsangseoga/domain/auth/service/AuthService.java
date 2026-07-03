@@ -137,7 +137,8 @@ public class AuthService {
 
         String accessToken = jwtTokenProvider.createAccessToken(member.getId(), member.getRole().name());
         String refreshToken = jwtTokenProvider.createRefreshToken(member.getId());
-        refreshTokenService.save(member.getId(), refreshToken);
+        Long memberId = member.getId();
+        eventPublisher.publishEvent(new AfterCommitTask(this, () -> refreshTokenService.save(memberId, refreshToken)));
 
         return LoginResponseDto.builder()
                 .memberId(member.getId())
