@@ -9,9 +9,12 @@ import com.kosta.sangsangseoga.domain.myLibrary.entity.BookReview;
 
 public interface BookReviewRepository extends JpaRepository<BookReview, Long> {
 	
-	//È¸¿øÀÌ ÀÛ¼ºÇÑ Æ¯Á¤ Ã¥ÀÇ µ¶ÈÄ°¨ Á¶È¸
-	Optional<BookReview> findByMember_IdAndBook_Id(Long memberId, Long BookId);
-	
-	//È¸¿øÀÌ ÀÛ¼ºÇÑ ¸ğµç µ¶ÈÄ°¨ Á¶È¸
-	List<BookReview> findByMember_Id(Long memberId);
+	// íšŒì›ì´ íŠ¹ì • ì±…ì— ì‘ì„±í•œ ë…í›„ê°
+    Optional<BookReview> findByMember_IdAndBook_Id(Long memberId, Long bookId);
+
+    // ë‚´ ë…í›„ê° ëª©ë¡
+    List<BookReview> findByMember_IdOrderByCreatedAtDesc(Long memberId);
+
+    // ë‚´ ë…í›„ê° ìƒì„¸ ì¡°íšŒ(ìˆ˜ì •/ì‚­ì œ ì‹œ ê¶Œí•œ í™•ì¸ê¹Œì§€ ê°€ëŠ¥)
+    Optional<BookReview> findByIdAndMember_Id(Long reviewId, Long memberId);
 }

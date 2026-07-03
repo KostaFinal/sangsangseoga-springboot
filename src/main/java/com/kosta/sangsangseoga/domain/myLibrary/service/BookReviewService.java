@@ -1,23 +1,31 @@
 package com.kosta.sangsangseoga.domain.myLibrary.service;
 
+import java.util.List;
+
 import com.kosta.sangsangseoga.domain.myLibrary.dto.AiFeedbackResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.BookReviewRequestDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.BookReviewResponseDto;
 
 public interface BookReviewService {
 	
-	//µ¶ÈÄ°¨ ÀÛ¼º
-	void createBookReview(Long memberId, Long bookId, BookReviewRequestDto bookReviewRequestDto) throws Exception;
-	
-	//µ¶ÈÄ°¨ Á¶È¸
-	BookReviewResponseDto getBookReview(Long memberId, Long bookId) throws Exception;
-	
-	//µ¶ÈÄ°¨ ¼öÁ¤
-	void updateBookReview(Long memberId, Long bookId, BookReviewRequestDto bookReviewRequestDto) throws Exception;
-	
-	//µ¶ÈÄ°¨ »èÁ¦
-	void deleteBookReview(Long memberId, Long bookId) throws Exception;
-	
-	//AI ÇÇµå¹é Á¶È¸
-	AiFeedbackResponseDto getAiFeedback(Long memberId, Long bookId) throws Exception;
+	 // ë…í›„ê° ëª©ë¡ ì¡°íšŒ
+    List<BookReviewResponseDto> getReviews(Long memberId) throws Exception;
+
+    // ë…í›„ê° ìƒì„¸ ì¡°íšŒ
+    BookReviewResponseDto getReview(Long memberId, Long reviewId) throws Exception;
+
+    // ë…í›„ê° ì‘ì„±
+    BookReviewResponseDto createReview(Long memberId, BookReviewRequestDto requestDto) throws Exception;
+
+    // ë…í›„ê° ìˆ˜ì •
+    BookReviewResponseDto updateReview(Long memberId, Long reviewId, BookReviewRequestDto requestDto) throws Exception;
+
+    // ë…í›„ê° ì‚­ì œ
+    void deleteReview(Long memberId, Long reviewId) throws Exception;
+
+    // ë…í›„ê° ì„ì‹œì €ì¥
+    BookReviewResponseDto saveDraft(Long memberId, Long reviewId, BookReviewRequestDto requestDto) throws Exception;
+
+    // AI í”¼ë“œë°± ì¡°íšŒ
+    AiFeedbackResponseDto getAiFeedback(Long memberId, Long reviewId) throws Exception;
 }

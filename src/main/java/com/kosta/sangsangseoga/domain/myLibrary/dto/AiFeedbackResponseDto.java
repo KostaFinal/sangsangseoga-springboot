@@ -9,9 +9,7 @@ import lombok.Getter;
 @Builder
 public class AiFeedbackResponseDto {
 	
-	//AI 피드백 내용
-	private String aiFeedbackContent;
-	
-	//AI 피드백 생성일
-	private LocalDateTime aiFeedbackCreatedAt;
+	private Long reviewId;
+    private String aiFeedbackContent;
+    private LocalDateTime aiFeedbackCreatedAt;
 }

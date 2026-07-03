@@ -10,5 +10,10 @@ import lombok.Getter;
 public class FinishedBookResponseDto {
 	
 	private Long bookId;
-	private LocalDateTime completeAt;
+	private String title;
+    private String category;
+    private String genre;
+    
+	private LocalDateTime completedAt;
+	private Integer readingTime;
 }

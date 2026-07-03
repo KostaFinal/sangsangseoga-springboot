@@ -21,4 +21,9 @@ public interface MyLibraryService {
 	
 	void updateReadingProgress(Long memberId, Long bookId, ReadingProgressRequestDto readingProgressRequestDto) throws Exception;
 	
+	// 완독 처리
+	void completeReading(Long memberId, Long bookId) throws Exception;
+
+	// 다시 읽기
+	void rereadBook(Long memberId, Long bookId) throws Exception;
 }

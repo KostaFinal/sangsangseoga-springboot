@@ -9,9 +9,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class BookReviewRequestDto {
 	
-	//독후감 내용
+	private Long bookId;
 	private String content;
-	
-	//임시저장 여부
 	private Boolean isDraft;
 }

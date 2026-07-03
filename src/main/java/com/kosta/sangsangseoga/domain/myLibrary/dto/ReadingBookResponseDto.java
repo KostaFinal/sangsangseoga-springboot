@@ -7,7 +7,12 @@ import lombok.Getter;
 @Builder
 public class ReadingBookResponseDto {
 	
-	private Long bookId;
+	private Long bookId;	
+	private String title;
+    private String category;
+    private String genre;
+    
 	private Integer currentPage;
 	private Integer progress;
+	private Integer pageCount;
 }
