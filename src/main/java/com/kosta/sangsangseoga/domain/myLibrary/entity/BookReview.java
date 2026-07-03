@@ -13,19 +13,21 @@ import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
-import com.kosta.sangsangseoga.domain.account.entity.Member;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.global.common.BaseEntity;
 
 import lombok.AccessLevel;
-import lombok.Getter;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
-@Getter
-@Setter
+@Data
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 @Table(name = "book_review")
 public class BookReview extends BaseEntity {
 
@@ -54,14 +56,6 @@ public class BookReview extends BaseEntity {
     @Column(name = "ai_feedback_created_at")
     private LocalDateTime aiFeedbackCreatedAt;
     
-    public void updateReview(String content) {
-        this.content = content;
-    }
-
-    public void saveDraft(String content) {
-        this.content = content;
-        this.isDraft = true;
-    }
 
     public void publish() {
         this.isDraft = false;
@@ -71,4 +65,6 @@ public class BookReview extends BaseEntity {
         this.aiFeedbackContent = aiFeedbackContent;
         this.aiFeedbackCreatedAt = LocalDateTime.now();
     }
+    
+    
 }

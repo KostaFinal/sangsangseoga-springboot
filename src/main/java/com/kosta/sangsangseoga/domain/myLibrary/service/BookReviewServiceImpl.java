@@ -3,19 +3,25 @@ package com.kosta.sangsangseoga.domain.myLibrary.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import javax.transaction.Transactional;
-
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.kosta.sangsangseoga.domain.ai.service.GeminiService;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.AiFeedbackResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.BookReviewRequestDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.BookReviewResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.entity.BookReview;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.BookReviewRepository;
+import com.kosta.sangsangseoga.domain.myLibrary.exception.ReadingErrorCode;
+import com.kosta.sangsangseoga.global.exception.CustomException;
+import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 
 import lombok.RequiredArgsConstructor;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -23,106 +29,106 @@ public class BookReviewServiceImpl implements BookReviewService {
 
 	private final BookReviewRepository bookReviewRepository;
 	private final BookRepository bookRepository;
-	
+	private final MemberRepository memberRepository;
+	private final GeminiService geminiService;
+
 	@Override
-    @Transactional(readOnly = true)
-    public List<BookReviewResponseDto> getReviews(Long memberId) throws Exception {
-        return bookReviewRepository.findByMember_IdOrderByCreatedAtDesc(memberId)
-                .stream()
-                .map(this::toResponseDto)
-                .collect(Collectors.toList());
-    }
+	@Transactional(readOnly = true)
+	public List<BookReviewResponseDto> getReviews(Long memberId){
+		return bookReviewRepository.findByMember_IdOrderByCreatedAtDesc(memberId).stream().map(this::toResponseDto)
+				.collect(Collectors.toList());
+	}
 
-    @Override
-    @Transactional(readOnly = true)
-    public BookReviewResponseDto getReview(Long memberId, Long reviewId) throws Exception {
-        BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
-                .orElseThrow(() -> new Exception("독후감을 찾을 수 없습니다."));
+	@Override
+	@Transactional(readOnly = true)
+	public BookReviewResponseDto getReview(Long memberId, Long reviewId){
+		BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
+				.orElseThrow(() -> new CustomException(ReadingErrorCode.BOOK_REVIEW_NOT_FOUND));
 
-        return toResponseDto(review);
-    }
+		return toResponseDto(review);
+	}
 
-    @Override
-    public BookReviewResponseDto createReview(Long memberId, BookReviewRequestDto requestDto) throws Exception {
-        bookReviewRepository.findByMember_IdAndBook_Id(memberId, requestDto.getBookId())
-                .ifPresent(review -> {
-                    throw new RuntimeException("이미 작성한 독후감이 있습니다.");
-                });
+	@Override
+	public BookReviewResponseDto createReview(Long memberId, BookReviewRequestDto requestDto){
+		bookReviewRepository.findByMember_IdAndBook_Id(memberId, requestDto.getBookId()).ifPresent(review -> {
+			throw new CustomException(ReadingErrorCode.BOOK_REVIEW_ALREADY_EXISTS);
+		});
 
-        Book book = bookRepository.findById(requestDto.getBookId())
-                .orElseThrow(() -> new Exception("책을 찾을 수 없습니다."));
+		Member member = memberRepository.findById(memberId).orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
 
-        // Member 연동 후 여기서 member 조회 필요
-        // Member member = memberRepository.findById(memberId).orElseThrow(...);
+		Book book = bookRepository.findById(requestDto.getBookId()).orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
 
-        BookReview review = BookReview.create(
-                null,
-                book,
-                requestDto.getContent(),
-                requestDto.getIsDraft()
-        );
+		BookReview review = BookReview.builder().member(member).book(book).content(requestDto.getContent())
+				.isDraft(requestDto.getIsDraft() != null ? requestDto.getIsDraft() : false).build();
 
-        BookReview saved = bookReviewRepository.save(review);
+		BookReview saved = bookReviewRepository.save(review);
 
-        return toResponseDto(saved);
-    }
+		return toResponseDto(saved);
+	}
 
-    @Override
-    public BookReviewResponseDto updateReview(Long memberId, Long reviewId, BookReviewRequestDto requestDto) throws Exception {
-        BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
-                .orElseThrow(() -> new Exception("독후감을 찾을 수 없습니다."));
+	@Override
+	public BookReviewResponseDto updateReview(Long memberId, Long reviewId, BookReviewRequestDto requestDto) {
+		BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
+				.orElseThrow(() -> new CustomException(ReadingErrorCode.BOOK_REVIEW_NOT_FOUND));
 
-        review.updateReview(requestDto.getContent(), requestDto.getIsDraft());
+		review.setContent(requestDto.getContent());
+		review.setIsDraft(requestDto.getIsDraft() != null ? requestDto.getIsDraft() : false);
 
-        return toResponseDto(review);
-    }
+		return toResponseDto(review);
+	}
 
-    @Override
-    public void deleteReview(Long memberId, Long reviewId) throws Exception {
-        BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
-                .orElseThrow(() -> new Exception("독후감을 찾을 수 없습니다."));
+	@Override
+	public void deleteReview(Long memberId, Long reviewId){
+		BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
+				.orElseThrow(() -> new CustomException(ReadingErrorCode.BOOK_REVIEW_NOT_FOUND));
 
-        bookReviewRepository.delete(review);
-    }
+		bookReviewRepository.delete(review);
+	}
 
-    @Override
-    public BookReviewResponseDto saveDraft(Long memberId, Long reviewId, BookReviewRequestDto requestDto) throws Exception {
-        BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
-                .orElseThrow(() -> new Exception("독후감을 찾을 수 없습니다."));
+	@Override
+	public BookReviewResponseDto saveDraft(Long memberId, Long reviewId, BookReviewRequestDto requestDto){
+		BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
+				.orElseThrow(() -> new CustomException(ReadingErrorCode.BOOK_REVIEW_NOT_FOUND));
 
-        review.saveDraft(requestDto.getContent());
+		review.setContent(requestDto.getContent());
+		review.setIsDraft(true);
 
-        return toResponseDto(review);
-    }
+		return toResponseDto(review);
+	}
 
-    @Override
-    @Transactional(readOnly = true)
-    public AiFeedbackResponseDto getAiFeedback(Long memberId, Long reviewId) throws Exception {
-        BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
-                .orElseThrow(() -> new Exception("독후감을 찾을 수 없습니다."));
+	@Override
+	@Transactional(readOnly = true)
+	public AiFeedbackResponseDto getAiFeedback(Long memberId, Long reviewId){
+		BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
+				.orElseThrow(() -> new CustomException(ReadingErrorCode.BOOK_REVIEW_NOT_FOUND));
 
-        return AiFeedbackResponseDto.builder()
-                .reviewId(review.getId())
-                .aiFeedbackContent(review.getAiFeedbackContent())
-                .aiFeedbackCreatedAt(review.getAiFeedbackCreatedAt())
-                .build();
-    }
+		return AiFeedbackResponseDto.builder().reviewId(review.getId()).aiFeedbackContent(review.getAiFeedbackContent())
+				.aiFeedbackCreatedAt(review.getAiFeedbackCreatedAt()).build();
+	}
 
-    private BookReviewResponseDto toResponseDto(BookReview review) {
-        Book book = review.getBook();
+	private BookReviewResponseDto toResponseDto(BookReview review) {
+		Book book = review.getBook();
 
-        return BookReviewResponseDto.builder()
-                .reviewId(review.getId())
-                .bookId(book.getId())
-                .bookTitle(book.getTitle())
-                .coverImageId(book.getCoverImageId())
-                .content(review.getContent())
-                .isDraft(review.getIsDraft())
-                .aiFeedbackContent(review.getAiFeedbackContent())
-                .aiFeedbackCreatedAt(review.getAiFeedbackCreatedAt())
-                .createdAt(review.getCreatedAt())
-                .updatedAt(review.getUpdatedAt())
-                .build();
-    }
+		return BookReviewResponseDto.builder().reviewId(review.getId()).bookId(book.getId()).bookTitle(book.getTitle())
+				.coverImageId(book.getCoverImageId()).content(review.getContent()).isDraft(review.getIsDraft())
+				.aiFeedbackContent(review.getAiFeedbackContent()).aiFeedbackCreatedAt(review.getAiFeedbackCreatedAt())
+				.createdAt(review.getCreatedAt()).updatedAt(review.getUpdatedAt()).build();
+	}
+
+	@Override
+	public AiFeedbackResponseDto requestAiFeedback(Long memberId, Long reviewId){
+		BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
+				.orElseThrow(() -> new CustomException(ReadingErrorCode.BOOK_REVIEW_NOT_FOUND));
+
+		String feedback = geminiService.generateReviewFeedback(review.getBook().getTitle(), review.getContent());
+
+		review.updateAiFeedback(feedback);
+
+		return AiFeedbackResponseDto.builder()
+				.reviewId(review.getId())
+				.aiFeedbackContent(review.getAiFeedbackContent())
+				.aiFeedbackCreatedAt(review.getAiFeedbackCreatedAt())
+				.build();
+	}
 
 }
