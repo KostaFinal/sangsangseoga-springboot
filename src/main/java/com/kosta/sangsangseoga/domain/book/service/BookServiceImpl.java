@@ -1,7 +1,5 @@
 package com.kosta.sangsangseoga.domain.book.service;
 
-import com.kosta.sangsangseoga.domain.account.entity.Member;
-import com.kosta.sangsangseoga.domain.account.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.book.dto.BookContentsResponseDto;
 import com.kosta.sangsangseoga.domain.book.dto.BookDetailDto;
 import com.kosta.sangsangseoga.domain.book.dto.BookListItemDto;
@@ -20,6 +18,8 @@ import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.book.service.BookService;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookLikeRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookmarkRepository;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.MyReadingRepository;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;

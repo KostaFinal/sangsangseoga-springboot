@@ -39,9 +39,9 @@ public class ReadingMemo extends BaseEntity {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
  
-    // �޸� ��ġ X ��ǥ
+    // 메모 위치 X 좌표
     private BigDecimal posX;
  
-    // �޸� ��ġ Y ��ǥ
+    // 메모 위치 Y 좌표
     private BigDecimal posY;
 }
