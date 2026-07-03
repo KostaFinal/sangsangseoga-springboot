@@ -20,7 +20,13 @@ public enum AuthErrorCode implements ErrorCode {
     // ===== Password Reset =====
     INVALID_RESET_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 비밀번호 재설정 요청입니다."),
     EXPIRED_RESET_TOKEN(HttpStatus.UNAUTHORIZED, "비밀번호 재설정 링크가 만료되었습니다. 다시 요청해 주세요."),
-    WEAK_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호는 8자 이상이어야 합니다.");
+    WEAK_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호는 영문, 숫자, 특수문자를 조합해 8자 이상이어야 합니다."),
+
+    // ===== Signup =====
+    DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "이미 가입된 이메일 주소입니다."),
+    DUPLICATE_NICKNAME(HttpStatus.BAD_REQUEST, "이미 사용 중인 닉네임입니다."),
+    INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "올바른 이메일 형식이 아닙니다."),
+    INVALID_NICKNAME_FORMAT(HttpStatus.BAD_REQUEST, "닉네임은 특수문자를 제외한 2~10자여야 합니다.");
 
     private final HttpStatus status;
     private final String message;

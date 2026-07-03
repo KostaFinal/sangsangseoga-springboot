@@ -4,6 +4,8 @@ import com.kosta.sangsangseoga.domain.auth.dto.LoginRequestDto;
 import com.kosta.sangsangseoga.domain.auth.dto.LoginResponseDto;
 import com.kosta.sangsangseoga.domain.auth.dto.PasswordResetCompleteDto;
 import com.kosta.sangsangseoga.domain.auth.dto.PasswordResetRequestDto;
+import com.kosta.sangsangseoga.domain.auth.dto.SignupRequestDto;
+import com.kosta.sangsangseoga.domain.auth.dto.SignupResponseDto;
 import com.kosta.sangsangseoga.domain.auth.dto.TokenRefreshRequestDto;
 import com.kosta.sangsangseoga.domain.auth.dto.TokenRefreshResponseDto;
 import com.kosta.sangsangseoga.domain.auth.service.AuthService;
@@ -24,6 +26,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+
+    @PostMapping("/signup")
+    public ResponseEntity<ApiResponse<SignupResponseDto>> signup(@RequestBody SignupRequestDto request) {
+        SignupResponseDto response = authService.signup(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
+    }
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponseDto>> login(@RequestBody LoginRequestDto request) {
