@@ -136,6 +136,9 @@ public class AuthService {
         if (member.getStatus() == MemberStatus.DELETED) {
             throw new CustomException(AuthErrorCode.DELETED_MEMBER);
         }
+        if (member.getStatus() == MemberStatus.PENDING) {
+            throw new CustomException(AuthErrorCode.PENDING_GUARDIAN_CONSENT);
+        }
         if (!passwordEncoder.matches(request.getPassword(), member.getPassword())) {
             throw new CustomException(AuthErrorCode.LOGIN_FAILED);
         }
