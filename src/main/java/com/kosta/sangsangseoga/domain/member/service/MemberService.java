@@ -29,6 +29,7 @@ import com.kosta.sangsangseoga.global.jwt.ActionTokenInvalidException;
 import com.kosta.sangsangseoga.global.jwt.ActionTokenProvider;
 import com.kosta.sangsangseoga.global.jwt.RefreshTokenService;
 import com.kosta.sangsangseoga.global.event.AfterCommitTask;
+import com.kosta.sangsangseoga.global.mail.MailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -59,10 +60,10 @@ public class MemberService {
     private final CommentRepository commentRepository;
     private final MyReadingRepository myReadingRepository;
     private final ReadingMemoRepository readingMemoRepository;
+    private final MailService mailService;
 
     /**
-     * 법정대리인 가입 동의 요청 생성. 실제 메일 발송(SMTP 등)은 별도 인프라 연동이 필요해
-     * 이 메서드는 동의 이력 생성과 토큰 발급까지만 담당한다.
+     * 법정대리인 가입 동의 요청 생성.
      */
     public GuardianConsentResponseDto requestGuardianConsent(GuardianConsentRequestDto request) {
         Member member = memberRepository.findById(request.getMemberId())
@@ -91,7 +92,7 @@ public class MemberService {
                 GUARDIAN_CONSENT_TOKEN_TTL_MILLIS
         );
 
-        // TODO: request.getGuardianEmail()로 token을 담은 동의 확인 메일 발송 (메일 인프라 연동 필요)
+        mailService.sendGuardianConsentEmail(request.getGuardianEmail(), consent.getId(), token);
 
         return toResponseDto(consent);
     }

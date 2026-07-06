@@ -56,7 +56,7 @@ public class Book extends BaseEntity {
     private String targetLang;
     private String styleCode;
 
-    @Column(name = "cover_image_id")
+    @Column(name = "cover_image_id", unique = true)
     private Long coverImageId;
 
     @Lob

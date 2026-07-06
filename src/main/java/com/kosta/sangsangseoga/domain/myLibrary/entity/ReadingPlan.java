@@ -12,6 +12,7 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
 import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
@@ -27,7 +28,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "reading_plan")
+@Table(name = "reading_plan", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_reading_plan_member_book_date", columnNames = {"member_id", "book_id", "plan_date"})
+})
 public class ReadingPlan extends BaseEntity{
 	@Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

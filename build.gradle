@@ -20,6 +20,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -41,6 +42,9 @@ dependencies {
 	annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jpa'
 	annotationProcessor 'javax.annotation:javax.annotation-api'
 	annotationProcessor 'javax.persistence:javax.persistence-api'
+
+	// Swagger (springdoc-openapi) - Spring Boot 2.7 호환 버전
+	implementation 'org.springdoc:springdoc-openapi-ui:1.7.0'
 }
 
 def querydslSrcDir = 'src/main/generated'

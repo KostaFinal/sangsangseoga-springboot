@@ -40,8 +40,10 @@ public class ReadingMemo extends BaseEntity {
     private String content;
  
     // 메모 위치 X 좌표
+    @Column(name = "pos_x")
     private BigDecimal posX;
- 
+
     // 메모 위치 Y 좌표
+    @Column(name = "pos_y")
     private BigDecimal posY;
 }
