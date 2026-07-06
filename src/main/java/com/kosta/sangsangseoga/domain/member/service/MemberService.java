@@ -10,6 +10,8 @@ import com.kosta.sangsangseoga.domain.friendLibrary.repository.CommentRepository
 import com.kosta.sangsangseoga.domain.friendLibrary.entity.Comment;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.ReadingMemoRepository;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentApproveRequestDto;
+import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentDecisionRequestDto;
+import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentPendingResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.WithdrawRequestDto;
@@ -38,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -92,30 +95,34 @@ public class MemberService {
                 GUARDIAN_CONSENT_TOKEN_TTL_MILLIS
         );
 
-        mailService.sendGuardianConsentEmail(request.getGuardianEmail(), consent.getId(), token);
+        mailService.sendGuardianConsentEmail(request.getGuardianEmail(), member.getNickname(), consent.getId(), token);
 
         return toResponseDto(consent);
     }
 
     /**
-     * 법정대리인의 동의/거절 처리. 승인되면 대기 중인 미성년 회원을 활성화한다.
+     * 로그인한 보호자 계정 기준으로 자신에게 온 미처리(REQUESTED) 동의 요청 목록을 조회한다.
+     * guardian_consent.guardian_id는 요청 생성 시점에 이메일로 이미 가입된 계정이 있어야 채워지므로,
+     * 이후 가입한 보호자도 조회되도록 guardianEmail로 매칭한다.
+     */
+    @Transactional(readOnly = true)
+    public List<GuardianConsentPendingResponseDto> getPendingGuardianConsents(Long guardianMemberId) {
+        Member guardian = memberRepository.findById(guardianMemberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        return guardianConsentRepository
+                .findByGuardianEmailAndStatusOrderByRequestedAtDesc(guardian.getEmail(), GuardianConsentStatus.REQUESTED)
+                .stream()
+                .map(this::toPendingResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 법정대리인의 동의/거절 처리(이메일 링크, 비로그인). 승인되면 대기 중인 미성년 회원을 활성화한다.
      */
     public GuardianConsentResponseDto processGuardianConsent(Long consentId, GuardianConsentApproveRequestDto request) {
-        GuardianConsent consent = guardianConsentRepository.findById(consentId)
-                .orElseThrow(() -> new CustomException(MemberErrorCode.GUARDIAN_CONSENT_NOT_FOUND));
-
-        if (consent.getStatus() != GuardianConsentStatus.REQUESTED) {
-            throw new CustomException(MemberErrorCode.GUARDIAN_CONSENT_ALREADY_PROCESSED);
-        }
-
-        if (consent.getExpiresAt() != null && consent.getExpiresAt().isBefore(LocalDateTime.now())) {
-            consent.expire();
-            throw new CustomException(MemberErrorCode.GUARDIAN_CONSENT_EXPIRED);
-        }
-
-        if (request.getStatus() != GuardianConsentStatus.APPROVED && request.getStatus() != GuardianConsentStatus.REJECTED) {
-            throw new CustomException(CommonErrorCode.BAD_REQUEST);
-        }
+        GuardianConsent consent = loadPendingConsent(consentId);
+        GuardianConsentStatus status = validateDecisionStatus(request.getStatus());
 
         DecodedJWT decoded;
         try {
@@ -131,8 +138,82 @@ public class MemberService {
             throw new CustomException(MemberErrorCode.INVALID_CONSENT_TOKEN);
         }
 
-        if (request.getStatus() == GuardianConsentStatus.APPROVED) {
-            Member guardian = memberRepository.findByEmail(consent.getGuardianEmail()).orElse(null);
+        Member guardian = memberRepository.findByEmail(consent.getGuardianEmail()).orElse(null);
+        applyDecision(consent, status, guardian);
+
+        return toResponseDto(consent);
+    }
+
+    /**
+     * 법정대리인의 동의/거절 처리(로그인 상태). 이메일 토큰 없이, 로그인한 계정의 이메일이
+     * 동의 요청의 guardianEmail과 일치하는지만 확인하고 처리한다.
+     */
+    public GuardianConsentResponseDto processGuardianConsentByLoggedInGuardian(
+            Long consentId, Long guardianMemberId, GuardianConsentDecisionRequestDto request) {
+        Member guardian = memberRepository.findById(guardianMemberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        GuardianConsent consent = loadPendingConsent(consentId);
+        if (!consent.getGuardianEmail().equalsIgnoreCase(guardian.getEmail())) {
+            throw new CustomException(MemberErrorCode.NOT_CONSENT_GUARDIAN);
+        }
+
+        GuardianConsentStatus status = validateDecisionStatus(request.getStatus());
+        applyDecision(consent, status, guardian);
+
+        return toResponseDto(consent);
+    }
+
+    /**
+     * 이미 승인한 보호자가 동의를 철회한다. 승인(APPROVED) 상태인 건만 철회할 수 있고,
+     * 철회되면 회원이 ACTIVE 상태였을 경우 재동의 전까지 PENDING으로 되돌려 로그인을 다시 막는다.
+     */
+    public GuardianConsentResponseDto withdrawGuardianConsent(Long consentId, Long guardianMemberId) {
+        Member guardian = memberRepository.findById(guardianMemberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        GuardianConsent consent = guardianConsentRepository.findById(consentId)
+                .orElseThrow(() -> new CustomException(MemberErrorCode.GUARDIAN_CONSENT_NOT_FOUND));
+
+        if (!consent.getGuardianEmail().equalsIgnoreCase(guardian.getEmail())) {
+            throw new CustomException(MemberErrorCode.NOT_CONSENT_GUARDIAN);
+        }
+        if (consent.getStatus() != GuardianConsentStatus.APPROVED) {
+            throw new CustomException(MemberErrorCode.GUARDIAN_CONSENT_NOT_APPROVED);
+        }
+
+        consent.withdraw();
+        if (consent.getMember().getStatus() == MemberStatus.ACTIVE) {
+            consent.getMember().revertToPending();
+        }
+
+        return toResponseDto(consent);
+    }
+
+    private GuardianConsent loadPendingConsent(Long consentId) {
+        GuardianConsent consent = guardianConsentRepository.findById(consentId)
+                .orElseThrow(() -> new CustomException(MemberErrorCode.GUARDIAN_CONSENT_NOT_FOUND));
+
+        if (consent.getStatus() != GuardianConsentStatus.REQUESTED) {
+            throw new CustomException(MemberErrorCode.GUARDIAN_CONSENT_ALREADY_PROCESSED);
+        }
+
+        if (consent.getExpiresAt() != null && consent.getExpiresAt().isBefore(LocalDateTime.now())) {
+            consent.expire();
+            throw new CustomException(MemberErrorCode.GUARDIAN_CONSENT_EXPIRED);
+        }
+        return consent;
+    }
+
+    private GuardianConsentStatus validateDecisionStatus(GuardianConsentStatus status) {
+        if (status != GuardianConsentStatus.APPROVED && status != GuardianConsentStatus.REJECTED) {
+            throw new CustomException(CommonErrorCode.BAD_REQUEST);
+        }
+        return status;
+    }
+
+    private void applyDecision(GuardianConsent consent, GuardianConsentStatus status, Member guardian) {
+        if (status == GuardianConsentStatus.APPROVED) {
             consent.approve(guardian);
             if (consent.getMember().getStatus() == MemberStatus.PENDING) {
                 consent.getMember().activate();
@@ -140,8 +221,6 @@ public class MemberService {
         } else {
             consent.reject();
         }
-
-        return toResponseDto(consent);
     }
 
     /**
@@ -201,6 +280,19 @@ public class MemberService {
         return GuardianConsentResponseDto.builder()
                 .consentId(consent.getId())
                 .status(consent.getStatus().name())
+                .expiresAt(consent.getExpiresAt())
+                .build();
+    }
+
+    private GuardianConsentPendingResponseDto toPendingResponseDto(GuardianConsent consent) {
+        Member member = consent.getMember();
+        return GuardianConsentPendingResponseDto.builder()
+                .consentId(consent.getId())
+                .memberId(member.getId())
+                .memberNickname(member.getNickname())
+                .memberEmail(member.getEmail())
+                .memberBirthDate(member.getBirthDate())
+                .requestedAt(consent.getRequestedAt())
                 .expiresAt(consent.getExpiresAt())
                 .build();
     }

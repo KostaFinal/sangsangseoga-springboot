@@ -16,7 +16,9 @@ public enum MemberErrorCode implements ErrorCode {
     GUARDIAN_CONSENT_NOT_FOUND(HttpStatus.NOT_FOUND, "동의 요청 정보를 찾을 수 없습니다."),
     GUARDIAN_CONSENT_ALREADY_PROCESSED(HttpStatus.CONFLICT, "이미 처리된 동의 요청입니다."),
     GUARDIAN_CONSENT_EXPIRED(HttpStatus.UNAUTHORIZED, "만료된 동의 요청입니다. 다시 요청해 주세요."),
-    INVALID_CONSENT_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 동의 인증 정보입니다.");
+    INVALID_CONSENT_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 동의 인증 정보입니다."),
+    NOT_CONSENT_GUARDIAN(HttpStatus.FORBIDDEN, "본인에게 요청된 동의 건이 아닙니다."),
+    GUARDIAN_CONSENT_NOT_APPROVED(HttpStatus.CONFLICT, "동의가 완료된 요청만 철회할 수 있습니다.");
 
     private final HttpStatus status;
     private final String message;
