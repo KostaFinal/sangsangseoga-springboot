@@ -16,5 +16,5 @@ public class BookRecommendItemDto {
     private String author;
     private String genre;
     private String coverImageUrl;
-    private String summary;
+    private String description;
 }

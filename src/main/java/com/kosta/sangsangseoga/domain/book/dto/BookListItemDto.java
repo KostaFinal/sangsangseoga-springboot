@@ -12,11 +12,14 @@ import lombok.NoArgsConstructor;
 public class BookListItemDto {
 
     private Long id;
+    private Long authorId;
     private String title;
     private String author;
     private String genre;
     private String coverImageUrl;
+    private String description;
     private Integer viewCount;
     private Integer likeCount;
     private Integer commentCount;
+    private Boolean isLikedByMe;
 }

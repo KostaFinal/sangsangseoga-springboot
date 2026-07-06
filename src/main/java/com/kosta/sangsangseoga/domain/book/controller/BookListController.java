@@ -27,8 +27,9 @@ public class BookListController {
             @RequestParam(required = false, defaultValue = "latest") String sort,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false, defaultValue = "1") int page,
-            @RequestParam(required = false, defaultValue = "12") int size) throws Exception {
-        BookListResponseDto result = bookService.getBooks(genre, sort, keyword, page, size);
+            @RequestParam(required = false, defaultValue = "12") int size,
+            @AuthenticationPrincipal Long memberId) throws Exception {
+        BookListResponseDto result = bookService.getBooks(genre, sort, keyword, page, size, memberId);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
