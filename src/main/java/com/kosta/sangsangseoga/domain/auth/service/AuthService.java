@@ -22,6 +22,7 @@ import com.kosta.sangsangseoga.global.jwt.ActionTokenProvider;
 import com.kosta.sangsangseoga.global.jwt.JwtTokenProvider;
 import com.kosta.sangsangseoga.global.jwt.RefreshTokenService;
 import com.kosta.sangsangseoga.global.event.AfterCommitTask;
+import com.kosta.sangsangseoga.global.mail.MailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -52,6 +53,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
     private final ApplicationEventPublisher eventPublisher;
+    private final MailService mailService;
 
     /**
      * 회원가입. 이메일/비밀번호/닉네임/생년월일 형식은 SignupRequestDto의 Bean Validation(@Valid)이
@@ -134,6 +136,9 @@ public class AuthService {
         if (member.getStatus() == MemberStatus.DELETED) {
             throw new CustomException(AuthErrorCode.DELETED_MEMBER);
         }
+        if (member.getStatus() == MemberStatus.PENDING) {
+            throw new CustomException(AuthErrorCode.PENDING_GUARDIAN_CONSENT);
+        }
         if (!passwordEncoder.matches(request.getPassword(), member.getPassword())) {
             throw new CustomException(AuthErrorCode.LOGIN_FAILED);
         }
@@ -187,7 +192,6 @@ public class AuthService {
 
     /**
      * 비밀번호 재설정 인증 메일 발송 요청.
-     * 실제 메일 발송(SMTP 등)은 별도 인프라 연동이 필요해 이 메서드는 토큰 발급까지만 담당한다.
      */
     public void requestPasswordReset(PasswordResetRequestDto request) {
         Member member = memberRepository.findByEmail(request.getEmail())
@@ -201,7 +205,7 @@ public class AuthService {
                 Map.of("pwv", passwordFingerprint)
         );
 
-        // TODO: member.getEmail()로 token을 담은 비밀번호 재설정 링크 메일 발송 (메일 인프라 연동 필요)
+        mailService.sendPasswordResetEmail(member.getEmail(), token);
     }
 
     /**

@@ -11,6 +11,7 @@ public enum AuthErrorCode implements ErrorCode {
     LOGIN_FAILED(HttpStatus.BAD_REQUEST, "이메일 또는 비밀번호가 일치하지 않습니다."),
     SUSPENDED_MEMBER(HttpStatus.FORBIDDEN, "이용이 정지된 계정입니다. 고객센터에 문의해 주세요."),
     DELETED_MEMBER(HttpStatus.NOT_FOUND, "존재하지 않거나 탈퇴한 회원 정보입니다."),
+    PENDING_GUARDIAN_CONSENT(HttpStatus.FORBIDDEN, "보호자 동의가 완료되지 않은 계정입니다. 보호자 동의 메일을 확인해 주세요."),
 
     // ===== Logout / Token =====
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "조작되었거나 만료된 토큰입니다."),
