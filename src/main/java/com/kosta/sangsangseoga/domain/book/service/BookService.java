@@ -8,7 +8,7 @@ import com.kosta.sangsangseoga.domain.book.dto.BookRecommendResponseDto;
 public interface BookService {
  
     // 책 목록 조회 (장르 필터/정렬/검색/페이징)
-    BookListResponseDto getBooks(String genre, String sort, String keyword, int page, int size) throws Exception;
+    BookListResponseDto getBooks(String genre, String sort, String keyword, int page, int size, Long memberId) throws Exception;
     
  // 책 상세 조회
     BookDetailDto getBook(Long bookId, Long memberId) throws Exception;

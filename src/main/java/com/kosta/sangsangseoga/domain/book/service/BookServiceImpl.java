@@ -15,7 +15,6 @@ import com.kosta.sangsangseoga.domain.book.exception.BookErrorCode;
 import com.kosta.sangsangseoga.domain.book.repository.BookImageRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookPageRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
-import com.kosta.sangsangseoga.domain.book.service.BookService;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookLikeRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookmarkRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
@@ -54,7 +53,7 @@ public class BookServiceImpl implements BookService {
      * - bookType 필터, 키워드 검색, 정렬, 페이징 지원
      */
     @Override
-    public BookListResponseDto getBooks(String bookType, String sort, String keyword, int page, int size) throws Exception {
+    public BookListResponseDto getBooks(String bookType, String sort, String keyword, int page, int size, Long memberId) throws Exception {
         if (sort != null && !VALID_SORTS.contains(sort)) {
             throw new CustomException(BookErrorCode.INVALID_SORT);
         }
@@ -84,6 +83,8 @@ public class BookServiceImpl implements BookService {
                 ? bookRepository.findBooksByPopular(bookTypeEnum, keywordFilter, pageRequest)
                 : bookRepository.findBooks(bookTypeEnum, keywordFilter, pageRequest);
 
+        Member member = (memberId != null) ? memberRepository.findById(memberId).orElse(null) : null;
+
         List<BookListItemDto> items = new ArrayList<>();
         for (Book book : bookPage.getContent()) {
             String coverImageUrl = bookImageRepository
@@ -91,15 +92,20 @@ public class BookServiceImpl implements BookService {
                     .map(BookImage::getFileUrl)
                     .orElse(null);
 
+            boolean isLikedByMe = member != null && bookLikeRepository.existsByMemberAndBook(member, book);
+
             items.add(BookListItemDto.builder()
                     .id(book.getId())
+                    .authorId(book.getMember().getId())
                     .title(book.getTitle())
-//                    .author(book.getMember().getNickname())
+                    .author(book.getMember().getNickname())
                     .genre(book.getBookType() != null ? book.getBookType().name() : null)
                     .coverImageUrl(coverImageUrl)
+                    .description(book.getDescription())
                     .viewCount(book.getViewCount())
                     .likeCount(book.getLikeCount())
                     .commentCount(book.getCommentCount())
+                    .isLikedByMe(isLikedByMe)
                     .build());
         }
 
@@ -232,7 +238,7 @@ public class BookServiceImpl implements BookService {
 //                    .author(rec.getMember().getNickname())
                     .genre(rec.getBookType() != null ? rec.getBookType().name() : null)
                     .coverImageUrl(coverImageUrl)
-                    .summary(rec.getSummary())
+                    .description(rec.getDescription())
                     .build());
         }
 
