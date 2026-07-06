@@ -16,11 +16,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class UsageService {
 
     private final MemberRepository memberRepository;
+    private final SubscriptionService subscriptionService;
 
-    @Transactional(readOnly = true)
+    /** 조회만 하는 API지만 만료 정리에서 쓰기가 발생할 수 있어 readOnly로 두지 않는다. */
     public UsageResponseDto getUsage(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+        subscriptionService.reconcileIfExpired(member);
 
         UsageResponseDto.UsageResponseDtoBuilder builder = UsageResponseDto.builder()
                 .plan(member.getSubscriptionPlan().name());
@@ -42,10 +44,10 @@ public class UsageService {
      * FREE 회원이 새 책을 만들 수 있는지(=아직 생애 1회 체험을 안 썼는지) 확인한다.
      * 실제 호출 지점은 book 도메인의 "책 생성" API가 만들어질 때 붙는다.
      */
-    @Transactional(readOnly = true)
     public boolean canStartFreeTrial(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+        subscriptionService.reconcileIfExpired(member);
         return !member.getSubscriptionPlan().isPremium()
                 && !Boolean.TRUE.equals(member.getFreeTrialUsed());
     }
@@ -61,6 +63,7 @@ public class UsageService {
     public void consumeText(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+        subscriptionService.reconcileIfExpired(member);
         if (member.getDailyTextRemaining() == null || member.getDailyTextRemaining() <= 0) {
             throw new CustomException(CommonErrorCode.BAD_REQUEST);
         }
@@ -71,6 +74,7 @@ public class UsageService {
     public void consumeImage(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+        subscriptionService.reconcileIfExpired(member);
         if (member.getDailyImageRemaining() == null || member.getDailyImageRemaining() <= 0) {
             throw new CustomException(CommonErrorCode.BAD_REQUEST);
         }
