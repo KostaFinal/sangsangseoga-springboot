@@ -8,6 +8,7 @@ import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.WithdrawRequestDto;
 import com.kosta.sangsangseoga.domain.member.service.MemberService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
+import com.kosta.sangsangseoga.global.security.AuthenticationHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +34,7 @@ public class MemberController {
     @DeleteMapping("/api/members/me")
     public ResponseEntity<ApiResponse<Void>> withdraw(Authentication authentication,
                                                         @RequestBody WithdrawRequestDto request) {
-        Long memberId = (Long) authentication.getPrincipal();
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
         memberService.withdraw(memberId, request);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
@@ -48,7 +49,7 @@ public class MemberController {
     @GetMapping("/api/guardian-consents/pending")
     public ResponseEntity<ApiResponse<List<GuardianConsentPendingResponseDto>>> getPendingGuardianConsents(
             Authentication authentication) {
-        Long memberId = (Long) authentication.getPrincipal();
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
         List<GuardianConsentPendingResponseDto> response = memberService.getPendingGuardianConsents(memberId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -66,7 +67,7 @@ public class MemberController {
             Authentication authentication,
             @PathVariable Long consentId,
             @RequestBody GuardianConsentDecisionRequestDto request) {
-        Long memberId = (Long) authentication.getPrincipal();
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
         GuardianConsentResponseDto response =
                 memberService.processGuardianConsentByLoggedInGuardian(consentId, memberId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -76,7 +77,7 @@ public class MemberController {
     public ResponseEntity<ApiResponse<GuardianConsentResponseDto>> withdrawGuardianConsent(
             Authentication authentication,
             @PathVariable Long consentId) {
-        Long memberId = (Long) authentication.getPrincipal();
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
         GuardianConsentResponseDto response = memberService.withdrawGuardianConsent(consentId, memberId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
