@@ -12,7 +12,9 @@ public class FinishedBookResponseDto {
 	private Long bookId;
 	private String title;
     private String category;
-    
+    private String description;
+    private String coverImageUrl;
+    private LocalDateTime startedAt;
 	private LocalDateTime completedAt;
 	private Integer readingTime;
 }

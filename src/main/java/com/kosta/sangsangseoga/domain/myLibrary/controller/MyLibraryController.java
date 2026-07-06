@@ -31,7 +31,8 @@ public class MyLibraryController {
 	// 읽고 싶은 책 조회
 	@GetMapping("/wishlist")
 	public ResponseEntity<List<WishlistBookResponseDto>> getWishlist(Authentication authentication)  {
-	    Long memberId = (Long) authentication.getPrincipal();
+//	    Long memberId = (Long) authentication.getPrincipal(); 
+		Long memberId = 1L; // 임시 테스트용
 	    return ResponseEntity.ok(myLibraryService.getWishlist(memberId));
 	}
 
@@ -39,7 +40,8 @@ public class MyLibraryController {
 	@DeleteMapping("/wishlist/{bookId}")
 	public ResponseEntity<Void> deleteWishlist(Authentication authentication, @PathVariable Long bookId){
 
-	    Long memberId = (Long) authentication.getPrincipal();
+//	    Long memberId = (Long) authentication.getPrincipal();
+	    Long memberId = 1L;   // 테스트용
 
 	    myLibraryService.deleteWishlist(memberId, bookId);
 	    return ResponseEntity.noContent().build();
@@ -50,7 +52,8 @@ public class MyLibraryController {
 	public ResponseEntity<List<ReadingBookResponseDto>> getReadingList(
 	        Authentication authentication)  {
 
-	    Long memberId = (Long) authentication.getPrincipal();
+//	    Long memberId = (Long) authentication.getPrincipal();
+		Long memberId = 1L;   // 테스트용
 
 	    return ResponseEntity.ok(myLibraryService.getReadingList(memberId));
 	}
@@ -60,7 +63,8 @@ public class MyLibraryController {
 	public ResponseEntity<List<FinishedBookResponseDto>> getFinishedList(
 	        Authentication authentication) {
 
-	    Long memberId = (Long) authentication.getPrincipal();
+//	    Long memberId = (Long) authentication.getPrincipal();
+	    Long memberId = 1L;   // 테스트용
 
 	    return ResponseEntity.ok(myLibraryService.getFinishedList(memberId));
 	}
@@ -72,7 +76,8 @@ public class MyLibraryController {
 	        @PathVariable Long bookId,
 	        @RequestBody ReadingProgressRequestDto requestDto) {
 
-	    Long memberId = (Long) authentication.getPrincipal();
+//	    Long memberId = (Long) authentication.getPrincipal();
+		Long memberId = 1L;   // 테스트용
 
 	    myLibraryService.updateReadingProgress(memberId, bookId, requestDto);
 	    return ResponseEntity.ok().build();
@@ -82,7 +87,9 @@ public class MyLibraryController {
 	@PatchMapping("/reading/{bookId}/complete")
 	public ResponseEntity<Void> completeReading(Authentication authentication, @PathVariable Long bookId){
 
-		Long memberId = (Long) authentication.getPrincipal();
+//		Long memberId = (Long) authentication.getPrincipal();
+		Long memberId = 1L;   // 테스트용
+		
 		myLibraryService.completeReading(memberId, bookId);
 		return ResponseEntity.ok().build();
 	}
@@ -91,7 +98,9 @@ public class MyLibraryController {
 	@PatchMapping("/finished/{bookId}/reread")
 	public ResponseEntity<Void> rereadBook(Authentication authentication, @PathVariable Long bookId){
 
-		Long memberId = (Long) authentication.getPrincipal();
+//		Long memberId = (Long) authentication.getPrincipal();
+		Long memberId = 1L;   // 테스트용
+		
 		myLibraryService.rereadBook(memberId, bookId);
 		return ResponseEntity.ok().build();
 	}
@@ -101,7 +110,8 @@ public class MyLibraryController {
 	public ResponseEntity<ReadingBookResponseDto> getLastReadingPosition(Authentication authentication,
 			@PathVariable Long bookId){
 
-		Long memberId = (Long) authentication.getPrincipal();
+//		Long memberId = (Long) authentication.getPrincipal();
+		Long memberId = 1L;   // 테스트용
 		return ResponseEntity.ok(myLibraryService.getLastReadingPosition(memberId, bookId));
 	}
 
@@ -109,7 +119,8 @@ public class MyLibraryController {
 	@GetMapping("/stats")
 	public ResponseEntity<ReadingStatsResponseDto> getReadingStats(Authentication authentication){
 
-		Long memberId = (Long) authentication.getPrincipal();
+//		Long memberId = (Long) authentication.getPrincipal();
+		Long memberId = 1L;   // 테스트용
 
 		return ResponseEntity.ok(myLibraryService.getReadingStats(memberId));
 	}
