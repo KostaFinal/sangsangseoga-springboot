@@ -64,6 +64,7 @@ INSERT INTO `member` (`id`, `email`, `password`, `birth_date`, `nickname`, `prof
 (58, 'caeweoni@example.net', '$2a$10$bdb5cc75bce2cb67dc3962cc82ab0cf8d3701b22', '1979-08-28', 'usumin1071', 'https://cdn.sangsangseoga.com/profile/58.png', 'Quae est accusamus illum dolore sapiente beatae veniam officia.', 'SUSPENDED', 'USER', 1, 'SMALL', 'FLIP', NULL, 'FREE', NULL, NULL, 9, 4, '2026-06-07', '2024-04-04 04:43:17', '2024-04-12 04:43:17'),
 (59, 'migyeong46@example.com', '$2a$10$ef499db768c35536c72de9f7a7e43bd25e545afe', '1973-08-30', 'hyeonjungim9767', NULL, 'Ullam magni sunt sint eius ratione impedit vel.', 'ACTIVE', 'USER', 0, 'MEDIUM', 'FADE', NULL, 'FREE', NULL, NULL, 4, 9, '2026-06-24', '2025-02-03 22:29:17', '2025-02-06 22:29:17'),
 (60, 'ijaeho@example.net', '$2a$10$83f7e6c5f6eefff8173c3b78e82ef5999bf51d89', '1992-05-30', 'cmun1626', NULL, 'Laborum ex quis fugiat ut sit voluptatem dolores fugit sequi illum et.', 'ACTIVE', 'USER', 1, 'MEDIUM', 'FLIP', NULL, 'FREE', NULL, NULL, 2, 3, '2026-06-11', '2025-05-03 18:39:33', '2025-05-21 18:39:33');
+(61, 'writer@sangsang.com', '$2a$10$nSkeVYLGzVKzq0Bgq7a8uOPHqXbuzY0VihxJ2r873QQ9e/Cvyrgsy', '2004-06-15', '테스트계정', NULL, NULL, 'ACTIVE', 'USER', 0, NULL, NULL, NULL, 'FREE', NULL, NULL, NULL, NULL, NULL, '2026-07-06 10:14:14', '2026-07-06 10:14:14');
 
 -- guardian_consent (6 rows)
 INSERT INTO `guardian_consent` (`id`, `member_id`, `guardian_email`, `guardian_id`, `status`, `requested_at`, `expires_at`, `approved_at`) VALUES
