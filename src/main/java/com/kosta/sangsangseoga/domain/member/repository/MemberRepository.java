@@ -19,9 +19,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     List<Member> findBySubscriptionPlanInAndLastTokenResetDateNot(List<PlanType> subscriptionPlans, LocalDate lastTokenResetDate);
 
-    List<Member> findBySubscriptionPlanInAndSubscriptionAutoRenewTrueAndSubscriptionEndAtBefore(
-            List<PlanType> subscriptionPlans, LocalDateTime subscriptionEndAt);
-
-    List<Member> findBySubscriptionPlanInAndSubscriptionAutoRenewFalseAndSubscriptionEndAtBefore(
+    List<Member> findBySubscriptionPlanInAndSubscriptionEndAtBefore(
             List<PlanType> subscriptionPlans, LocalDateTime subscriptionEndAt);
 }
