@@ -52,10 +52,14 @@ public class SubscriptionService {
         );
     }
 
-    @Transactional(readOnly = true)
+    /**
+     * 조회만 하는 API지만 만료 정리(reconcileIfExpired)에서 쓰기가 발생할 수 있어
+     * readOnly로 두지 않는다.
+     */
     public SubscriptionMeResponseDto getMySubscription(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+        reconcileIfExpired(member);
         return toMeResponseDto(member);
     }
 
@@ -67,6 +71,7 @@ public class SubscriptionService {
     public SubscriptionMeResponseDto subscribe(Long memberId, SubscriptionCreateRequestDto request) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+        reconcileIfExpired(member);
 
         PlanType planType = request.getPlanType();
         if (planType == null || !planType.isPremium()) {
@@ -108,6 +113,7 @@ public class SubscriptionService {
     public SubscriptionMeResponseDto cancelSubscription(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+        reconcileIfExpired(member);
 
         if (!member.getSubscriptionPlan().isPremium()) {
             throw new CustomException(SubscriptionErrorCode.NOT_PREMIUM_MEMBER);
@@ -126,6 +132,7 @@ public class SubscriptionService {
     public SubscriptionMeResponseDto resumeSubscription(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+        reconcileIfExpired(member);
 
         if (!member.getSubscriptionPlan().isPremium()) {
             throw new CustomException(SubscriptionErrorCode.NOT_PREMIUM_MEMBER);
@@ -136,6 +143,41 @@ public class SubscriptionService {
 
         member.resumeAutoRenew();
         return toMeResponseDto(member);
+    }
+
+    /**
+     * subscriptionEndAt이 이미 지났는데 자정 배치(SubscriptionScheduler)가 아직 처리하지 않은 회원을
+     * 그 자리에서 즉시 정리한다. 상태 필드(subscriptionPlan/autoRenew)와 실제 만료일이라는 두 진실
+     * 소스가 배치 주기 사이에 어긋나는 걸 막기 위해, 구독을 조회/변경하는 모든 진입점에서 먼저 호출한다.
+     * 배치와 정확히 같은 규칙(자동갱신 또는 다운그레이드)을 쓴다 — SubscriptionScheduler도 이 메서드를 그대로 쓴다.
+     */
+    public void reconcileIfExpired(Member member) {
+        if (!member.getSubscriptionPlan().isPremium()) {
+            return;
+        }
+        if (member.getSubscriptionEndAt() == null || !member.getSubscriptionEndAt().isBefore(LocalDateTime.now())) {
+            return;
+        }
+
+        if (Boolean.TRUE.equals(member.getSubscriptionAutoRenew())) {
+            PlanType planType = member.getSubscriptionPlan();
+            Payment renewalPayment = Payment.builder()
+                    .member(member)
+                    .amount(SubscriptionPolicy.priceOf(planType))
+                    .status(PaymentStatus.SUCCESS)
+                    .planType(planType)
+                    .pgTransactionId(UUID.randomUUID().toString())
+                    .paidAt(LocalDateTime.now())
+                    .build();
+            paymentRepository.save(renewalPayment);
+
+            LocalDateTime startAt = LocalDateTime.now();
+            LocalDateTime endAt = startAt.plusDays(SubscriptionPolicy.periodDaysOf(planType));
+            member.renewPremiumSubscription(startAt, endAt,
+                    SubscriptionPolicy.PREMIUM_DAILY_TEXT_LIMIT, SubscriptionPolicy.PREMIUM_DAILY_IMAGE_LIMIT);
+        } else {
+            member.downgradeToFree();
+        }
     }
 
     private SubscriptionMeResponseDto toMeResponseDto(Member member) {
