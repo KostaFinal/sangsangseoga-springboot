@@ -73,7 +73,7 @@ INSERT INTO `guardian_consent` (`id`, `member_id`, `guardian_email`, `guardian_i
 (3, 7, 'myeongsuggim@example.net', 20, 'APPROVED', '2024-12-05 17:42:34', '2024-12-12 17:42:34', '2024-12-08 17:42:34'),
 (4, 42, 'jiyeon71@example.net', 47, 'EXPIRED', '2025-06-17 23:30:39', '2025-06-24 23:30:39', NULL),
 (5, 47, 'jgim@example.com', 5, 'APPROVED', '2026-04-28 07:02:32', '2026-05-05 07:02:32', '2026-05-01 07:02:32'),
-(6, 51, 'minjunhwang@example.com', 52, 'APPROVED', ㅇ'2026-03-10 21:11:03', '2026-03-17 21:11:03', '2026-03-14 21:11:03');
+(6, 51, 'minjunhwang@example.com', 52, 'APPROVED', '2026-03-10 21:11:03', '2026-03-17 21:11:03', '2026-03-14 21:11:03');
 
 -- book (150 rows)
 INSERT INTO `book` (`id`, `member_id`, `book_type`, `creation_mode`, `author_age_group`, `reader_age_group`, `title`, `description`, `summary`, `category`, `target_lang`, `style_code`, `cover_image_id`, `confirmed_settings`, `status`, `page_count`, `view_count`, `like_count`, `comment_count`, `created_at`, `updated_at`) VALUES

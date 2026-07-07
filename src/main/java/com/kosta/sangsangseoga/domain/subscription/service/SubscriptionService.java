@@ -102,6 +102,9 @@ public class SubscriptionService {
         }
 
         PlanType requestedPlanType = request.getPlanType();
+        if (requestedPlanType == null || !requestedPlanType.isPremium()) {
+            throw new CustomException(SubscriptionErrorCode.UNSUPPORTED_PLAN_TYPE);
+        }
         if (requestedPlanType != PlanType.PREMIUM_YEARLY) {
             throw new CustomException(SubscriptionErrorCode.DOWNGRADE_NOT_SUPPORTED);
         }
