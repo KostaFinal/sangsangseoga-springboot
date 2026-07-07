@@ -1,5 +1,6 @@
 package com.kosta.sangsangseoga.domain.subscription.service;
 
+import com.kosta.sangsangseoga.domain.subscription.dto.PaymentPageResponseDto;
 import com.kosta.sangsangseoga.domain.subscription.dto.PaymentResponseDto;
 import com.kosta.sangsangseoga.domain.subscription.entity.Payment;
 import com.kosta.sangsangseoga.domain.subscription.repository.PaymentRepository;
@@ -22,9 +23,14 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
 
     @Transactional(readOnly = true)
-    public Page<PaymentResponseDto> getPaymentHistory(Long memberId, Pageable pageable) {
+    public PaymentPageResponseDto getPaymentHistory(Long memberId, Pageable pageable) {
         Page<Payment> payments = paymentRepository.findByMember_IdOrderByCreatedAtDesc(memberId, pageable);
-        return payments.map(this::toResponseDto);
+        return PaymentPageResponseDto.builder()
+                .items(payments.map(this::toResponseDto).getContent())
+                .totalCount(payments.getTotalElements())
+                .page(payments.getNumber())
+                .hasNext(payments.hasNext())
+                .build();
     }
 
     private PaymentResponseDto toResponseDto(Payment payment) {
