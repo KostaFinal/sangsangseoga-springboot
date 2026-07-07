@@ -18,4 +18,8 @@ public class UsageResponseDto {
     // FREE 전용
     private Boolean freeTrialUsed;
     private Integer trialPageLimit;
+    private Integer freeTrialTextCallLimit;
+    private Integer freeTrialTextCallsRemaining;
+    private Integer freeTrialImageCallLimit;
+    private Integer freeTrialImageCallsRemaining;
 }
