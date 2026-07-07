@@ -4,6 +4,7 @@ import com.kosta.sangsangseoga.global.common.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -38,6 +39,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(CommonErrorCode.BAD_REQUEST.getStatus())
                 .body(ApiResponse.error(CommonErrorCode.BAD_REQUEST.name(), message));
+    }
+
+    /**
+     * 지원하지 않는 HTTP 메서드로 요청한 경우 (예: POST 전용 API에 GET으로 접근)
+     * 브라우저 주소창 직접 접근, Swagger "Try it out" 오용 등에서 흔히 발생한다.
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodNotSupportedException(
+            HttpRequestMethodNotSupportedException e) {
+        log.warn("지원하지 않는 HTTP 메서드 요청: {} (지원 메서드: {})", e.getMethod(), e.getSupportedHttpMethods());
+        ErrorCode errorCode = CommonErrorCode.METHOD_NOT_ALLOWED;
+        return ResponseEntity
+                .status(errorCode.getStatus())
+                .body(ApiResponse.error(errorCode.name(), errorCode.getMessage()));
     }
 
     /**
