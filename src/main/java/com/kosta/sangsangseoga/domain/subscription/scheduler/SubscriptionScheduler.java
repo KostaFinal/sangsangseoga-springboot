@@ -23,12 +23,10 @@ public class SubscriptionScheduler {
     private final SubscriptionService subscriptionService;
 
     /**
-     * 매일 00:00 실행. 실제로는 안전망 역할이 크다 — 만료 시점에 회원이 구독 관련 API를 직접
-     * 호출하면 SubscriptionService.reconcileIfExpired가 그 자리에서 이미 처리해주기 때문에,
-     * 이 배치는 그 사이 아무 API도 호출하지 않은 회원들을 하루 단위로 쓸어서 정리하는 역할이다.
-     * 1) 결제 주기가 끝난 PREMIUM(월간/연간) 회원을 자동갱신(Mock 재결제) 또는 FREE 전환으로 정리
-     * 2) PREMIUM 회원의 일일 텍스트/이미지 생성 한도를 재충전
-     * FREE 회원은 일일 한도 개념이 없어(생애 1회 체험 방식) 이 배치 대상이 아니다.
+     * [매일 00:00 실행] 프리미엄 회원 만료 처리 및 일일 한도 재충전 배치
+     * - API 미호출 회원들을 위한 최종 안전망 역할을 합니다. (FREE 회원은 제외)
+     * * 1. 구독 만료 처리: 결제 주기 끝난 프리미엄 회원 자동갱신(Mock) 또는 FREE 전환
+     * 2. 일일 한도 충전: 프리미엄 회원의 텍스트/이미지 생성 한도 초기화
      */
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
