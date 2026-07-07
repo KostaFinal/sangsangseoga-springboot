@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -47,6 +48,18 @@ public class SubscriptionController {
         Long memberId = AuthenticationHelper.resolveMemberId(authentication);
         SubscriptionMeResponseDto response = subscriptionService.subscribe(memberId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
+    }
+
+    /**
+     * 월간 -> 연간 즉시 전환(재결제, 남은 월간 기간 소멸). 연간 -> 월간 다운그레이드는 지원하지 않는다
+     * (해지 예약 후 만료를 기다렸다가 월간으로 재구독하는 기존 흐름을 이용해야 함).
+     */
+    @PatchMapping("/api/subscriptions")
+    public ResponseEntity<ApiResponse<SubscriptionMeResponseDto>> changePlan(
+            Authentication authentication,
+            @RequestBody SubscriptionCreateRequestDto request) {
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
+        return ResponseEntity.ok(ApiResponse.success(subscriptionService.changePlan(memberId, request)));
     }
 
     @PostMapping("/api/subscriptions/cancel")

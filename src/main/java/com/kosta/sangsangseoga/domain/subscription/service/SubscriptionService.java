@@ -83,10 +83,39 @@ public class SubscriptionService {
             throw new CustomException(SubscriptionErrorCode.ALREADY_PREMIUM_MEMBER);
         }
 
+        chargeAndStartPremium(member, planType, request.getPaymentKey());
+        return toMeResponseDto(member);
+    }
+
+    /**
+     * 월간 -> 연간 즉시 전환(재결제, 남은 월간 기간은 소멸). 연간에서 월간으로의 다운그레이드는
+     * 이미 결제한 잔여 기간을 환불 없이 날리게 되어 불공평하므로 이 API로는 지원하지 않는다
+     * (해지 예약 후 만료를 기다렸다가 월간으로 재구독하는 기존 흐름을 이용해야 한다).
+     */
+    public SubscriptionMeResponseDto changePlan(Long memberId, SubscriptionCreateRequestDto request) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+        reconcileIfExpired(member);
+
+        if (!member.getSubscriptionPlan().isPremium()) {
+            throw new CustomException(SubscriptionErrorCode.NOT_PREMIUM_MEMBER);
+        }
+
+        PlanType requestedPlanType = request.getPlanType();
+        if (requestedPlanType != PlanType.PREMIUM_YEARLY) {
+            throw new CustomException(SubscriptionErrorCode.DOWNGRADE_NOT_SUPPORTED);
+        }
+        if (member.getSubscriptionPlan() == PlanType.PREMIUM_YEARLY) {
+            throw new CustomException(SubscriptionErrorCode.ALREADY_YEARLY_PLAN);
+        }
+
+        chargeAndStartPremium(member, PlanType.PREMIUM_YEARLY, request.getPaymentKey());
+        return toMeResponseDto(member);
+    }
+
+    private void chargeAndStartPremium(Member member, PlanType planType, String paymentKey) {
         int price = SubscriptionPolicy.priceOf(planType);
-        String pgTransactionId = request.getPaymentKey() != null
-                ? request.getPaymentKey()
-                : UUID.randomUUID().toString();
+        String pgTransactionId = paymentKey != null ? paymentKey : UUID.randomUUID().toString();
 
         Payment payment = Payment.builder()
                 .member(member)
@@ -102,8 +131,6 @@ public class SubscriptionService {
         LocalDateTime endAt = startAt.plusDays(SubscriptionPolicy.periodDaysOf(planType));
         member.startPremiumSubscription(planType, startAt, endAt,
                 SubscriptionPolicy.PREMIUM_DAILY_TEXT_LIMIT, SubscriptionPolicy.PREMIUM_DAILY_IMAGE_LIMIT);
-
-        return toMeResponseDto(member);
     }
 
     /**
