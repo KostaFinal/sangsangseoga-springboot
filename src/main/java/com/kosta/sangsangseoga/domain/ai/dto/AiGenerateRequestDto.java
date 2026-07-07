@@ -13,7 +13,6 @@ import java.util.Map;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Schema(description = "AI 생성 요청. React 정식 흐름은 bookId/bookType/creationMode/authorAgeGroup/readerAgeGroup/stage(taskType)와 "
         + "context: { draft, extra }만 채워서 보낸다. prompt/storySeed/protagonistName/backgroundPlace/problem/draft/extra(최상위)는 "
         + "Postman 등으로 평평한 구조를 직접 테스트할 때만 쓰는 선택 필드이며, React는 사용하지 않는다.")
