@@ -20,6 +20,7 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.Table;
+import javax.persistence.Version;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -32,6 +33,14 @@ public class Member extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /**
+     * 낙관적 락. 구독 시작/전환/해지/재개/자동갱신처럼 같은 회원 row를 동시에 읽고 쓸 수 있는
+     * 흐름(API 중복 호출, 배치와 API 동시 실행 등)에서 마지막에 커밋되는 쪽만 반영되고
+     * 나머지는 ObjectOptimisticLockingFailureException으로 실패하도록 막아준다.
+     */
+    @Version
+    private Long version;
 
     @Column(nullable = false, unique = true)
     private String email;
