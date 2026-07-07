@@ -205,7 +205,7 @@ public class AuthService {
                 Map.of("pwv", passwordFingerprint)
         );
 
-        mailService.sendPasswordResetEmail(member.getEmail(), token);
+        mailService.sendPasswordResetEmail(member.getEmail(), member.getNickname(), token);
     }
 
     /**

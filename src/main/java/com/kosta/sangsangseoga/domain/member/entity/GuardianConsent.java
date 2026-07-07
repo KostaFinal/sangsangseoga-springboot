@@ -50,6 +50,8 @@ public class GuardianConsent {
 
     private LocalDateTime approvedAt;
 
+    private LocalDateTime withdrawnAt;
+
     @Builder
     private GuardianConsent(Member member, String guardianEmail, Member guardian,
                               GuardianConsentStatus status, LocalDateTime requestedAt, LocalDateTime expiresAt) {
@@ -75,5 +77,10 @@ public class GuardianConsent {
 
     public void expire() {
         this.status = GuardianConsentStatus.EXPIRED;
+    }
+
+    public void withdraw() {
+        this.status = GuardianConsentStatus.WITHDRAWN;
+        this.withdrawnAt = LocalDateTime.now();
     }
 }

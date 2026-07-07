@@ -12,6 +12,7 @@ public enum FriendLibraryErrorCode implements ErrorCode {
     SELF_FOLLOW_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "본인을 팔로우할 수 없습니다."),
     FOLLOW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 팔로우한 작가입니다."),
     FOLLOW_NOT_FOUND(HttpStatus.NOT_FOUND, "팔로우 정보를 찾을 수 없습니다."),
+    INVALID_PARAMETER(HttpStatus.BAD_REQUEST, "sort 값이 올바르지 않습니다 (followers/works 중 하나여야 합니다)"),
 
     // ===== BookLike =====
     LIKE_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 좋아요한 책입니다."),

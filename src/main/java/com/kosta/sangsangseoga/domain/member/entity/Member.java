@@ -108,6 +108,13 @@ public class Member extends BaseEntity {
         this.status = MemberStatus.ACTIVE;
     }
 
+    /**
+     * 보호자가 승인을 철회했을 때, 재동의 전까지 이용을 다시 막기 위해 가입 대기 상태로 되돌린다.
+     */
+    public void revertToPending() {
+        this.status = MemberStatus.PENDING;
+    }
+
     public void withdraw() {
         this.status = MemberStatus.DELETED;
         this.withdrawnAt = LocalDateTime.now();
