@@ -1,10 +1,11 @@
 package com.kosta.sangsangseoga.domain.friendLibrary.service;
- 
+
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.dto.CommentDto;
+import com.kosta.sangsangseoga.domain.friendLibrary.dto.CommentListResponseDto;
 import com.kosta.sangsangseoga.domain.friendLibrary.entity.Comment;
 import com.kosta.sangsangseoga.domain.friendLibrary.exception.FriendLibraryErrorCode;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.CommentRepository;
@@ -12,17 +13,65 @@ import com.kosta.sangsangseoga.domain.friendLibrary.service.CommentService;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
- 
+
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class CommentServiceImpl implements CommentService {
- 
+
     private final CommentRepository commentRepository;
     private final MemberRepository memberRepository;
     private final BookRepository bookRepository;
+
+    /**
+     * 댓글 목록 조회 (cursor 기반 무한스크롤)
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public CommentListResponseDto getComments(Long bookId, String cursor, int size) throws Exception {
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+
+        PageRequest pageRequest = PageRequest.of(0, size + 1);
+        List<Comment> comments;
+
+        if (cursor == null || cursor.isBlank()) {
+            comments = commentRepository.findByBookOrderByCreatedAtDesc(book, pageRequest);
+        } else {
+            Long cursorId = Long.parseLong(cursor);
+            comments = commentRepository.findByBookAndIdLessThanOrderByCreatedAtDesc(book, cursorId, pageRequest);
+        }
+
+        boolean hasNext = comments.size() > size;
+        if (hasNext) comments = comments.subList(0, size);
+
+        List<CommentDto> items = new ArrayList<>();
+        for (Comment c : comments) {
+            items.add(CommentDto.builder()
+                    .id(c.getId())
+                    .bookId(c.getBook().getId())
+                    .memberId(c.getMember() != null ? c.getMember().getId() : null)
+                    .nickname(c.getMember() != null ? c.getMember().getNickname() : "익명의 독자")
+                    .replyToCommentId(c.getReplyTo() != null ? c.getReplyTo().getId() : null)
+                    .content(c.getContent())
+                    .createdAt(c.getCreatedAt())
+                    .build());
+        }
+
+        String nextCursor = hasNext && !items.isEmpty() ? String.valueOf(items.get(items.size() - 1).getId()) : null;
+
+        return CommentListResponseDto.builder()
+                .items(items)
+                .nextCursor(nextCursor)
+                .hasNext(hasNext)
+                .build();
+    }
  
     /**
      * 댓글 작성
@@ -63,7 +112,7 @@ public class CommentServiceImpl implements CommentService {
                 .id(comment.getId())
                 .bookId(bookId)
                 .memberId(memberId)
-//                .nickname(member.getNickname())
+                .nickname(member.getNickname())
                 .content(comment.getContent())
                 .createdAt(comment.getCreatedAt())
                 .replyToCommentId(replyToCommentId)
@@ -103,7 +152,7 @@ public class CommentServiceImpl implements CommentService {
                 .id(reply.getId())
                 .bookId(parentComment.getBook().getId())
                 .memberId(memberId)
-//                .nickname(member.getNickname())
+                .nickname(member.getNickname())
                 .content(reply.getContent())
                 .createdAt(reply.getCreatedAt())
                 .replyToCommentId(commentId)

@@ -5,6 +5,7 @@ import com.kosta.sangsangseoga.domain.friendLibrary.service.AuthorService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,8 +25,9 @@ public class AuthorController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false, defaultValue = "followers") String sort,
             @RequestParam(required = false, defaultValue = "1") int page,
-            @RequestParam(required = false, defaultValue = "20") int size) throws Exception {
-        AuthorListResponseDto result = authorService.getAuthors(keyword, sort, page, size);
+            @RequestParam(required = false, defaultValue = "20") int size,
+            @AuthenticationPrincipal Long memberId) throws Exception {
+        AuthorListResponseDto result = authorService.getAuthors(keyword, sort, page, size, memberId);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 }

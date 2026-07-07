@@ -2,6 +2,7 @@ package com.kosta.sangsangseoga.domain.book.entity;
 
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.book.enums.AgeGroup;
+import com.kosta.sangsangseoga.domain.book.enums.BookStatus;
 import com.kosta.sangsangseoga.domain.book.enums.BookType;
 import com.kosta.sangsangseoga.domain.book.enums.CreationMode;
 import com.kosta.sangsangseoga.global.common.BaseEntity;
@@ -49,9 +50,6 @@ public class Book extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(columnDefinition = "TEXT")
-    private String summary;
-
     private String category;
     private String targetLang;
     private String styleCode;
@@ -62,8 +60,10 @@ public class Book extends BaseEntity {
     @Lob
     private String confirmedSettings;
 
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
     @Column(nullable = false)
-    private String status; // PUBLISHED / HIDDEN
+    private BookStatus status = BookStatus.PUBLISHED;
 
     @Column(nullable = false)
     private Integer pageCount;

@@ -1,6 +1,7 @@
 package com.kosta.sangsangseoga.domain.book.repository;
 
 import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.book.enums.BookStatus;
 import com.kosta.sangsangseoga.domain.book.enums.BookType;
 import org.springframework.data.domain.Page;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
@@ -52,8 +53,8 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     List<Book> findTop5ForWeeklyRanking(Pageable pageable);
 
     // 작가(회원)의 공개된 작품 수 (작가 검색/프로필용)
-    long countByMemberAndStatus(Member member, String status);
+    long countByMemberAndStatus(Member member, BookStatus status);
 
     // 작가(회원)의 대표작품 - 좋아요 가장 많은 공개 작품 1건 (작가 검색/프로필용)
-    Optional<Book> findTopByMemberAndStatusOrderByLikeCountDesc(Member member, String status);
+    Optional<Book> findTopByMemberAndStatusOrderByLikeCountDesc(Member member, BookStatus status);
 }

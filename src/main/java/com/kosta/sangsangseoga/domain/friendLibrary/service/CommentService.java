@@ -1,9 +1,13 @@
 package com.kosta.sangsangseoga.domain.friendLibrary.service;
  
 import com.kosta.sangsangseoga.domain.friendLibrary.dto.CommentDto;
+import com.kosta.sangsangseoga.domain.friendLibrary.dto.CommentListResponseDto;
  
  
 public interface CommentService {
+	
+	 // 댓글 목록 조회 (cursor 기반 무한스크롤)
+    CommentListResponseDto getComments(Long bookId, String cursor, int size) throws Exception;
  
     // 댓글 작성 - 201 응답
     CommentDto addComment(Long memberId, Long bookId, String content, Long replyToCommentId) throws Exception;
