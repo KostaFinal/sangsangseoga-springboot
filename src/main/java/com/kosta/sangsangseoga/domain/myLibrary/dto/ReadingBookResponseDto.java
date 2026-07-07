@@ -15,4 +15,5 @@ public class ReadingBookResponseDto {
 	private Integer currentPage;
 	private Integer progress;
 	private Integer pageCount;
+	private String bookType;
 }

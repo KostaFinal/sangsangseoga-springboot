@@ -15,10 +15,12 @@ import com.kosta.sangsangseoga.domain.myLibrary.dto.AiFeedbackResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.BookReviewRequestDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.BookReviewResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.entity.BookReview;
-import com.kosta.sangsangseoga.domain.myLibrary.repository.BookReviewRepository;
+import com.kosta.sangsangseoga.domain.myLibrary.entity.MyReading;
+import com.kosta.sangsangseoga.domain.myLibrary.enums.ReadingStatus;
 import com.kosta.sangsangseoga.domain.myLibrary.exception.ReadingErrorCode;
-import com.kosta.sangsangseoga.global.exception.CustomException;
+import com.kosta.sangsangseoga.domain.myLibrary.repository.BookReviewRepository;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
+import com.kosta.sangsangseoga.global.exception.CustomException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -38,6 +40,7 @@ public class BookReviewServiceImpl implements BookReviewService {
 		return bookReviewRepository.findByMember_IdOrderByCreatedAtDesc(memberId).stream().map(this::toResponseDto)
 				.collect(Collectors.toList());
 	}
+	
 
 	@Override
 	@Transactional(readOnly = true)

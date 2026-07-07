@@ -19,4 +19,6 @@ public class FinishedBookResponseDto {
 	private Integer readingTime;
 	private String readingStatus;
 	private Integer rereadCount;
+	private String bookType;
+	private Integer pageCount;
 }

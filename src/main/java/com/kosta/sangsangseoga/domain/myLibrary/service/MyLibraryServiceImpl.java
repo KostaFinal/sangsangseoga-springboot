@@ -10,6 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.domain.book.entity.BookImage;
 import com.kosta.sangsangseoga.domain.book.repository.BookImageRepository;
+import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.CategoryStatsDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.FinishedBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingBookResponseDto;
@@ -21,6 +24,7 @@ import com.kosta.sangsangseoga.domain.myLibrary.enums.ReadingStatus;
 import com.kosta.sangsangseoga.domain.myLibrary.exception.ReadingErrorCode;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.BookReviewRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.MyReadingRepository;
+import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 
 import lombok.RequiredArgsConstructor;
@@ -32,6 +36,8 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	private final MyReadingRepository myReadingRepository;
 	private final BookReviewRepository bookReviewRepository;
 	private final BookImageRepository bookImageRepository;
+	private final BookRepository bookRepository;
+	private final MemberRepository memberRepository;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -55,10 +61,41 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	                        .title(book.getTitle())
 	                        .description(book.getDescription())
 	                        .category(book.getCategory())
+	                        .bookType(book.getBookType().name())
 	                        .coverImageUrl(coverImageUrl)
 	                        .build();
 	            })
 	            .collect(Collectors.toList());
+	}
+	
+	@Override
+	public void addWishlist(Long memberId, Long bookId) {
+	    MyReading existing = myReadingRepository
+	            .findByMember_IdAndBook_Id(memberId, bookId)
+	            .orElse(null);
+
+	    if (existing != null) {
+	        existing.setReadingStatus(ReadingStatus.WISH);
+	        return;
+	    }
+
+	    Member member = memberRepository.findById(memberId)
+	            .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+	    Book book = bookRepository.findById(bookId)
+	            .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+
+	    MyReading myReading = MyReading.builder()
+	            .member(member)
+	            .book(book)
+	            .readingStatus(ReadingStatus.WISH)
+	            .currentPage(1)
+	            .progress(0)
+	            .rereadCount(0)
+	            .readingTime(0)
+	            .build();
+
+	    myReadingRepository.save(myReading);
 	}
 
 	@Override
@@ -96,6 +133,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	                        .title(book.getTitle())
 	                        .description(book.getDescription())
 	                        .category(book.getCategory())
+	                        .bookType(book.getBookType().name())
 	                        .coverImageUrl(coverImageUrl)
 	                        .currentPage(myReading.getCurrentPage())
 	                        .progress(myReading.getProgress())
@@ -128,6 +166,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	                        .title(book.getTitle())
 	                        .description(book.getDescription())
 	                        .category(book.getCategory())
+	                        .bookType(book.getBookType().name())
 	                        .coverImageUrl(coverImageUrl)
 	                        .startedAt(myReading.getCreatedAt())
 	                        .completedAt(myReading.getCompletedAt())
@@ -141,15 +180,41 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	}
 
 	@Override
-	public void updateReadingProgress(Long memberId, Long bookId, ReadingProgressRequestDto readingProgressRequestDto){
-		MyReading myReading = myReadingRepository
-		        .findByMember_IdAndBook_Id(memberId, bookId)
-		        .orElseThrow(() -> new CustomException(ReadingErrorCode.MY_READING_NOT_FOUND));
+	public void updateReadingProgress(Long memberId, Long bookId, ReadingProgressRequestDto requestDto) {
 
-		myReading.setReadingStatus(ReadingStatus.READING);
-		myReading.setCurrentPage(readingProgressRequestDto.getCurrentPage());
-		myReading.setProgress(readingProgressRequestDto.getProgress());
-		myReading.setRecentReadAt(LocalDateTime.now());
+	    MyReading myReading = myReadingRepository
+	            .findByMember_IdAndBook_Id(memberId, bookId)
+	            .orElse(null);
+
+	    if (myReading == null) {
+	        Member member = memberRepository.findById(memberId)
+	                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+	        Book book = bookRepository.findById(bookId)
+	                .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+
+	        myReading = MyReading.builder()
+	                .member(member)
+	                .book(book)
+	                .readingStatus(ReadingStatus.READING)
+	                .currentPage(requestDto.getCurrentPage())
+	                .progress(requestDto.getProgress())
+	                .recentReadAt(LocalDateTime.now())
+	                .rereadCount(0)
+	                .readingTime(0)
+	                .build();
+
+	        myReadingRepository.save(myReading);
+	        return;
+	    }
+
+	    if (myReading.getReadingStatus() == ReadingStatus.WISH) {
+	        myReading.setReadingStatus(ReadingStatus.READING);
+	    }
+
+	    myReading.setCurrentPage(requestDto.getCurrentPage());
+	    myReading.setProgress(requestDto.getProgress());
+	    myReading.setRecentReadAt(LocalDateTime.now());
 	}
 
 	@Override
@@ -197,6 +262,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	            .bookId(book.getId())
 	            .title(book.getTitle())
 	            .category(book.getCategory())
+	            .bookType(book.getBookType().name())
 	            .currentPage(myReading.getCurrentPage())
 	            .progress(myReading.getProgress())
 	            .pageCount(book.getPageCount())
@@ -260,5 +326,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	            .finishedBooks(finishedBooks)
 	            .build();
 	}
+
+	
 
 }

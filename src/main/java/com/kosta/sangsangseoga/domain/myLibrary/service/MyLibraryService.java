@@ -13,6 +13,8 @@ public interface MyLibraryService {
 	//읽고 싶은 책 목록 조회
 	List<WishlistBookResponseDto> getWishlist(Long memberId);
 	
+	void addWishlist(Long memberId, Long bookId);
+	
 	//읽고 싶은 책 삭제
 	void deleteWishlist(Long memberId, Long bookId);
 	

@@ -11,6 +11,8 @@ public class WishlistBookResponseDto {
     private String title;
     private String description;
     private String category;
-    private String coverImageUrl; 
+    private String bookType;
+    private String coverImageUrl;
+    private Integer pageCount;
 	
 }
