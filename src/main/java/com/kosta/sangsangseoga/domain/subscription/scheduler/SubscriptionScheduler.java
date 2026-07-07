@@ -40,7 +40,16 @@ public class SubscriptionScheduler {
                 .findBySubscriptionPlanInAndSubscriptionEndAtBefore(
                         SubscriptionPolicy.PREMIUM_PLAN_TYPES, LocalDateTime.now());
 
-        expiredMembers.forEach(subscriptionService::reconcileIfExpired);
+        expiredMembers.forEach(member -> {
+            try {
+                subscriptionService.reconcileIfExpired(member);
+            } catch (Exception e) {
+                // 회원 한 명 처리 중 예외가 나도 나머지 회원 정리는 계속 진행한다.
+                // (단, Payment가 IDENTITY 전략이라 save() 시점에 즉시 INSERT되므로, DB 레벨 예외로
+                // 트랜잭션이 rollback-only로 마킹되는 경우까지는 이 try/catch로 막을 수 없다.)
+                log.error("회원 id={} 구독 정리 중 오류 발생", member.getId(), e);
+            }
+        });
         log.info("만료된 PREMIUM 회원 정리(자동갱신/다운그레이드) 완료 - {}건", expiredMembers.size());
     }
 
