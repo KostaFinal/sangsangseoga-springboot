@@ -17,4 +17,6 @@ public class FinishedBookResponseDto {
     private LocalDateTime startedAt;
 	private LocalDateTime completedAt;
 	private Integer readingTime;
+	private String readingStatus;
+	private Integer rereadCount;
 }

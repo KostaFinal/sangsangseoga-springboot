@@ -78,7 +78,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	@Transactional(readOnly = true)
 	public List<ReadingBookResponseDto> getReadingList(Long memberId)  {
 		return myReadingRepository
-	            .findByMember_IdAndReadingStatus(memberId, ReadingStatus.READING)
+				.findByMember_IdAndReadingStatusOrderByRecentReadAtDesc(memberId, ReadingStatus.READING)
 	            .stream()
 	            .map(myReading -> {
 	                Book book = myReading.getBook();
@@ -109,7 +109,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	@Transactional(readOnly = true)
 	public List<FinishedBookResponseDto> getFinishedList(Long memberId)  {
 		return myReadingRepository
-	            .findByMember_IdAndReadingStatus(memberId, ReadingStatus.COMPLETED)
+				.findByMember_IdAndRereadCountGreaterThanOrderByCompletedAtDesc(memberId,0)
 	            .stream()
 	            .map(myReading -> {
 
@@ -129,9 +129,11 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	                        .description(book.getDescription())
 	                        .category(book.getCategory())
 	                        .coverImageUrl(coverImageUrl)
-	                        .startedAt(myReading.getCreatedAt()) 
+	                        .startedAt(myReading.getCreatedAt())
 	                        .completedAt(myReading.getCompletedAt())
 	                        .readingTime(myReading.getReadingTime())
+	                        .readingStatus(myReading.getReadingStatus().name())
+	                        .rereadCount(myReading.getRereadCount())
 	                        .build();
 
 	            })
@@ -156,10 +158,16 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 		            .findByMember_IdAndBook_Id(memberId, bookId)
 		            .orElseThrow(() -> new CustomException(ReadingErrorCode.MY_READING_NOT_FOUND));
 
-		    myReading.setReadingStatus(ReadingStatus.COMPLETED);
-		    myReading.setProgress(100);
-		    myReading.setCompletedAt(LocalDateTime.now());
-		    myReading.setRecentReadAt(LocalDateTime.now());
+		 LocalDateTime now = LocalDateTime.now();
+
+		 
+		 myReading.setReadingStatus(ReadingStatus.COMPLETED);
+		 myReading.setCurrentPage(myReading.getBook().getPageCount());
+		 myReading.setProgress(100);
+		 myReading.setCompletedAt(now);
+
+		 // 완독 횟수 증가
+		 myReading.setRereadCount(myReading.getRereadCount() + 1);
 		
 	}
 
@@ -172,7 +180,6 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 		    myReading.setReadingStatus(ReadingStatus.READING);
 		    myReading.setCurrentPage(1);
 		    myReading.setProgress(0);
-		    myReading.setCompletedAt(null);
 		    myReading.setRecentReadAt(LocalDateTime.now());
 		
 	}
@@ -206,7 +213,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	            .countByMember_IdAndReadingStatus(memberId, ReadingStatus.READING);
 
 	    Long completedBookCount = myReadingRepository
-	            .countByMember_IdAndReadingStatus(memberId, ReadingStatus.COMPLETED);
+	            .countByMember_IdAndRereadCountGreaterThan(memberId, 0);
 
 	    Long totalReadingTime = myReadingRepository.sumReadingTimeByMemberId(memberId);
 	    
