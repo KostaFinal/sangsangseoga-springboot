@@ -68,4 +68,10 @@ public class Payment {
         this.paidAt = paidAt;
         this.planType = planType;
     }
+
+    public void approve(String pgTransactionId) {
+        this.status = PaymentStatus.SUCCESS;
+        this.pgTransactionId = pgTransactionId;
+        this.paidAt = LocalDateTime.now();
+    }
 }

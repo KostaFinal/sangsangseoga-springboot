@@ -3,6 +3,7 @@ package com.kosta.sangsangseoga.global.exception;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -50,6 +51,19 @@ public class GlobalExceptionHandler {
             HttpRequestMethodNotSupportedException e) {
         log.warn("지원하지 않는 HTTP 메서드 요청: {} (지원 메서드: {})", e.getMethod(), e.getSupportedHttpMethods());
         ErrorCode errorCode = CommonErrorCode.METHOD_NOT_ALLOWED;
+        return ResponseEntity
+                .status(errorCode.getStatus())
+                .body(ApiResponse.error(errorCode.name(), errorCode.getMessage()));
+    }
+
+    /**
+     * 낙관적 락(@Version) 충돌 처리. 같은 회원 row를 동시에 읽고 쓰는 요청(API 중복 호출,
+     * 배치와 API 동시 실행 등)이 겹쳤을 때 나중에 커밋을 시도한 쪽이 여기서 걸린다.
+     */
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLockException(ObjectOptimisticLockingFailureException e) {
+        log.warn("낙관적 락 충돌 발생: {}", e.getMessage());
+        ErrorCode errorCode = CommonErrorCode.CONCURRENT_UPDATE_CONFLICT;
         return ResponseEntity
                 .status(errorCode.getStatus())
                 .body(ApiResponse.error(errorCode.name(), errorCode.getMessage()));
