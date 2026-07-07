@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface BookRepository extends JpaRepository<Book, Long> {
 
@@ -49,4 +50,10 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("SELECT b FROM Book b WHERE b.status = 'PUBLISHED' " +
            "ORDER BY (b.viewCount * 1 + b.likeCount * 3) DESC")
     List<Book> findTop5ForWeeklyRanking(Pageable pageable);
+
+    // 작가(회원)의 공개된 작품 수 (작가 검색/프로필용)
+    long countByMemberAndStatus(Member member, String status);
+
+    // 작가(회원)의 대표작품 - 좋아요 가장 많은 공개 작품 1건 (작가 검색/프로필용)
+    Optional<Book> findTopByMemberAndStatusOrderByLikeCountDesc(Member member, String status);
 }

@@ -12,7 +12,7 @@ public interface BookService {
     //  - 페이지 추가 시 UsageService.canAddFreeTrialPage()로 10페이지 제한 체크(FREE 회원 한정)
 
     // 책 목록 조회 (장르 필터/정렬/검색/페이징)
-    BookListResponseDto getBooks(String genre, String sort, String keyword, int page, int size) throws Exception;
+    BookListResponseDto getBooks(String genre, String sort, String keyword, int page, int size, Long memberId) throws Exception;
     
  // 책 상세 조회
     BookDetailDto getBook(Long bookId, Long memberId) throws Exception;
