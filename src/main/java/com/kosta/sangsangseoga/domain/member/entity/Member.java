@@ -121,6 +121,14 @@ public class Member extends BaseEntity {
     }
 
     /**
+     * 관리자가 신고를 처리하며(AUTHOR_SUSPEND) 작가 계정을 이용정지 시킬 때 호출한다.
+     * 로그인 시 SUSPENDED 상태는 이미 차단되고 있다(AuthService.login).
+     */
+    public void suspend() {
+        this.status = MemberStatus.SUSPENDED;
+    }
+
+    /**
      * 보호자가 승인을 철회했을 때, 재동의 전까지 이용을 다시 막기 위해 가입 대기 상태로 되돌린다.
      */
     public void revertToPending() {
