@@ -14,7 +14,7 @@ public class BookRecommendItemDto {
     private Long id;
     private String title;
     private String author;
-    private String genre;
+    private String bookType;
     private String coverImageUrl;
     private String description;
 }

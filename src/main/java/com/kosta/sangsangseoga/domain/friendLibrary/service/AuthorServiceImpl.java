@@ -1,6 +1,7 @@
 package com.kosta.sangsangseoga.domain.friendLibrary.service;
 
 import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.book.enums.BookStatus;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.dto.AuthorListItemDto;
 import com.kosta.sangsangseoga.domain.friendLibrary.dto.AuthorListResponseDto;
@@ -24,7 +25,7 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class AuthorServiceImpl implements AuthorService {
 
-    private static final String PUBLISHED = "PUBLISHED";
+    private static final BookStatus PUBLISHED = BookStatus.PUBLISHED;
     private static final List<String> VALID_SORTS = Arrays.asList("followers", "works");
 
     private final AuthorRepository authorRepository;
@@ -37,7 +38,7 @@ public class AuthorServiceImpl implements AuthorService {
      * - keyword 미입력 시 전체 회원 목록, sort 기본값 followers
      */
     @Override
-    public AuthorListResponseDto getAuthors(String keyword, String sort, int page, int size) throws Exception {
+    public AuthorListResponseDto getAuthors(String keyword, String sort, int page, int size, Long memberId) throws Exception {
         String sortKey = (sort == null || sort.isBlank()) ? "followers" : sort;
         if (!VALID_SORTS.contains(sortKey)) {
             throw new CustomException(FriendLibraryErrorCode.INVALID_PARAMETER);
@@ -58,14 +59,18 @@ public class AuthorServiceImpl implements AuthorService {
                     .findTopByMemberAndStatusOrderByLikeCountDesc(author, PUBLISHED)
                     .map(Book::getTitle)
                     .orElse(null);
+            boolean isFollowedByMe = memberId != null
+                    && authorFollowRepository.existsByFollower_IdAndAuthor_Id(memberId, author.getId());
 
             items.add(AuthorListItemDto.builder()
                     .id(author.getId())
                     .nickname(author.getNickname())
                     .profileImageUrl(author.getProfileImageUrl())
+                    .introduction(author.getIntroduction())
                     .followerCount(followerCount)
                     .worksCount(worksCount)
                     .representativeWork(representativeWork)
+                    .isFollowedByMe(isFollowedByMe)
                     .build());
         }
 

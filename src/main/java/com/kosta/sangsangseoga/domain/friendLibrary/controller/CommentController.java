@@ -1,6 +1,7 @@
 package com.kosta.sangsangseoga.domain.friendLibrary.controller;
 
 import com.kosta.sangsangseoga.domain.friendLibrary.dto.CommentDto;
+import com.kosta.sangsangseoga.domain.friendLibrary.dto.CommentListResponseDto;
 import com.kosta.sangsangseoga.domain.friendLibrary.dto.CommentUpdateDto;
 import com.kosta.sangsangseoga.domain.friendLibrary.service.CommentService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
@@ -18,6 +19,20 @@ import java.util.Map;
 public class CommentController {
 
     private final CommentService commentService;
+
+    /**
+     * GET /api/books/:id/comments
+     * 댓글 목록 조회 (cursor 기반 무한스크롤) - 200
+     * 인증 불필요
+     */
+    @GetMapping("/api/books/{id}/comments")
+    public ResponseEntity<ApiResponse<CommentListResponseDto>> getComments(
+            @PathVariable Long id,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(required = false, defaultValue = "20") int size) throws Exception {
+        CommentListResponseDto result = commentService.getComments(id, cursor, size);
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
 
     /**
      * POST /api/books/:id/comments

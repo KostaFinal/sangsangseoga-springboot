@@ -17,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -66,6 +68,18 @@ public class ReportServiceImpl implements ReportService {
                 .status(report.getStatus())
                 .createdAt(report.getCreatedAt())
                 .build();
+    }
+
+    /**
+     * 내가 신고한 대상 ID 목록 조회
+     * - 비로그인(reporterId=null)이면 빈 목록
+     */
+    @Override
+    public List<Long> getMyReportedTargetIds(Long reporterId, ReportTargetType targetType) {
+        if (reporterId == null) {
+            return List.of();
+        }
+        return reportRepository.findTargetIdsByReporterIdAndTargetType(reporterId, targetType);
     }
 
     /**

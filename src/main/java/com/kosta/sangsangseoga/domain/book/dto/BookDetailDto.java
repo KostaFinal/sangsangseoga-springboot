@@ -17,7 +17,7 @@ public class BookDetailDto {
     private String title;
     private String author;
     private Long authorId;
-    private String genre;
+    private String bookType;
     private String coverImageUrl;
     private String description;
     private Integer pageCount;

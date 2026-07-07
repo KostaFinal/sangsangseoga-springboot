@@ -15,7 +15,7 @@ public class BookListItemDto {
     private Long authorId;
     private String title;
     private String author;
-    private String genre;
+    private String bookType;
     private String coverImageUrl;
     private String description;
     private Integer viewCount;
