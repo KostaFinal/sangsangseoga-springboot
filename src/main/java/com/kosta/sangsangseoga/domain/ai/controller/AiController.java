@@ -5,6 +5,8 @@ import com.kosta.sangsangseoga.domain.ai.dto.AiGenerateResponseDto;
 import com.kosta.sangsangseoga.domain.ai.service.AiService;
 import com.kosta.sangsangseoga.domain.ai.service.AiStreamService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +19,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
+@Tag(name = "AI 생성", description = "동화/소설 등 도서 창작 과정에서 쓰이는 단일 AI 생성 엔드포인트(설정 수집/선택지/페이지 계획/본문 작성/본문 수정 등)")
 public class AiController {
 
     private final AiService aiService;
@@ -27,6 +30,11 @@ public class AiController {
      * bookType/stage 에 따라 설정, 본문, 이미지 프롬프트 생성을 모두 처리하는 단일 엔드포인트.
      * Spring Boot가 Python FastAPI(/api/ai/generate)로 요청을 위임하고 결과를 그대로 반환한다.
      */
+    @Operation(
+            summary = "AI 콘텐츠 생성",
+            description = "stage(taskType)에 따라 설정 수집, 선택지 생성, 페이지 계획, 본문 작성/수정, 장면 계획, 삽화 프롬프트 생성을 "
+                    + "모두 처리하는 단일 엔드포인트다. Spring은 요청을 Python FastAPI(/api/ai/generate)로 위임하고 응답을 그대로 감싸서 반환한다."
+    )
     @PostMapping("/generate")
     public ResponseEntity<ApiResponse<AiGenerateResponseDto>> generate(
             @RequestBody AiGenerateRequestDto request) {
@@ -39,6 +47,11 @@ public class AiController {
      * Python FastAPI(/api/ai/generate/stream)의 SSE 응답을 그대로 중계한다.
      * SSE는 JSON 엔벌로프 관례(ApiResponse)의 의도적 예외이다 — 이벤트 스트림이라 감쌀 수 없다.
      */
+    @Operation(
+            summary = "AI 콘텐츠 생성(스트리밍)",
+            description = "/generate와 동일한 요청 바디를 받아 Python의 SSE 스트림(event: delta/done/error)을 그대로 중계한다. "
+                    + "스트리밍 텍스트는 로딩 중 미리보기 용도일 뿐이며, 최종 결과는 항상 /generate(non-stream) 호출로 확정한다."
+    )
     @PostMapping(value = "/generate/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter generateStream(@RequestBody AiGenerateRequestDto request) {
         return aiStreamService.streamGenerate(request);
