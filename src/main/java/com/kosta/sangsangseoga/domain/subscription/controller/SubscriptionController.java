@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -44,7 +45,7 @@ public class SubscriptionController {
     @PostMapping("/api/subscriptions")
     public ResponseEntity<ApiResponse<SubscriptionMeResponseDto>> subscribe(
             Authentication authentication,
-            @RequestBody SubscriptionCreateRequestDto request) {
+            @Valid @RequestBody SubscriptionCreateRequestDto request) {
         Long memberId = AuthenticationHelper.resolveMemberId(authentication);
         SubscriptionMeResponseDto response = subscriptionService.subscribe(memberId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
@@ -57,7 +58,7 @@ public class SubscriptionController {
     @PatchMapping("/api/subscriptions")
     public ResponseEntity<ApiResponse<SubscriptionMeResponseDto>> changePlan(
             Authentication authentication,
-            @RequestBody SubscriptionCreateRequestDto request) {
+            @Valid @RequestBody SubscriptionCreateRequestDto request) {
         Long memberId = AuthenticationHelper.resolveMemberId(authentication);
         return ResponseEntity.ok(ApiResponse.success(subscriptionService.changePlan(memberId, request)));
     }
