@@ -19,4 +19,7 @@ public class ReadingStatsResponseDto {
 
 	private List<CategoryStatsDto> categoryStats;
 	private List<FinishedBookResponseDto> finishedBooks;
+	
+	private Long writtenBookCount;
+	private List<CategoryStatsDto> writtenCategoryStats;
 }

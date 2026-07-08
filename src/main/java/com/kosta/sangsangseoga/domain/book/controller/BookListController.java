@@ -33,6 +33,18 @@ public class BookListController {
         BookListResponseDto result = bookService.getBooks(bookType, sort, keyword, page, size, memberId);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
+    
+    /**
+     * GET /api/books/my
+     * 내가 쓴 책 목록 조회 - 200
+     */
+    @GetMapping("/my")
+    public ResponseEntity<ApiResponse<BookListResponseDto>> getMyBooks(
+            @AuthenticationPrincipal Long memberId) throws Exception {
+
+        BookListResponseDto result = bookService.getMyBooks(memberId);
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
 
     /**
      * GET /api/books/:id
