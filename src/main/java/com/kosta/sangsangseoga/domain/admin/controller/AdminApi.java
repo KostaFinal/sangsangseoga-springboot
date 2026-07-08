@@ -41,7 +41,8 @@ public interface AdminApi {
      */
     @Operation(summary = "신고 처리", description = "actionType에 따라 책 숨김/ 댓글 삭제/ 작가 정지/ 신고 기각을 수행한다.")
     @ApiErrorCodes({"REPORT_NOT_FOUND", "REPORT_ALREADY_PROCESSED",
-            "ACTION_TARGET_TYPE_MISMATCH", "ACTION_TARGET_NOT_FOUND", "MEMBER_NOT_FOUND"})
+            "ACTION_TARGET_TYPE_MISMATCH", "ACTION_TARGET_NOT_FOUND", "MEMBER_NOT_FOUND",
+            "ALREADY_DELETED_MEMBER"})
     @PatchMapping("/reports/{reportId}")
     public ResponseEntity<ApiResponse<AdminReportProcessResponseDto>> processReport(
         Authentication authentication,
@@ -66,7 +67,8 @@ public interface AdminApi {
      * 회원 상태 강제 변경(정지/정상복원/탈퇴 처리).
      */
     @Operation(summary = "회원 상태 변경", description = "관리자가 회원을 정지(SUSPENDED)/정상복원(ACTIVE)/탈퇴(DELETED) 처리한다.")
-    @ApiErrorCodes({"MEMBER_NOT_FOUND", "INVALID_TARGET_STATUS", "ALREADY_DELETED_MEMBER"})
+    @ApiErrorCodes({"MEMBER_NOT_FOUND", "INVALID_TARGET_STATUS", "ALREADY_DELETED_MEMBER",
+            "ADMIN_STATUS_CHANGE_NOT_ALLOWED"})
     @PatchMapping("/members/{memberId}/status")
     ResponseEntity<ApiResponse<AdminMemberStatusChangeResponseDto>> changeMemberStatus(
         Authentication authentication,

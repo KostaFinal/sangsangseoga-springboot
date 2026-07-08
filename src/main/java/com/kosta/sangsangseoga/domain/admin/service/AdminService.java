@@ -22,6 +22,7 @@ import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportTargetType;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.CommentRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.ReportRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.member.enums.MemberRole;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.domain.member.exception.MemberErrorCode;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
@@ -122,6 +123,10 @@ public class AdminService {
                 requireTargetType(report, ReportTargetType.AUTHOR);
                 Member author = memberRepository.findById(report.getTargetId())
                         .orElseThrow(() -> new CustomException(AdminErrorCode.ACTION_TARGET_NOT_FOUND));
+                // 이미 탈퇴(DELETED)한 회원은 정지로 되돌리지 않는다 (탈퇴 시 정리된 데이터와 상태가 어긋나는 것 방지)
+                if (author.getStatus() == MemberStatus.DELETED) {
+                    throw new CustomException(MemberErrorCode.ALREADY_DELETED_MEMBER);
+                }
                 author.suspend();
                 break;
             case REPORT_REJECT:
@@ -164,6 +169,12 @@ public class AdminService {
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        // 관리자 본인 포함, 어떤 관리자 계정도 이 API로는 상태를 바꿀 수 없다.
+        // (자기 자신 정지, 마지막 남은 관리자 계정 잠금 등의 사고를 원천 차단)
+        if (member.getRole() == MemberRole.ADMIN) {
+            throw new CustomException(AdminErrorCode.ADMIN_STATUS_CHANGE_NOT_ALLOWED);
+        }
 
         MemberStatus targetStatus = request.getStatus();
         if (targetStatus != MemberStatus.ACTIVE
