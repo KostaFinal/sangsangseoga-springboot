@@ -1,13 +1,20 @@
 package com.kosta.sangsangseoga.domain.book.repository;
 
-import com.kosta.sangsangseoga.domain.book.entity.Book;
-import com.kosta.sangsangseoga.domain.book.entity.BookImage;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Optional;
+import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.book.entity.BookImage;
 
 public interface BookImageRepository extends JpaRepository<BookImage, Long> {
 
     // 책의 표지 이미지 조회 (imageType = COVER)
     Optional<BookImage> findByBookAndImageTypeAndDeletedAtIsNull(Book book, BookImage.ImageType imageType);
+    
+    List<BookImage> findByBookInAndImageTypeAndDeletedAtIsNull(
+            List<Book> books,
+            BookImage.ImageType imageType
+    );
 }

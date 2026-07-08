@@ -46,7 +46,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 	List<Book> findTop5ForWeeklyRanking(Pageable pageable);
 
 	// 내가 작성한 공개 책 목록 조회
-	List<Book> findByMember_IdAndStatus(Long memberId, String status);
+	List<Book> findByMember_IdAndStatus(Long memberId, BookStatus status);
 
     // 작가(회원)의 공개된 작품 수 (작가 검색/프로필용)
     long countByMemberAndStatus(Member member, BookStatus status);

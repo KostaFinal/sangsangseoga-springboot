@@ -21,7 +21,7 @@ import com.kosta.sangsangseoga.domain.myLibrary.service.BookReviewService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/bookshelves/reviews")
+@RequestMapping("/api/bookshelves/reviews")
 @RequiredArgsConstructor
 public class BookReviewController {
 	private final BookReviewService bookReviewService;

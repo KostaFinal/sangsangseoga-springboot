@@ -1,5 +1,15 @@
 package com.kosta.sangsangseoga.domain.book.service;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.kosta.sangsangseoga.domain.book.dto.BookContentsResponseDto;
 import com.kosta.sangsangseoga.domain.book.dto.BookDetailDto;
 import com.kosta.sangsangseoga.domain.book.dto.BookListItemDto;
@@ -10,6 +20,7 @@ import com.kosta.sangsangseoga.domain.book.dto.BookRecommendResponseDto;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.domain.book.entity.BookImage;
 import com.kosta.sangsangseoga.domain.book.entity.BookPage;
+import com.kosta.sangsangseoga.domain.book.enums.BookStatus;
 import com.kosta.sangsangseoga.domain.book.enums.BookType;
 import com.kosta.sangsangseoga.domain.book.exception.BookErrorCode;
 import com.kosta.sangsangseoga.domain.book.repository.BookImageRepository;
@@ -22,16 +33,8 @@ import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.MyReadingRepository;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -253,7 +256,7 @@ public class BookServiceImpl implements BookService {
             throw new CustomException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        List<Book> myBooks = bookRepository.findByMember_IdAndStatus(memberId, "PUBLISHED");
+        List<Book> myBooks = bookRepository.findByMember_IdAndStatus(memberId, BookStatus.PUBLISHED);
 
         List<BookListItemDto> items = new ArrayList<>();
 
