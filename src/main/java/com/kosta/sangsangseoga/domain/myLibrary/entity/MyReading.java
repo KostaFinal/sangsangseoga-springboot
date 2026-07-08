@@ -22,12 +22,16 @@ import com.kosta.sangsangseoga.domain.myLibrary.enums.ReadingStatus;
 import com.kosta.sangsangseoga.global.common.BaseEntity;
 
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 
 @Entity
 @Data
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "my_reading")
 public class MyReading extends BaseEntity {
@@ -61,6 +65,10 @@ public class MyReading extends BaseEntity {
     
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
+    
+    @Column(name = "reread_count", nullable = false)
+    @Builder.Default
+    private Integer rereadCount = 0;
     
     @Column(name = "read_date")
     private LocalDate readDate;

@@ -10,11 +10,13 @@ import com.kosta.sangsangseoga.domain.book.dto.BookRecommendResponseDto;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.domain.book.entity.BookImage;
 import com.kosta.sangsangseoga.domain.book.entity.BookPage;
+import com.kosta.sangsangseoga.domain.book.entity.BookTag;
 import com.kosta.sangsangseoga.domain.book.enums.BookType;
 import com.kosta.sangsangseoga.domain.book.exception.BookErrorCode;
 import com.kosta.sangsangseoga.domain.book.repository.BookImageRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookPageRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
+import com.kosta.sangsangseoga.domain.book.repository.BookTagRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookLikeRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookmarkRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
@@ -32,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +48,7 @@ public class BookServiceImpl implements BookService {
     private final MemberRepository memberRepository;
     private final BookPageRepository bookPageRepository;
     private final MyReadingRepository myReadingRepository;
+    private final BookTagRepository bookTagRepository;
 
     private static final List<String> VALID_SORTS = Arrays.asList("latest", "popular", "likes");
 
@@ -146,6 +150,10 @@ public class BookServiceImpl implements BookService {
             }
         }
 
+        List<String> tags = bookTagRepository.findByBook(book).stream()
+                .map(BookTag::getTagName)
+                .collect(Collectors.toList());
+
         return BookDetailDto.builder()
                 .id(book.getId())
                 .title(book.getTitle())
@@ -160,6 +168,7 @@ public class BookServiceImpl implements BookService {
                 .commentCount(book.getCommentCount())
                 .isLikedByMe(isLikedByMe)
                 .isBookmarkedByMe(isBookmarkedByMe)
+                .tags(tags)
                 .createdAt(book.getCreatedAt())
                 .build();
     }
@@ -239,11 +248,53 @@ public class BookServiceImpl implements BookService {
                     .bookType(rec.getBookType() != null ? rec.getBookType().name() : null)
                     .coverImageUrl(coverImageUrl)
                     .description(rec.getDescription())
+                    .viewCount(rec.getViewCount())
+                    .likeCount(rec.getLikeCount())
+                    .commentCount(rec.getCommentCount())
                     .build());
         }
 
         return BookRecommendResponseDto.builder()
                 .items(items)
+                .build();
+    }
+    
+    @Override
+    public BookListResponseDto getMyBooks(Long memberId) throws Exception {
+        if (memberId == null) {
+            throw new CustomException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        List<Book> myBooks = bookRepository.findByMember_IdAndStatus(memberId, "PUBLISHED");
+
+        List<BookListItemDto> items = new ArrayList<>();
+
+        for (Book book : myBooks) {
+            String coverImageUrl = bookImageRepository
+                    .findByBookAndImageTypeAndDeletedAtIsNull(book, BookImage.ImageType.COVER)
+                    .map(BookImage::getFileUrl)
+                    .orElse(null);
+
+            items.add(BookListItemDto.builder()
+                    .id(book.getId())
+                    .authorId(book.getMember().getId())
+                    .title(book.getTitle())
+                    .author(book.getMember().getNickname())
+                    .bookType(book.getBookType() != null ? book.getBookType().name() : null)
+                    .coverImageUrl(coverImageUrl)
+                    .description(book.getDescription())
+                    .viewCount(book.getViewCount())
+                    .likeCount(book.getLikeCount())
+                    .commentCount(book.getCommentCount())
+                    .isLikedByMe(false)
+                    .build());
+        }
+
+        return BookListResponseDto.builder()
+                .items(items)
+                .totalCount((long) items.size())
+                .page(1)
+                .hasNext(false)
                 .build();
     }
 }

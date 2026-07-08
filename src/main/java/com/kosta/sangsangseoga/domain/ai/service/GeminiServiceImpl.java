@@ -16,7 +16,10 @@ import org.springframework.web.client.RestTemplate;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class GeminiServiceImpl implements GeminiService {
 
 	@Value("${gemini.api.key}")
@@ -25,7 +28,7 @@ public class GeminiServiceImpl implements GeminiService {
 	@Value("${gemini.api.url}")
 	private String apiUrl;
 
-	private final RestTemplate restTemplate = new RestTemplate();
+	private final RestTemplate restTemplate;
 
 	@Override
 	public String generateReviewFeedback(String bookTitle, String reviewContent)  {

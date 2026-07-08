@@ -5,6 +5,7 @@ import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentDecisionRequestD
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentPendingResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentResponseDto;
+import com.kosta.sangsangseoga.domain.member.dto.ViewerPreferenceDto;
 import com.kosta.sangsangseoga.domain.member.dto.WithdrawRequestDto;
 import com.kosta.sangsangseoga.domain.member.service.MemberService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
@@ -27,6 +28,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MemberController {
     // /api/members/me, /api/members/exists, /api/members/password/reset-request, /api/guardian-consents
+    // /api/members/me/viewer-preference
     // 서로 다른 최상위 경로라 클래스 레벨 매핑 없이 메서드별로 전체 경로를 지정합니다.
 
     private final MemberService memberService;
@@ -37,6 +39,22 @@ public class MemberController {
         Long memberId = AuthenticationHelper.resolveMemberId(authentication);
         memberService.withdraw(memberId, request);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @GetMapping("/api/members/me/viewer-preference")
+    public ResponseEntity<ApiResponse<ViewerPreferenceDto>> getViewerPreference(Authentication authentication) {
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
+        ViewerPreferenceDto response = memberService.getViewerPreference(memberId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PatchMapping("/api/members/me/viewer-preference")
+    public ResponseEntity<ApiResponse<ViewerPreferenceDto>> updateViewerPreference(
+            Authentication authentication,
+            @RequestBody ViewerPreferenceDto request) {
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
+        ViewerPreferenceDto response = memberService.updateViewerPreference(memberId, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/api/guardian-consents")

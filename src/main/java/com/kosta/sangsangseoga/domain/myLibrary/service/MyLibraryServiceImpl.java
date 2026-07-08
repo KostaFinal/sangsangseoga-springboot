@@ -8,6 +8,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.book.entity.BookImage;
+import com.kosta.sangsangseoga.domain.book.repository.BookImageRepository;
+import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.CategoryStatsDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.FinishedBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingBookResponseDto;
@@ -19,6 +24,7 @@ import com.kosta.sangsangseoga.domain.myLibrary.enums.ReadingStatus;
 import com.kosta.sangsangseoga.domain.myLibrary.exception.ReadingErrorCode;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.BookReviewRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.MyReadingRepository;
+import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 
 import lombok.RequiredArgsConstructor;
@@ -29,24 +35,67 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	
 	private final MyReadingRepository myReadingRepository;
 	private final BookReviewRepository bookReviewRepository;
+	private final BookImageRepository bookImageRepository;
+	private final BookRepository bookRepository;
+	private final MemberRepository memberRepository;
 
 	@Override
 	@Transactional(readOnly = true)
 	public List<WishlistBookResponseDto> getWishlist(Long memberId){
 		return myReadingRepository
-				.findByMember_IdAndReadingStatus(memberId, ReadingStatus.WISH)
-				.stream()
-				.map(myReading -> {
-					Book book = myReading.getBook();
-					
-					return WishlistBookResponseDto.builder()
-							.bookId(book.getId())
-							.title(book.getTitle())
-							.description(book.getDescription())
-							.category(book.getCategory())
-							.build();
-				})
-				.collect(Collectors.toList());
+	            .findByMember_IdAndReadingStatus(memberId, ReadingStatus.WISH)
+	            .stream()
+	            .map(myReading -> {
+	                Book book = myReading.getBook();
+
+	                String coverImageUrl = bookImageRepository
+	                        .findByBookAndImageTypeAndDeletedAtIsNull(
+	                                book,
+	                                BookImage.ImageType.COVER
+	                        )
+	                        .map(BookImage::getFileUrl)
+	                        .orElse(null);
+
+	                return WishlistBookResponseDto.builder()
+	                        .bookId(book.getId())
+	                        .title(book.getTitle())
+	                        .description(book.getDescription())
+	                        .category(book.getCategory())
+	                        .bookType(book.getBookType().name())
+	                        .coverImageUrl(coverImageUrl)
+	                        .build();
+	            })
+	            .collect(Collectors.toList());
+	}
+	
+	@Override
+	public void addWishlist(Long memberId, Long bookId) {
+	    MyReading existing = myReadingRepository
+	            .findByMember_IdAndBook_Id(memberId, bookId)
+	            .orElse(null);
+
+	    if (existing != null) {
+	        existing.setReadingStatus(ReadingStatus.WISH);
+	        return;
+	    }
+
+	    Member member = memberRepository.findById(memberId)
+	            .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+	    Book book = bookRepository.findById(bookId)
+	            .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+
+	    MyReading myReading = MyReading.builder()
+	            .member(member)
+	            .book(book)
+	            .readingStatus(ReadingStatus.WISH)
+	            .currentPage(1)
+	            .progress(0)
+	            .rereadCount(0)
+	            .readingTime(0)
+	            .build();
+
+	    myReadingRepository.save(myReading);
 	}
 
 	@Override
@@ -66,52 +115,106 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	@Transactional(readOnly = true)
 	public List<ReadingBookResponseDto> getReadingList(Long memberId)  {
 		return myReadingRepository
-				.findByMember_IdAndReadingStatus(memberId, ReadingStatus.READING)
-				.stream()
-				.map(myReading -> {
-					Book book = myReading.getBook();
-					
-					return ReadingBookResponseDto.builder()
-							.bookId(book.getId())
-							.title(book.getTitle())
-							.category(book.getCategory())
-							.currentPage(myReading.getCurrentPage())
-							.progress(myReading.getProgress())
-							.pageCount(book.getPageCount())
-							.build();
-				})
-				.collect(Collectors.toList());
+				.findByMember_IdAndReadingStatusOrderByRecentReadAtDesc(memberId, ReadingStatus.READING)
+	            .stream()
+	            .map(myReading -> {
+	                Book book = myReading.getBook();
+
+	                String coverImageUrl = bookImageRepository
+	                        .findByBookAndImageTypeAndDeletedAtIsNull(
+	                                book,
+	                                BookImage.ImageType.COVER
+	                        )
+	                        .map(BookImage::getFileUrl)
+	                        .orElse(null);
+
+	                return ReadingBookResponseDto.builder()
+	                        .bookId(book.getId())
+	                        .title(book.getTitle())
+	                        .description(book.getDescription())
+	                        .category(book.getCategory())
+	                        .bookType(book.getBookType().name())
+	                        .coverImageUrl(coverImageUrl)
+	                        .currentPage(myReading.getCurrentPage())
+	                        .progress(myReading.getProgress())
+	                        .pageCount(book.getPageCount())
+	                        .build();
+	            })
+	            .collect(Collectors.toList());
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public List<FinishedBookResponseDto> getFinishedList(Long memberId)  {
-		 return myReadingRepository
-		            .findByMember_IdAndReadingStatus(memberId, ReadingStatus.COMPLETED)
-		            .stream()
-		            .map(myReading -> {
-		                Book book = myReading.getBook();
+		return myReadingRepository
+				.findByMember_IdAndRereadCountGreaterThanOrderByCompletedAtDesc(memberId,0)
+	            .stream()
+	            .map(myReading -> {
 
-		                return FinishedBookResponseDto.builder()
-		                        .bookId(book.getId())
-		                        .title(book.getTitle())
-		                        .category(book.getCategory())
-		                        .completedAt(myReading.getCompletedAt())
-		                        .readingTime(myReading.getReadingTime())
-		                        .build();
-		            })
-		            .collect(Collectors.toList());
+	                Book book = myReading.getBook();
+
+	                String coverImageUrl = bookImageRepository
+	                        .findByBookAndImageTypeAndDeletedAtIsNull(
+	                                book,
+	                                BookImage.ImageType.COVER
+	                        )
+	                        .map(BookImage::getFileUrl)
+	                        .orElse(null);
+
+	                return FinishedBookResponseDto.builder()
+	                        .bookId(book.getId())
+	                        .title(book.getTitle())
+	                        .description(book.getDescription())
+	                        .category(book.getCategory())
+	                        .bookType(book.getBookType().name())
+	                        .coverImageUrl(coverImageUrl)
+	                        .startedAt(myReading.getCreatedAt())
+	                        .completedAt(myReading.getCompletedAt())
+	                        .readingTime(myReading.getReadingTime())
+	                        .readingStatus(myReading.getReadingStatus().name())
+	                        .rereadCount(myReading.getRereadCount())
+	                        .build();
+
+	            })
+	            .collect(Collectors.toList());
 	}
 
 	@Override
-	public void updateReadingProgress(Long memberId, Long bookId, ReadingProgressRequestDto readingProgressRequestDto){
-		 MyReading myReading = myReadingRepository
-		            .findByMember_IdAndBook_IdAndReadingStatus(memberId, bookId, ReadingStatus.READING)
-		            .orElseThrow(() -> new CustomException(ReadingErrorCode.MY_READING_NOT_FOUND));
+	public void updateReadingProgress(Long memberId, Long bookId, ReadingProgressRequestDto requestDto) {
 
-		    myReading.setCurrentPage(readingProgressRequestDto.getCurrentPage());
-		    myReading.setProgress(readingProgressRequestDto.getProgress());
-		    myReading.setRecentReadAt(LocalDateTime.now());
+	    MyReading myReading = myReadingRepository
+	            .findByMember_IdAndBook_Id(memberId, bookId)
+	            .orElse(null);
+
+	    if (myReading == null) {
+	        Member member = memberRepository.findById(memberId)
+	                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+	        Book book = bookRepository.findById(bookId)
+	                .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+
+	        myReading = MyReading.builder()
+	                .member(member)
+	                .book(book)
+	                .readingStatus(ReadingStatus.READING)
+	                .currentPage(requestDto.getCurrentPage())
+	                .progress(requestDto.getProgress())
+	                .recentReadAt(LocalDateTime.now())
+	                .rereadCount(0)
+	                .readingTime(0)
+	                .build();
+
+	        myReadingRepository.save(myReading);
+	        return;
+	    }
+
+	    if (myReading.getReadingStatus() == ReadingStatus.WISH) {
+	        myReading.setReadingStatus(ReadingStatus.READING);
+	    }
+
+	    myReading.setCurrentPage(requestDto.getCurrentPage());
+	    myReading.setProgress(requestDto.getProgress());
+	    myReading.setRecentReadAt(LocalDateTime.now());
 	}
 
 	@Override
@@ -120,10 +223,16 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 		            .findByMember_IdAndBook_Id(memberId, bookId)
 		            .orElseThrow(() -> new CustomException(ReadingErrorCode.MY_READING_NOT_FOUND));
 
-		    myReading.setReadingStatus(ReadingStatus.COMPLETED);
-		    myReading.setProgress(100);
-		    myReading.setCompletedAt(LocalDateTime.now());
-		    myReading.setRecentReadAt(LocalDateTime.now());
+		 LocalDateTime now = LocalDateTime.now();
+
+		 
+		 myReading.setReadingStatus(ReadingStatus.COMPLETED);
+		 myReading.setCurrentPage(myReading.getBook().getPageCount());
+		 myReading.setProgress(100);
+		 myReading.setCompletedAt(now);
+
+		 // 완독 횟수 증가
+		 myReading.setRereadCount(myReading.getRereadCount() + 1);
 		
 	}
 
@@ -136,7 +245,6 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 		    myReading.setReadingStatus(ReadingStatus.READING);
 		    myReading.setCurrentPage(1);
 		    myReading.setProgress(0);
-		    myReading.setCompletedAt(null);
 		    myReading.setRecentReadAt(LocalDateTime.now());
 		
 	}
@@ -154,9 +262,11 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	            .bookId(book.getId())
 	            .title(book.getTitle())
 	            .category(book.getCategory())
+	            .bookType(book.getBookType().name())
 	            .currentPage(myReading.getCurrentPage())
 	            .progress(myReading.getProgress())
 	            .pageCount(book.getPageCount())
+	            .readingStatus(myReading.getReadingStatus().name())
 	            .build();
 	}
 
@@ -170,13 +280,14 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	            .countByMember_IdAndReadingStatus(memberId, ReadingStatus.READING);
 
 	    Long completedBookCount = myReadingRepository
-	            .countByMember_IdAndReadingStatus(memberId, ReadingStatus.COMPLETED);
+	            .countByMember_IdAndRereadCountGreaterThan(memberId, 0);
 
 	    Long totalReadingTime = myReadingRepository.sumReadingTimeByMemberId(memberId);
 	    
 	    Long reportCount = bookReviewRepository.countByMember_Id(memberId);
 
-	    List<MyReading> myReadings = myReadingRepository.findByMember_Id(memberId);
+	    List<MyReading> myReadings =
+	            myReadingRepository.findByMember_IdAndRereadCountGreaterThan(memberId, 0);
 
 	    Long totalPagesRead = myReadings.stream()
 	            .mapToLong(myReading -> {
@@ -203,6 +314,25 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	                    .count(entry.getValue())
 	                    .build())
 	            .collect(Collectors.toList());
+	    
+	    List<Book> writtenBooks = bookRepository.findByMember_IdAndStatus(memberId, "PUBLISHED");
+
+	    Long writtenBookCount = (long) writtenBooks.size();
+
+	    List<CategoryStatsDto> writtenCategoryStats = writtenBooks.stream()
+	            .collect(Collectors.groupingBy(
+	                    book -> book.getCategory() != null
+	                            ? book.getCategory()
+	                            : "기타",
+	                    Collectors.counting()
+	            ))
+	            .entrySet()
+	            .stream()
+	            .map(entry -> CategoryStatsDto.builder()
+	                    .category(entry.getKey())
+	                    .count(entry.getValue())
+	                    .build())
+	            .collect(Collectors.toList());
 
 	    List<FinishedBookResponseDto> finishedBooks = getFinishedList(memberId);
 
@@ -215,7 +345,11 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	            .completedBookCount(completedBookCount)
 	            .categoryStats(categoryStats)
 	            .finishedBooks(finishedBooks)
+	            .writtenBookCount(writtenBookCount)
+	            .writtenCategoryStats(writtenCategoryStats)
 	            .build();
 	}
+
+	
 
 }

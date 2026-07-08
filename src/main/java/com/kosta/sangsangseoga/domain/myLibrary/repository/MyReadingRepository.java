@@ -55,4 +55,15 @@ public interface MyReadingRepository extends JpaRepository<MyReading, Long> {
            "GROUP BY mr.book " +
            "ORDER BY COUNT(mr.member) DESC")
     List<Book> findCollaborativeRecommendations(@Param("book") Book book, Pageable pageable);
+    
+    List<MyReading> findByMember_IdAndRereadCountGreaterThanOrderByCompletedAtDesc(
+            Long memberId,
+            Integer rereadCount
+    );
+    
+    // 개수만 반환
+    Long countByMember_IdAndRereadCountGreaterThan(Long memberId, Integer rereadCount);
+    
+    // 목록 반환
+    List<MyReading> findByMember_IdAndRereadCountGreaterThan(Long memberId, Integer rereadCount);
 }
