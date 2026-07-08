@@ -1,9 +1,13 @@
 package com.kosta.sangsangseoga.domain.admin.controller;
 
+import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberListResponseDto;
+import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberStatusChangeRequestDto;
+import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberStatusChangeResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportListItemDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessRequestDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessResponseDto;
+import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
 import com.kosta.sangsangseoga.global.config.ApiErrorCodes;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,4 +47,29 @@ public interface AdminApi {
         Authentication authentication,
         @PathVariable Long reportId,
         @Valid @RequestBody AdminReportProcessRequestDto request);
+
+    /**
+     * GET /api/admin/members
+     * 전체 회원 목록 조회 (상태 필터 + 이메일/닉네임 검색어 + 페이지네이션).
+     */
+    @Operation(summary = "전체 회원 목록 조회", description = "상태 필터(ACTIVE/PENDING/SUSPENDED/DELETED)와 검색어로 전체 회원을 페이지네이션 조회한다.")
+    @ApiErrorCodes({}) // 인증(401) / 인가(403) 실패 외 도메인 에러 없음
+    @GetMapping("/members")
+    ResponseEntity<ApiResponse<AdminMemberListResponseDto>> getMembers(
+        @RequestParam(required = false) MemberStatus status,
+        @RequestParam(required = false) String keyword,
+        @RequestParam(defaultValue = "0") @Min(0) int page,
+        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size);
+
+    /**
+     * PATCH /api/admin/members/{memberId}/status
+     * 회원 상태 강제 변경(정지/정상복원/탈퇴 처리).
+     */
+    @Operation(summary = "회원 상태 변경", description = "관리자가 회원을 정지(SUSPENDED)/정상복원(ACTIVE)/탈퇴(DELETED) 처리한다.")
+    @ApiErrorCodes({"MEMBER_NOT_FOUND", "INVALID_TARGET_STATUS", "ALREADY_DELETED_MEMBER"})
+    @PatchMapping("/members/{memberId}/status")
+    ResponseEntity<ApiResponse<AdminMemberStatusChangeResponseDto>> changeMemberStatus(
+        Authentication authentication,
+        @PathVariable Long memberId,
+        @Valid @RequestBody AdminMemberStatusChangeRequestDto request);
 }

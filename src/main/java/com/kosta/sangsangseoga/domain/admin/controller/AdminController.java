@@ -1,9 +1,13 @@
 package com.kosta.sangsangseoga.domain.admin.controller;
 
+import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberListResponseDto;
+import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberStatusChangeRequestDto;
+import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberStatusChangeResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessRequestDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessResponseDto;
 import com.kosta.sangsangseoga.domain.admin.service.AdminService;
+import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
 import com.kosta.sangsangseoga.global.security.AuthenticationHelper;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +46,24 @@ public class AdminController implements AdminApi {
 
         Long adminMemberId = AuthenticationHelper.resolveMemberId(authentication);
         AdminReportProcessResponseDto response = adminService.processReport(adminMemberId, reportId, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<AdminMemberListResponseDto>> getMembers(
+            MemberStatus status, String keyword, int page, int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(ApiResponse.success(adminService.getMembers(status, keyword, pageable)));
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<AdminMemberStatusChangeResponseDto>> changeMemberStatus(
+            Authentication authentication, Long memberId, AdminMemberStatusChangeRequestDto request) {
+
+        Long adminMemberId = AuthenticationHelper.resolveMemberId(authentication);
+        AdminMemberStatusChangeResponseDto response =
+                adminService.changeMemberStatus(adminMemberId, memberId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

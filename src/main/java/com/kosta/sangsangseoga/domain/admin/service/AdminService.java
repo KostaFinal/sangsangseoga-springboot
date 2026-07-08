@@ -1,5 +1,9 @@
 package com.kosta.sangsangseoga.domain.admin.service;
 
+import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberListItemDto;
+import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberListResponseDto;
+import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberStatusChangeRequestDto;
+import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberStatusChangeResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportListItemDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessRequestDto;
@@ -18,10 +22,13 @@ import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportTargetType;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.CommentRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.ReportRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
+import com.kosta.sangsangseoga.domain.member.exception.MemberErrorCode;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -31,6 +38,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -126,6 +134,81 @@ public class AdminService {
         if (report.getTargetType() != expected) {
             throw new CustomException(AdminErrorCode.ACTION_TARGET_TYPE_MISMATCH);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public AdminMemberListResponseDto getMembers(MemberStatus status, String keyword, Pageable pageable) {
+        String normalizedKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        Page<Member> members = memberRepository.searchForAdmin(status, normalizedKeyword, pageable);
+
+        List<AdminMemberListItemDto> items = members.getContent().stream()
+                .map(this::toMemberListItemDto)
+                .collect(Collectors.toList());
+
+        return AdminMemberListResponseDto.builder()
+                .items(items)
+                .totalCount(members.getTotalElements())
+                .page(members.getNumber())
+                .hasNext(members.hasNext())
+                .build();
+    }
+
+    /**
+     * 회원 상태 강제 변경(정지/정상복원/탈퇴). PENDING(보호자 동의 대기)으로의 전환은 회원가입 흐름 전용이라 허용하지 않는다.
+     * 이미 탈퇴 처리된 회원은 상태를 되돌리지 않는다(탈퇴는 되돌릴 수 없는 처리로 취급).
+     */
+    public AdminMemberStatusChangeResponseDto changeMemberStatus(Long adminMemberId, Long memberId,
+                                                                  AdminMemberStatusChangeRequestDto request) {
+        memberRepository.findById(adminMemberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        MemberStatus targetStatus = request.getStatus();
+        if (targetStatus != MemberStatus.ACTIVE
+                && targetStatus != MemberStatus.SUSPENDED
+                && targetStatus != MemberStatus.DELETED) {
+            throw new CustomException(AdminErrorCode.INVALID_TARGET_STATUS);
+        }
+        if (member.getStatus() == MemberStatus.DELETED) {
+            throw new CustomException(MemberErrorCode.ALREADY_DELETED_MEMBER);
+        }
+
+        switch (targetStatus) {
+            case ACTIVE:
+                member.activate();
+                break;
+            case SUSPENDED:
+                member.suspend();
+                break;
+            case DELETED:
+                member.cancelSubscriptionImmediately();
+                member.withdraw();
+                break;
+        }
+
+        log.info("관리자[{}]가 회원[{}] 상태를 {}로 변경. 사유: {}",
+                adminMemberId, memberId, targetStatus, request.getReason());
+
+        return AdminMemberStatusChangeResponseDto.builder()
+                .memberId(member.getId())
+                .status(member.getStatus())
+                .processedAt(LocalDateTime.now())
+                .build();
+    }
+
+    private AdminMemberListItemDto toMemberListItemDto(Member member) {
+        return AdminMemberListItemDto.builder()
+                .memberId(member.getId())
+                .email(member.getEmail())
+                .nickname(member.getNickname())
+                .status(member.getStatus())
+                .role(member.getRole())
+                .subscriptionPlan(member.getSubscriptionPlan())
+                .createdAt(member.getCreatedAt())
+                .withdrawnAt(member.getWithdrawnAt())
+                .build();
     }
 
     private AdminReportListItemDto toListItemDto(Report report) {
