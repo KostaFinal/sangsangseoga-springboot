@@ -74,7 +74,7 @@ public class AiController {
     )
     @PostMapping("/generate-image")
     public ResponseEntity<ApiResponse<AiGenerateImageResponseDto>> generateImage(
-            @RequestBody AiGenerateImageRequestDto request) {
+            `@Valid` `@RequestBody` AiGenerateImageRequestDto request) {
         AiGenerateImageResponseDto result = aiImageService.generateImage(request);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
