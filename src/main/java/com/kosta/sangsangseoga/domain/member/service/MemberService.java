@@ -2,6 +2,7 @@ package com.kosta.sangsangseoga.domain.member.service;
 
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.book.enums.BookStatus;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.AuthorFollowRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookmarkRepository;
@@ -271,7 +272,7 @@ public class MemberService {
             }
             bookRepository.deleteAll(books);
         } else {
-            books.forEach(book -> book.setStatus("HIDDEN"));
+            books.forEach(book -> book.setStatus(BookStatus.HIDDEN));
             bookRepository.saveAll(books);
         }
     }

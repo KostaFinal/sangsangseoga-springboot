@@ -14,7 +14,9 @@ public class AuthorListItemDto {
     private Long id;
     private String nickname;
     private String profileImageUrl;
+    private String introduction;
     private Long followerCount;
     private Long worksCount;
     private String representativeWork;
+    private Boolean isFollowedByMe;
 }

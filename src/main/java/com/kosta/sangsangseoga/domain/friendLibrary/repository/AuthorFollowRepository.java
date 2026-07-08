@@ -9,6 +9,8 @@ import java.util.Optional;
 public interface AuthorFollowRepository extends JpaRepository<AuthorFollow, Long> {
  
     boolean existsByFollowerAndAuthor(Member follower, Member author);
+
+    boolean existsByFollower_IdAndAuthor_Id(Long followerId, Long authorId);
  
     Optional<AuthorFollow> findByFollowerAndAuthor(Member follower, Member author);
  

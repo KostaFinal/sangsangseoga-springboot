@@ -1,6 +1,7 @@
 package com.kosta.sangsangseoga.domain.book.repository;
 
 import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.book.enums.BookStatus;
 import com.kosta.sangsangseoga.domain.book.enums.BookType;
 import org.springframework.data.domain.Page;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
@@ -44,12 +45,13 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 	@Query("SELECT b FROM Book b WHERE b.status = 'PUBLISHED' " + "ORDER BY (b.viewCount * 1 + b.likeCount * 3) DESC")
 	List<Book> findTop5ForWeeklyRanking(Pageable pageable);
 
-	// 작가(회원)의 공개된 작품 수 (작가 검색/프로필용)
-	long countByMemberAndStatus(Member member, String status);
-
-	// 작가(회원)의 대표작품 - 좋아요 가장 많은 공개 작품 1건 (작가 검색/프로필용)
-	Optional<Book> findTopByMemberAndStatusOrderByLikeCountDesc(Member member, String status);
-
 	// 내가 작성한 공개 책 목록 조회
 	List<Book> findByMember_IdAndStatus(Long memberId, String status);
+
+    // 작가(회원)의 공개된 작품 수 (작가 검색/프로필용)
+    long countByMemberAndStatus(Member member, BookStatus status);
+
+    // 작가(회원)의 대표작품 - 좋아요 가장 많은 공개 작품 1건 (작가 검색/프로필용)
+    Optional<Book> findTopByMemberAndStatusOrderByLikeCountDesc(Member member, BookStatus status);
+
 }

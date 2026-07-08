@@ -3,6 +3,7 @@ package com.kosta.sangsangseoga.domain.book.controller;
 import com.kosta.sangsangseoga.domain.book.dto.BookContentsResponseDto;
 import com.kosta.sangsangseoga.domain.book.dto.BookDetailDto;
 import com.kosta.sangsangseoga.domain.book.dto.BookListResponseDto;
+import com.kosta.sangsangseoga.domain.book.dto.BookRecommendResponseDto;
 import com.kosta.sangsangseoga.domain.book.service.BookService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,13 +24,13 @@ public class BookListController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<BookListResponseDto>> getBooks(
-            @RequestParam(required = false) String genre,
+            @RequestParam(required = false) String bookType,
             @RequestParam(required = false, defaultValue = "latest") String sort,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false, defaultValue = "1") int page,
             @RequestParam(required = false, defaultValue = "12") int size,
             @AuthenticationPrincipal Long memberId) throws Exception {
-        BookListResponseDto result = bookService.getBooks(genre, sort, keyword, page, size, memberId);
+        BookListResponseDto result = bookService.getBooks(bookType, sort, keyword, page, size, memberId);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
     
@@ -65,6 +66,18 @@ public class BookListController {
     public ResponseEntity<ApiResponse<BookContentsResponseDto>> getContents(
             @PathVariable Long id) throws Exception {
         BookContentsResponseDto result = bookService.getContents(id);
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    /**
+     * GET /api/books/:id/recommendations
+     * 함께 읽기 좋은 작품 추천 - 200
+     */
+    @GetMapping("/{id}/recommendations")
+    public ResponseEntity<ApiResponse<BookRecommendResponseDto>> getRecommendations(
+            @PathVariable Long id,
+            @RequestParam(required = false, defaultValue = "4") int size) throws Exception {
+        BookRecommendResponseDto result = bookService.getRecommendations(id, size);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 }

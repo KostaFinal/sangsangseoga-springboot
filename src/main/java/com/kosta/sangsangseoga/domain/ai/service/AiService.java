@@ -24,6 +24,16 @@ import java.util.Map;
 @Transactional
 public class AiService {
 
+	// TODO: UsageService(subscription 도메인) 연동 필요.
+	//  - generate()는 stage(taskType)와 무관하게 전부 텍스트 응답(이미지 프롬프트 포함)만 만들어서 반환하므로
+	//    CallType.TEXT 사용량으로 취급하면 된다. 실제 이미지 파일 생성(Replicate 등, CallType.IMAGE)은
+	//    아직 별도 연동이 없어 보인다.
+	//  - 지금은 이 메서드가 회원 정보(Authentication/memberId)를 안 받는 구조라 사용량 체크가 불가능하다.
+	//    호출자(컨트롤러)에서 memberId를 받아 넘기도록 시그니처를 바꿔야 아래를 걸 수 있다.
+	//    - PREMIUM 회원: 호출 전 UsageService.consumeText(memberId)(잔여량 0이면 예외)
+	//    - FREE 회원: UsageService.canGenerateFreeTrialText(memberId) 체크
+	//      (책 페이지 수 제한과는 별개로, 재생성 남용으로 원가만 나가는 것을 막는 생애 호출 횟수 상한)
+
 	@Value("${fastapi.base-url}")
 	private String fastApiBaseUrl;
 
