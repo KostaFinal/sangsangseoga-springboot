@@ -1,7 +1,10 @@
 package com.kosta.sangsangseoga.domain.ai.controller;
 
+import com.kosta.sangsangseoga.domain.ai.dto.AiGenerateImageRequestDto;
+import com.kosta.sangsangseoga.domain.ai.dto.AiGenerateImageResponseDto;
 import com.kosta.sangsangseoga.domain.ai.dto.AiGenerateRequestDto;
 import com.kosta.sangsangseoga.domain.ai.dto.AiGenerateResponseDto;
+import com.kosta.sangsangseoga.domain.ai.service.AiImageService;
 import com.kosta.sangsangseoga.domain.ai.service.AiService;
 import com.kosta.sangsangseoga.domain.ai.service.AiStreamService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import javax.validation.Valid;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -24,6 +28,7 @@ public class AiController {
 
     private final AiService aiService;
     private final AiStreamService aiStreamService;
+    private final AiImageService aiImageService;
 
     /**
      * POST /api/ai/generate
@@ -55,5 +60,23 @@ public class AiController {
     @PostMapping(value = "/generate/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter generateStream(@RequestBody AiGenerateRequestDto request) {
         return aiStreamService.streamGenerate(request);
+    }
+
+    /**
+     * POST /api/ai/generate-image
+     * promptText/imageType/pageNo/style/aspectRatio를 받아 Python(FastAPI) /api/ai/generate-image로
+     * 위임하고, Replicate가 생성한 imageUrl을 그대로 반환한다.
+     * book_image 저장, S3 업로드 등은 이번 범위에 포함하지 않는다(AiImageService의 TODO 참고).
+     */
+    @Operation(
+            summary = "AI 이미지 생성",
+            description = "promptText/imageType/pageNo/style/aspectRatio를 받아 Python(FastAPI)의 Replicate 호출을 위임하고 "
+                    + "imageUrl을 그대로 반환한다. book_image 저장/S3 업로드는 이번 범위에 포함하지 않는다."
+    )
+    @PostMapping("/generate-image")
+    public ResponseEntity<ApiResponse<AiGenerateImageResponseDto>> generateImage(
+           @Valid @RequestBody AiGenerateImageRequestDto request) {
+        AiGenerateImageResponseDto result = aiImageService.generateImage(request);
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 }
