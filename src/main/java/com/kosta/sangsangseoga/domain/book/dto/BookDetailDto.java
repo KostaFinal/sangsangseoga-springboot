@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -27,4 +28,5 @@ public class BookDetailDto {
     private Boolean isLikedByMe;
     private Boolean isBookmarkedByMe;
     private LocalDateTime createdAt;
+    private List<String> tags;
 }
