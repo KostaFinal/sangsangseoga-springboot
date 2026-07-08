@@ -45,6 +45,9 @@ dependencies {
 
 	// Swagger (springdoc-openapi) - Spring Boot 2.7 호환 버전
 	implementation 'org.springdoc:springdoc-openapi-ui:1.7.0'
+
+    // Swagger 에러코드 어노테이션 검증 테스트용 (런타임엔 포함 안 됨)
+    testImplementation 'org.reflections:reflections:0.10.2'
 }
 
 def querydslSrcDir = 'src/main/generated'
