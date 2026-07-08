@@ -246,4 +246,43 @@ public class BookServiceImpl implements BookService {
                 .items(items)
                 .build();
     }
+    
+    @Override
+    public BookListResponseDto getMyBooks(Long memberId) throws Exception {
+        if (memberId == null) {
+            throw new CustomException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        List<Book> myBooks = bookRepository.findByMember_IdAndStatus(memberId, "PUBLISHED");
+
+        List<BookListItemDto> items = new ArrayList<>();
+
+        for (Book book : myBooks) {
+            String coverImageUrl = bookImageRepository
+                    .findByBookAndImageTypeAndDeletedAtIsNull(book, BookImage.ImageType.COVER)
+                    .map(BookImage::getFileUrl)
+                    .orElse(null);
+
+            items.add(BookListItemDto.builder()
+                    .id(book.getId())
+                    .authorId(book.getMember().getId())
+                    .title(book.getTitle())
+                    .author(book.getMember().getNickname())
+                    .genre(book.getBookType() != null ? book.getBookType().name() : null)
+                    .coverImageUrl(coverImageUrl)
+                    .description(book.getDescription())
+                    .viewCount(book.getViewCount())
+                    .likeCount(book.getLikeCount())
+                    .commentCount(book.getCommentCount())
+                    .isLikedByMe(false)
+                    .build());
+        }
+
+        return BookListResponseDto.builder()
+                .items(items)
+                .totalCount((long) items.size())
+                .page(1)
+                .hasNext(false)
+                .build();
+    }
 }

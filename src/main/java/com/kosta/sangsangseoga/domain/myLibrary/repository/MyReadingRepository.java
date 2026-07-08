@@ -61,5 +61,9 @@ public interface MyReadingRepository extends JpaRepository<MyReading, Long> {
             Integer rereadCount
     );
     
+    // 개수만 반환
     Long countByMember_IdAndRereadCountGreaterThan(Long memberId, Integer rereadCount);
+    
+    // 목록 반환
+    List<MyReading> findByMember_IdAndRereadCountGreaterThan(Long memberId, Integer rereadCount);
 }

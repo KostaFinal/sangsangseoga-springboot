@@ -18,4 +18,7 @@ public interface BookService {
     
  // 함께 읽기 좋은 작품 추천
     BookRecommendResponseDto getRecommendations(Long bookId, int size) throws Exception;
+    
+ // 내가 쓴 책 목록 조회
+    BookListResponseDto getMyBooks(Long memberId) throws Exception;
 }

@@ -285,7 +285,8 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	    
 	    Long reportCount = bookReviewRepository.countByMember_Id(memberId);
 
-	    List<MyReading> myReadings = myReadingRepository.findByMember_Id(memberId);
+	    List<MyReading> myReadings =
+	            myReadingRepository.findByMember_IdAndRereadCountGreaterThan(memberId, 0);
 
 	    Long totalPagesRead = myReadings.stream()
 	            .mapToLong(myReading -> {
@@ -312,6 +313,25 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	                    .count(entry.getValue())
 	                    .build())
 	            .collect(Collectors.toList());
+	    
+	    List<Book> writtenBooks = bookRepository.findByMember_IdAndStatus(memberId, "PUBLISHED");
+
+	    Long writtenBookCount = (long) writtenBooks.size();
+
+	    List<CategoryStatsDto> writtenCategoryStats = writtenBooks.stream()
+	            .collect(Collectors.groupingBy(
+	                    book -> book.getCategory() != null
+	                            ? book.getCategory()
+	                            : "기타",
+	                    Collectors.counting()
+	            ))
+	            .entrySet()
+	            .stream()
+	            .map(entry -> CategoryStatsDto.builder()
+	                    .category(entry.getKey())
+	                    .count(entry.getValue())
+	                    .build())
+	            .collect(Collectors.toList());
 
 	    List<FinishedBookResponseDto> finishedBooks = getFinishedList(memberId);
 
@@ -324,6 +344,8 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	            .completedBookCount(completedBookCount)
 	            .categoryStats(categoryStats)
 	            .finishedBooks(finishedBooks)
+	            .writtenBookCount(writtenBookCount)
+	            .writtenCategoryStats(writtenCategoryStats)
 	            .build();
 	}
 
