@@ -39,7 +39,7 @@ public class AiService {
 
 	private final AiPythonRequestMapper aiPythonRequestMapper;
 
-	private final RestTemplate restTemplate = new RestTemplate();
+	private final RestTemplate restTemplate;
 
 	public AiGenerateResponseDto generate(AiGenerateRequestDto request) {
 		String url = fastApiBaseUrl + "/api/ai/generate";
