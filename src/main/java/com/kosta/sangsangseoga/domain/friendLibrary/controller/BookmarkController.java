@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -44,5 +45,17 @@ public class BookmarkController {
             @AuthenticationPrincipal Long memberId) throws Exception {
         bookmarkService.removeBookmark(memberId, id, pageNo);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * GET /api/books/:id/bookmarks
+     * 내가 북마크한 페이지 번호 목록 조회
+     */
+    @GetMapping("/{id}/bookmarks")
+    public ResponseEntity<ApiResponse<List<Integer>>> getBookmarkedPages(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Long memberId) throws Exception {
+        List<Integer> pages = bookmarkService.getBookmarkedPages(memberId, id);
+        return ResponseEntity.ok(ApiResponse.success(pages));
     }
 }
