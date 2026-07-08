@@ -21,7 +21,7 @@ public class ErrorCodeRegistry {
     public ErrorCode resolve(String codeName) {
         ErrorCode errorCode = registry.get(codeName);
         if (errorCode == null) {
-            throw new IllegalStateException("등록되지 않은 에러코드: " + errorCode
+            throw new IllegalStateException("등록되지 않은 에러코드: " + codeName
             + " (오타이거나, 새 ErrorCod enum이 " + BASE_PACKAGE + " 하위에 있는지 확인)");
         }
         return errorCode;
