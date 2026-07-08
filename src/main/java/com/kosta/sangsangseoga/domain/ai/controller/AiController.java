@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import javax.validation.Valid;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -74,7 +75,7 @@ public class AiController {
     )
     @PostMapping("/generate-image")
     public ResponseEntity<ApiResponse<AiGenerateImageResponseDto>> generateImage(
-            `@Valid` `@RequestBody` AiGenerateImageRequestDto request) {
+           @Valid @RequestBody AiGenerateImageRequestDto request) {
         AiGenerateImageResponseDto result = aiImageService.generateImage(request);
         return ResponseEntity.ok(ApiResponse.success(result));
     }

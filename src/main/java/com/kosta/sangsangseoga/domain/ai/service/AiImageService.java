@@ -24,7 +24,7 @@ public class AiImageService {
     @Value("${fastapi.base-url}")
     private String fastApiBaseUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     public AiGenerateImageResponseDto generateImage(AiGenerateImageRequestDto request) {
         String url = fastApiBaseUrl + "/api/ai/generate-image";
