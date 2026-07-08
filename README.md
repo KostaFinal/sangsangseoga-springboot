@@ -210,6 +210,26 @@ http://localhost:8080/swagger-ui/index.html
 
 로그인(`/api/auth/login`)으로 발급받은 Access Token을 우측 상단 `Authorize` 버튼에 입력하면, 이후 모든 요청에 `Authorization: Bearer <token>` 헤더가 자동으로 포함됩니다.
 
+## 테스트 계정
+
+`/api/admin/**` 등 ADMIN 권한이 필요한 API를 테스트할 때 쓸 수 있는 계정입니다.
+
+| 이메일 | 비밀번호 | 권한 | 비고 |
+|---|---|---|---|
+| `admintest2@example.com` | `test1234!` | ADMIN | 관리자 API 테스트용 계정. 로컬 DB를 리셋(전체 삭제 후 재시딩)해도 회원가입 API로 다시 만들 수 있음(아래 참고) |
+
+**주의**: `dummy_data.sql`로 시딩되는 회원(예: id 1~3번 등)은 더미 데이터 생성기가 만든 임의의 비밀번호 해시라 **실제 로그인 가능한 평문 비밀번호가 없습니다.** ADMIN 권한 테스트가 필요하면 아래처럼 새 계정을 만들어서 쓰세요.
+
+```bash
+# 1) 회원가입
+curl -X POST http://localhost:8080/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{"email":"내이메일@example.com","password":"원하는비번","nickname":"닉네임","birthDate":"1990-01-01"}'
+
+# 2) DB에서 방금 만든 계정을 ADMIN으로 승격
+mysql -u root -p sangsangseoga -e "UPDATE member SET role='ADMIN' WHERE email='내이메일@example.com';"
+```
+
 ## 트러블슈팅
 
 - **서버 재실행 시 컬럼이 중복돼서 생기거나 타입 에러가 남**: `ddl-auto: update`는 없는 테이블/컬럼을 추가만 할 뿐, 기존 컬럼의 이름 변경이나 삭제는 해주지 않습니다. 엔티티 필드명을 바꿨다면 문제되는 테이블만 `DROP TABLE {테이블명}` 하거나, 아래 "전체 테이블 초기화" 방법으로 스키마를 통째로 리셋한 뒤 서버를 재기동하세요.
