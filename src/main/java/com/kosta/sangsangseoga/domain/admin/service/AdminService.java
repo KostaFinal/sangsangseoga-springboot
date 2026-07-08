@@ -9,6 +9,7 @@ import com.kosta.sangsangseoga.domain.admin.enums.AdminActionType;
 import com.kosta.sangsangseoga.domain.admin.exception.AdminErrorCode;
 import com.kosta.sangsangseoga.domain.admin.repository.AdminActionLogRepository;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.book.enums.BookStatus;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.entity.Comment;
 import com.kosta.sangsangseoga.domain.friendLibrary.entity.Report;
@@ -101,7 +102,7 @@ public class AdminService {
                 requireTargetType(report, ReportTargetType.BOOK);
                 Book book = bookRepository.findById(report.getTargetId())
                         .orElseThrow(() -> new CustomException(AdminErrorCode.ACTION_TARGET_NOT_FOUND));
-                book.setStatus("HIDDEN");
+                book.setStatus(BookStatus.HIDDEN);
                 break;
             case COMMENT_DELETE:
                 requireTargetType(report, ReportTargetType.COMMENT);
