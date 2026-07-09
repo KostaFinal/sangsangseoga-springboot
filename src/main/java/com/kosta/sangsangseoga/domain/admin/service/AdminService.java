@@ -26,15 +26,20 @@ import com.kosta.sangsangseoga.domain.member.enums.MemberRole;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.domain.member.exception.MemberErrorCode;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
+import com.kosta.sangsangseoga.global.event.AfterCommitTask;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
+import com.kosta.sangsangseoga.global.jwt.RefreshTokenService;
+import com.kosta.sangsangseoga.global.jwt.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -50,6 +55,9 @@ public class AdminService {
     private final MemberRepository memberRepository;
     private final BookRepository bookRepository;
     private final CommentRepository commentRepository;
+    private final RefreshTokenService refreshTokenService;
+    private final TokenBlacklistService tokenBlacklistService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public AdminReportListResponseDto getPendingReports(Pageable pageable) {
@@ -128,6 +136,7 @@ public class AdminService {
                     throw new CustomException(MemberErrorCode.ALREADY_DELETED_MEMBER);
                 }
                 author.suspend();
+                invalidateSessionsAfterCommit(author.getId());
                 break;
             case REPORT_REJECT:
                 // 대상에는 아무 조치도 하지 않고 신고만 기각 처리한다.
@@ -139,6 +148,18 @@ public class AdminService {
         if (report.getTargetType() != expected) {
             throw new CustomException(AdminErrorCode.ACTION_TARGET_TYPE_MISMATCH);
         }
+    }
+
+    /**
+     * 관리자에 의해 정지/탈퇴된 회원의 기존 세션을 무효화한다. access token은 발급 시점 기준으로
+     * 블랙리스트 처리하고, refresh token은 Redis에서 삭제해 재발급도 막는다. 트랜잭션이 롤백되면
+     * 이 작업도 실행되지 않도록 커밋 이후로 미룬다.
+     */
+    private void invalidateSessionsAfterCommit(Long memberId) {
+        eventPublisher.publishEvent(new AfterCommitTask(this, () -> {
+            tokenBlacklistService.invalidateTokensIssuedBefore(memberId, Instant.now());
+            refreshTokenService.delete(memberId);
+        }));
     }
 
     @Transactional(readOnly = true)
@@ -192,10 +213,12 @@ public class AdminService {
                 break;
             case SUSPENDED:
                 member.suspend();
+                invalidateSessionsAfterCommit(member.getId());
                 break;
             case DELETED:
                 member.cancelSubscriptionImmediately();
                 member.withdraw();
+                invalidateSessionsAfterCommit(member.getId());
                 break;
         }
 

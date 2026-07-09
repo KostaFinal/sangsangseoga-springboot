@@ -66,6 +66,11 @@ public class JwtTokenProvider {
         return decoded.getClaim(CLAIM_ROLE).asString();
     }
 
+    public Date getIssuedAt(String token) {
+        DecodedJWT decoded = JWT.require(algorithm()).build().verify(token);
+        return decoded.getIssuedAt();
+    }
+
     /**
      * Refresh Token 전용 검증. 만료/위조를 구분해야 하는 호출부(토큰 재발급)를 위한 것이다.
      * tokenType=refresh가 아니면(예: Access Token 오용) ActionTokenInvalidException을 던진다.
