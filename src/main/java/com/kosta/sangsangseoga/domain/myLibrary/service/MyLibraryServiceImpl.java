@@ -299,6 +299,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	            .currentPage(myReading.getCurrentPage())
 	            .progress(myReading.getProgress())
 	            .pageCount(book.getPageCount())
+	            .readingStatus(myReading.getReadingStatus().name())
 	            .build();
 	}
 

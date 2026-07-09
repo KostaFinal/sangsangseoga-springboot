@@ -10,6 +10,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.OptimisticLock;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -69,9 +70,11 @@ public class Member extends BaseEntity {
     @Column(nullable = false)
     private Boolean freeTrialUsed;
 
+    @OptimisticLock(excluded = true)
     @Enumerated(EnumType.STRING)
     private ViewerFontSize viewerFontSize;
 
+    @OptimisticLock(excluded = true)
     @Enumerated(EnumType.STRING)
     private ViewerViewType viewerViewType;
 
@@ -107,8 +110,8 @@ public class Member extends BaseEntity {
         this.status = status != null ? status : MemberStatus.ACTIVE;
         this.role = role != null ? role : MemberRole.USER;
         this.freeTrialUsed = freeTrialUsed != null ? freeTrialUsed : false;
-        this.viewerFontSize = viewerFontSize;
-        this.viewerViewType = viewerViewType;
+        this.viewerFontSize = viewerFontSize != null ? viewerFontSize : ViewerFontSize.MEDIUM;
+        this.viewerViewType = viewerViewType != null ? viewerViewType : ViewerViewType.FLIP;
         this.subscriptionPlan = subscriptionPlan != null ? subscriptionPlan : PlanType.FREE;
     }
 
@@ -229,5 +232,17 @@ public class Member extends BaseEntity {
 
     public void decrementDailyImage() {
         this.dailyImageRemaining = this.dailyImageRemaining - 1;
+    }
+
+    /**
+     * 뷰어 글자 크기/페이지 전환 방식 환경설정 저장
+     */
+    public void updateViewerPreference(ViewerFontSize viewerFontSize, ViewerViewType viewerViewType) {
+        if (viewerFontSize != null) {
+            this.viewerFontSize = viewerFontSize;
+        }
+        if (viewerViewType != null) {
+            this.viewerViewType = viewerViewType;
+        }
     }
 }

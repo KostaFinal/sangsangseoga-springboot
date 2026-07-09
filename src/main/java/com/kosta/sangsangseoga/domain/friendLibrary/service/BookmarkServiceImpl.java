@@ -14,7 +14,10 @@ import com.kosta.sangsangseoga.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
- 
+
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -73,5 +76,22 @@ public class BookmarkServiceImpl implements BookmarkService {
                 .orElseThrow(() -> new CustomException(FriendLibraryErrorCode.BOOKMARK_NOT_FOUND));
  
         bookmarkRepository.delete(bookmark);
+    }
+
+    /**
+     * 회원의 특정 책 북마크 페이지 목록 조회
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<Integer> getBookmarkedPages(Long memberId, Long bookId) throws Exception {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+
+        return bookmarkRepository.findAllByMemberAndBook(member, book).stream()
+                .map(Bookmark::getPageNo)
+                .collect(Collectors.toList());
     }
 }
