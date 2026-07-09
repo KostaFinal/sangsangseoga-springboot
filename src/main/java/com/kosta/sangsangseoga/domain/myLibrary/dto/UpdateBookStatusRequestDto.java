@@ -15,5 +15,7 @@ public class UpdateBookStatusRequestDto {
         regexp = "PUBLIC|HIDDEN",
         message = "책 상태는 PUBLIC 또는 HIDDEN만 가능합니다."
     )
-	private String status; // PUBLISHED 또는 HIDDEN
+
+	private String status; // PUBLIC 또는 HIDDEN
+
 }

@@ -1,20 +1,29 @@
 package com.kosta.sangsangseoga.domain.member.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.domain.book.enums.BookStatus;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
-import com.kosta.sangsangseoga.domain.friendLibrary.repository.AuthorFollowRepository;
-import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookmarkRepository;
-import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookLikeRepository;
-import com.kosta.sangsangseoga.domain.friendLibrary.repository.CommentRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.entity.Comment;
-import com.kosta.sangsangseoga.domain.myLibrary.repository.ReadingMemoRepository;
+import com.kosta.sangsangseoga.domain.friendLibrary.repository.AuthorFollowRepository;
+import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookLikeRepository;
+import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookmarkRepository;
+import com.kosta.sangsangseoga.domain.friendLibrary.repository.CommentRepository;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentApproveRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentDecisionRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentPendingResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentResponseDto;
+import com.kosta.sangsangseoga.domain.member.dto.MemberMeResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.ViewerPreferenceDto;
 import com.kosta.sangsangseoga.domain.member.dto.WithdrawRequestDto;
 import com.kosta.sangsangseoga.domain.member.entity.GuardianConsent;
@@ -26,23 +35,17 @@ import com.kosta.sangsangseoga.domain.member.exception.MemberErrorCode;
 import com.kosta.sangsangseoga.domain.member.repository.GuardianConsentRepository;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.MyReadingRepository;
+import com.kosta.sangsangseoga.domain.myLibrary.repository.ReadingMemoRepository;
+import com.kosta.sangsangseoga.global.event.AfterCommitTask;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import com.kosta.sangsangseoga.global.jwt.ActionTokenExpiredException;
 import com.kosta.sangsangseoga.global.jwt.ActionTokenInvalidException;
 import com.kosta.sangsangseoga.global.jwt.ActionTokenProvider;
 import com.kosta.sangsangseoga.global.jwt.RefreshTokenService;
-import com.kosta.sangsangseoga.global.event.AfterCommitTask;
 import com.kosta.sangsangseoga.global.mail.MailService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -325,6 +328,18 @@ public class MemberService {
                 .memberBirthDate(member.getBirthDate())
                 .requestedAt(consent.getRequestedAt())
                 .expiresAt(consent.getExpiresAt())
+                .build();
+    }
+    
+    @Transactional(readOnly = true)
+    public MemberMeResponseDto getMyInfo(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        return MemberMeResponseDto.builder()
+                .memberId(member.getId())
+                .nickname(member.getNickname())
+                .profileImageUrl(member.getProfileImageUrl())
                 .build();
     }
 }

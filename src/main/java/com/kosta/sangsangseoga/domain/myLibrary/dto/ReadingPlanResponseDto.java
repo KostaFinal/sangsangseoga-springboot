@@ -14,7 +14,7 @@ public class ReadingPlanResponseDto {
     private Long bookId;
     private String bookTitle;
     private String category;
-    private Long coverImageId;
+    private String coverImageUrl;
 
     private LocalDate planDate;
     private Integer targetPage;

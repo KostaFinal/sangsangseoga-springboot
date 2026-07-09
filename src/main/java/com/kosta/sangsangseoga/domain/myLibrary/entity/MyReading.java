@@ -79,5 +79,13 @@ public class MyReading extends BaseEntity {
     
     @Column(name = "reading_time")
     private Integer readingTime;
+    
+    public void addToWishlist() {
+        this.wishlist = true;
+    }
+
+    public void removeFromWishlist() {
+        this.wishlist = false;
+    }
 
 }
