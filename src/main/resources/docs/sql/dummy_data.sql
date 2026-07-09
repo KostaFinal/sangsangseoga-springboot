@@ -1,4 +1,4 @@
-﻿SET NAMES utf8mb4;
+﻿﻿SET NAMES utf8mb4;
 -- SangSangSeoGa 더미 데이터 (자동 생성)
 SET FOREIGN_KEY_CHECKS=0;
 

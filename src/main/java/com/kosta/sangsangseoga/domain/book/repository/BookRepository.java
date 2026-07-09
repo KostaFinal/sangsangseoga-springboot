@@ -42,17 +42,17 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 			+ "ORDER BY (b.viewCount * 1 + b.likeCount * 3) DESC, b.createdAt DESC")
 	List<Book> findTop5NewReleases(@Param("weekStart") LocalDateTime weekStart, Pageable pageable);
 
-	// 전체 PUBLISHED 책 중 이번 주 증가분(누적 - 이번 주 시작 시점) 기준 score 상위 5개 (주간 랭킹 집계용)
+	// 전체 PUBLISHED 책 중 이번 주 조회수/좋아요 기준 score 상위 5개 (주간 랭킹 집계용)
+	// 동점이면 전체 누적 인기도(조회수×1+좋아요×3) 순, 그마저 같으면 최신 등록순으로 우선순위 결정
 	@Query("SELECT b FROM Book b WHERE b.status = 'PUBLISHED' "
-			+ "ORDER BY ((b.viewCount - COALESCE(b.weekStartViewCount, 0)) * 1 "
-			+ "+ (b.likeCount - COALESCE(b.weekStartLikeCount, 0)) * 3) DESC")
+			+ "ORDER BY (b.weekViewCount * 1 + b.weekLikeCount * 3) DESC, "
+			+ "(b.viewCount * 1 + b.likeCount * 3) DESC, b.createdAt DESC")
 	List<Book> findTop5ForWeeklyRanking(Pageable pageable);
 
-	// 주간 랭킹 집계 후 다음 주 증가분 계산의 기준점을 현재 누적치로 갱신 (TOP5 여부와 무관하게 전체 PUBLISHED 책 대상)
+	// 주간 랭킹 집계 후 이번 주 조회수/좋아요를 0으로 초기화 (TOP5 여부와 무관하게 전체 PUBLISHED 책 대상)
 	@Modifying
-	@Query("UPDATE Book b SET b.weekStartViewCount = b.viewCount, b.weekStartLikeCount = b.likeCount "
-			+ "WHERE b.status = 'PUBLISHED'")
-	void resetWeeklyBaseline();
+	@Query("UPDATE Book b SET b.weekViewCount = 0, b.weekLikeCount = 0 WHERE b.status = 'PUBLISHED'")
+	void resetWeeklyCounters();
 
 	// 내가 작성한 공개 책 목록 조회
 	List<Book> findByMember_IdAndStatus(Long memberId, BookStatus status);
