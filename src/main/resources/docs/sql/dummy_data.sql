@@ -2,7 +2,7 @@ SET NAMES utf8mb4;
 -- SangSangSeoGa 더미 데이터 (자동 생성)
 SET FOREIGN_KEY_CHECKS=0;
 
--- member (69 rows)
+-- member (70 rows)
 INSERT INTO `member` (`id`, `version`, `email`, `password`, `birth_date`, `nickname`, `profile_image_url`, `introduction`, `status`, `role`, `free_trial_used`, `viewer_font_size`, `viewer_view_type`, `withdrawn_at`, `subscription_plan`, `subscription_start_at`, `subscription_end_at`, `daily_text_remaining`, `daily_image_remaining`, `last_token_reset_date`, `created_at`, `updated_at`, `auth_provider`, `oauth_provider_id`) VALUES
 (1, 0, 'seoyeongjin@example.org', '$2a$10$73c5b9e0516e9ad1fc1c2d32fef557a70c4a4ac0', '1999-05-24', 'coedoyun2287', NULL, NULL, 'ACTIVE', 'ADMIN', 1, 'LARGE', 'FADE', NULL, 'FREE', NULL, NULL, 0, 0, '2026-06-07', '2024-07-06 07:58:54', '2024-07-06 07:58:54', 'LOCAL', NULL),
 (2, 0, 'migyeonggim@example.org', '$2a$10$89067a736f9915ec56466252ed3e56043b047bdf', '1970-06-20', 'lgim3258', NULL, NULL, 'ACTIVE', 'ADMIN', 0, 'SMALL', 'FADE', NULL, 'FREE', NULL, NULL, 9, 4, '2026-06-03', '2024-12-20 00:40:23', '2024-12-27 00:40:23', 'LOCAL', NULL),
@@ -72,10 +72,11 @@ INSERT INTO `member` (`id`, `version`, `email`, `password`, `birth_date`, `nickn
 (66, 0, 'monthly@sangsang.com', '$2a$10$I91OTS3.S.thbseYfHaiqOsklubbBOo9tdtZZ7SS6UweTRE7IJLFy', '2000-01-01', '월간구독테스트', NULL, '월간 구독 테스트 계정입니다.', 'ACTIVE', 'USER', 0, 'MEDIUM', 'FLIP', NULL, 'PREMIUM_MONTHLY', '2026-07-01 00:00:00', '2026-07-31 00:00:00', 30, 20, '2026-07-09', '2026-07-09 09:00:00', '2026-07-09 09:00:00', 'LOCAL', NULL),
 (67, 0, 'yearly@sangsang.com', '$2a$10$I91OTS3.S.thbseYfHaiqOsklubbBOo9tdtZZ7SS6UweTRE7IJLFy', '2000-01-01', '연간구독테스트', NULL, '연간 구독 테스트 계정입니다.', 'ACTIVE', 'USER', 0, 'MEDIUM', 'FLIP', NULL, 'PREMIUM_YEARLY', '2026-07-01 00:00:00', '2027-07-01 00:00:00', 30, 20, '2026-07-09', '2026-07-09 09:00:00', '2026-07-09 09:00:00', 'LOCAL', NULL),
 (68, 0, 'yearly_coverage1@example.com', '$2a$10$fakehash0000000000000000000005', '1988-07-22', '연간구독1', NULL, NULL, 'ACTIVE', 'USER', 0, 'MEDIUM', 'FLIP', NULL, 'PREMIUM_YEARLY', '2026-01-10 00:00:00', '2027-01-10 00:00:00', 30, 20, '2026-07-01', '2025-01-10 00:00:00', '2026-01-10 00:00:00', 'LOCAL', NULL),
-(69, 0, 'yearly_coverage2@example.com', '$2a$10$fakehash0000000000000000000006', '1995-11-05', '연간구독2', NULL, NULL, 'ACTIVE', 'USER', 1, 'SMALL', 'FADE', NULL, 'PREMIUM_YEARLY', '2026-02-15 00:00:00', '2027-02-15 00:00:00', 25, 15, '2026-07-02', '2025-02-15 00:00:00', '2026-02-15 00:00:00', 'LOCAL', NULL);
+(69, 0, 'yearly_coverage2@example.com', '$2a$10$fakehash0000000000000000000006', '1995-11-05', '연간구독2', NULL, NULL, 'ACTIVE', 'USER', 1, 'SMALL', 'FADE', NULL, 'PREMIUM_YEARLY', '2026-02-15 00:00:00', '2027-02-15 00:00:00', 25, 15, '2026-07-02', '2025-02-15 00:00:00', '2026-02-15 00:00:00', 'LOCAL', NULL),
+(70, 0, 'guardian@sangsang.com', '$2a$10$I91OTS3.S.thbseYfHaiqOsklubbBOo9tdtZZ7SS6UweTRE7IJLFy', '1980-01-01', '보호자테스트', NULL, '보호자 동의 처리 테스트 계정입니다. pending@sangsang.com(id 64)의 보호자로 연결되어 있습니다.', 'ACTIVE', 'USER', 0, 'MEDIUM', 'FLIP', NULL, 'FREE', NULL, NULL, 5, 3, '2026-07-09', '2026-07-09 09:00:00', '2026-07-09 09:00:00', 'LOCAL', NULL);
 
 
--- guardian_consent (16 rows)
+-- guardian_consent (17 rows)
 INSERT INTO `guardian_consent` (`id`, `member_id`, `guardian_email`, `guardian_id`, `status`, `requested_at`, `expires_at`, `approved_at`) VALUES
 (1, 4, 'zhan@example.com', 37, 'APPROVED', '2025-01-07 16:34:09', '2025-01-14 16:34:09', '2025-01-08 16:34:09'),
 (2, 6, 'ymin@example.net', 28, 'EXPIRED', '2025-10-26 07:15:22', '2025-11-02 07:15:22', NULL),
@@ -92,7 +93,8 @@ INSERT INTO `guardian_consent` (`id`, `member_id`, `guardian_email`, `guardian_i
 (13, 35, 'guardian13@example.com', 8, 'WITHDRAWN', '2026-01-01 09:00:00', '2026-01-08 09:00:00', '2026-01-03 09:00:00'),
 (14, 40, 'guardian14@example.com', 9, 'WITHDRAWN', '2026-01-05 09:00:00', '2026-01-12 09:00:00', '2026-01-07 09:00:00'),
 (15, 45, 'guardian15@example.com', 10, 'WITHDRAWN', '2026-01-10 09:00:00', '2026-01-17 09:00:00', '2026-01-12 09:00:00'),
-(16, 50, 'guardian16@example.com', NULL, 'EXPIRED', '2025-12-01 09:00:00', '2025-12-08 09:00:00', NULL);
+(16, 50, 'guardian16@example.com', NULL, 'EXPIRED', '2025-12-01 09:00:00', '2025-12-08 09:00:00', NULL),
+(17, 64, 'guardian@sangsang.com', 70, 'REQUESTED', '2026-07-09 09:00:00', '2026-07-16 09:00:00', NULL);
 
 
 -- book (150 rows)
