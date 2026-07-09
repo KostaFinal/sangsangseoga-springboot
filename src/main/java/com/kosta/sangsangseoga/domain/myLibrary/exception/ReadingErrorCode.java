@@ -25,6 +25,7 @@ public enum ReadingErrorCode implements ErrorCode {
 	
 	MY_READING_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 내 서재에 등록된 책입니다.");
 
+
     private final HttpStatus status;
     private final String message;
 

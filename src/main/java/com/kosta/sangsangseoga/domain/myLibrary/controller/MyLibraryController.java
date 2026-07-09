@@ -135,6 +135,7 @@ public class MyLibraryController {
 	        Authentication authentication,
 	        @PathVariable Long bookId,
 	        @Valid @RequestBody UpdateBookStatusRequestDto requestDto
+
 	) {
 	    Long memberId = getMemberId(authentication);
 	    myLibraryService.updateMyWrittenBookStatus(memberId, bookId, requestDto);
@@ -146,6 +147,7 @@ public class MyLibraryController {
 	        Authentication authentication,
 	        @PathVariable Long bookId,
 	        @Valid @RequestBody UpdateBookDescriptionRequestDto requestDto
+
 	) {
 	    Long memberId = getMemberId(authentication);
 	    myLibraryService.updateMyWrittenBookDescription(memberId, bookId, requestDto);

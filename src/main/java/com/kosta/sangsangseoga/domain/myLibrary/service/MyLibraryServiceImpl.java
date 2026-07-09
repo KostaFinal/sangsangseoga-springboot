@@ -68,6 +68,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 		List<MyReading> myReadings = myReadingRepository
 		        .findByMember_IdAndWishlistTrue(memberId);
 
+
 	    List<Book> books = myReadings.stream()
 	            .map(MyReading::getBook)
 	            .collect(Collectors.toList());
@@ -93,7 +94,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	
 	@Override
 	public void addWishlist(Long memberId, Long bookId) {
-	    MyReading existing = myReadingRepository
+		MyReading existing = myReadingRepository
 	            .findByMember_IdAndBook_Id(memberId, bookId)
 	            .orElse(null);
 
@@ -104,6 +105,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 
 	        existing.setWishlist(true);
 	        return;
+
 	    }
 
 	    Member member = memberRepository.findById(memberId)
@@ -413,6 +415,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	        throw new CustomException(CommonErrorCode.FORBIDDEN);
 	    }
 
+
 	    BookStatus status;
 
 	    try {
@@ -420,7 +423,6 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	    } catch (IllegalArgumentException | NullPointerException e) {
 	        throw new CustomException(CommonErrorCode.BAD_REQUEST);
 	    }
-
 	    book.setStatus(status);
 	}
 	
