@@ -10,6 +10,7 @@ import com.kosta.sangsangseoga.domain.auth.dto.TokenRefreshRequestDto;
 import com.kosta.sangsangseoga.domain.auth.dto.TokenRefreshResponseDto;
 import com.kosta.sangsangseoga.domain.auth.service.AuthService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
+import com.kosta.sangsangseoga.global.security.AuthenticationHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,7 +44,7 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(Authentication authentication) {
-        Long memberId = (Long) authentication.getPrincipal();
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
         authService.logout(memberId);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
