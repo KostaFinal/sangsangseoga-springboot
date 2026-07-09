@@ -23,7 +23,7 @@ import com.kosta.sangsangseoga.domain.myLibrary.service.ReadingPlanService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/bookshelves/reading-plans")
+@RequestMapping("/api/bookshelves/reading-plans")
 @RequiredArgsConstructor
 public class ReadingPlanController {
 	private final ReadingPlanService readingPlanService;

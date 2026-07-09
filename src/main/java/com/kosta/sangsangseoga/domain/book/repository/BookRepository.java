@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -41,9 +42,17 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 			+ "ORDER BY (b.viewCount * 1 + b.likeCount * 3) DESC, b.createdAt DESC")
 	List<Book> findTop5NewReleases(@Param("weekStart") LocalDateTime weekStart, Pageable pageable);
 
-	// 전체 PUBLISHED 책 중 score 기준 상위 5개 (주간 랭킹 집계용)
-	@Query("SELECT b FROM Book b WHERE b.status = 'PUBLISHED' " + "ORDER BY (b.viewCount * 1 + b.likeCount * 3) DESC")
+	// 전체 PUBLISHED 책 중 이번 주 증가분(누적 - 이번 주 시작 시점) 기준 score 상위 5개 (주간 랭킹 집계용)
+	@Query("SELECT b FROM Book b WHERE b.status = 'PUBLISHED' "
+			+ "ORDER BY ((b.viewCount - COALESCE(b.weekStartViewCount, 0)) * 1 "
+			+ "+ (b.likeCount - COALESCE(b.weekStartLikeCount, 0)) * 3) DESC")
 	List<Book> findTop5ForWeeklyRanking(Pageable pageable);
+
+	// 주간 랭킹 집계 후 다음 주 증가분 계산의 기준점을 현재 누적치로 갱신 (TOP5 여부와 무관하게 전체 PUBLISHED 책 대상)
+	@Modifying
+	@Query("UPDATE Book b SET b.weekStartViewCount = b.viewCount, b.weekStartLikeCount = b.likeCount "
+			+ "WHERE b.status = 'PUBLISHED'")
+	void resetWeeklyBaseline();
 
 	// 내가 작성한 공개 책 목록 조회
 	List<Book> findByMember_IdAndStatus(Long memberId, BookStatus status);
