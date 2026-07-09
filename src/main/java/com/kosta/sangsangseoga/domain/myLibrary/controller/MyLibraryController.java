@@ -16,9 +16,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.kosta.sangsangseoga.domain.myLibrary.dto.FinishedBookResponseDto;
+import com.kosta.sangsangseoga.domain.myLibrary.dto.MyWrittenBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingProgressRequestDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingStatsResponseDto;
+import com.kosta.sangsangseoga.domain.myLibrary.dto.UpdateBookDescriptionRequestDto;
+import com.kosta.sangsangseoga.domain.myLibrary.dto.UpdateBookStatusRequestDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.WishlistBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.service.MyLibraryService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
@@ -117,5 +120,35 @@ public class MyLibraryController {
 	public ResponseEntity<ApiResponse<ReadingStatsResponseDto>> getReadingStats(Authentication authentication) {
 		Long memberId = getMemberId(authentication);
 		return ResponseEntity.ok(ApiResponse.success(myLibraryService.getReadingStats(memberId)));
+	}
+	
+	@GetMapping("/my-books")
+	public ResponseEntity<ApiResponse<List<MyWrittenBookResponseDto>>> getMyWrittenBooks(
+	        Authentication authentication
+	) {
+	    Long memberId = getMemberId(authentication);
+	    return ResponseEntity.ok(ApiResponse.success(myLibraryService.getMyWrittenBooks(memberId)));
+	}
+	
+	@PatchMapping("/my-books/{bookId}/status")
+	public ResponseEntity<ApiResponse<Void>> updateMyWrittenBookStatus(
+	        Authentication authentication,
+	        @PathVariable Long bookId,
+	        @RequestBody UpdateBookStatusRequestDto requestDto
+	) {
+	    Long memberId = getMemberId(authentication);
+	    myLibraryService.updateMyWrittenBookStatus(memberId, bookId, requestDto);
+	    return ResponseEntity.ok(ApiResponse.success(null));
+	}
+	
+	@PatchMapping("/my-books/{bookId}/description")
+	public ResponseEntity<ApiResponse<Void>> updateMyWrittenBookDescription(
+	        Authentication authentication,
+	        @PathVariable Long bookId,
+	        @RequestBody UpdateBookDescriptionRequestDto requestDto
+	) {
+	    Long memberId = getMemberId(authentication);
+	    myLibraryService.updateMyWrittenBookDescription(memberId, bookId, requestDto);
+	    return ResponseEntity.ok(ApiResponse.success(null));
 	}
 }

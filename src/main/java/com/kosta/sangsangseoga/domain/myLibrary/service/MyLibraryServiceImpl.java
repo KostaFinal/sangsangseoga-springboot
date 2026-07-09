@@ -17,9 +17,12 @@ import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.CategoryStatsDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.FinishedBookResponseDto;
+import com.kosta.sangsangseoga.domain.myLibrary.dto.MyWrittenBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingProgressRequestDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingStatsResponseDto;
+import com.kosta.sangsangseoga.domain.myLibrary.dto.UpdateBookDescriptionRequestDto;
+import com.kosta.sangsangseoga.domain.myLibrary.dto.UpdateBookStatusRequestDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.WishlistBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.entity.MyReading;
 import com.kosta.sangsangseoga.domain.myLibrary.enums.ReadingStatus;
@@ -192,6 +195,8 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	                        .readingTime(myReading.getReadingTime())
 	                        .readingStatus(myReading.getReadingStatus().name())
 	                        .rereadCount(myReading.getRereadCount())
+	                        .viewCount(book.getViewCount())
+	                        .likeCount(book.getLikeCount())
 	                        .build();
 	            })
 	            .collect(Collectors.toList());
@@ -233,6 +238,16 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	    myReading.setCurrentPage(requestDto.getCurrentPage());
 	    myReading.setProgress(requestDto.getProgress());
 	    myReading.setRecentReadAt(LocalDateTime.now());
+	    
+	    Integer addedReadingTime = requestDto.getReadingTime();
+
+	    if (addedReadingTime != null && addedReadingTime > 0) {
+	        Integer currentReadingTime = myReading.getReadingTime() != null
+	                ? myReading.getReadingTime()
+	                : 0;
+
+	        myReading.setReadingTime(currentReadingTime + addedReadingTime);
+	    }
 	}
 
 	@Override
@@ -367,6 +382,56 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	            .build();
 	}
 
+	@Override
+	@Transactional(readOnly = true)
+	public List<MyWrittenBookResponseDto> getMyWrittenBooks(Long memberId) {
+	    List<Book> books = bookRepository.findByMember_IdAndStatus(memberId, BookStatus.PUBLISHED);
+
+	    Map<Long, String> coverImageUrlMap = getCoverImageUrlMap(books);
+
+	    return books.stream()
+	            .map(book -> MyWrittenBookResponseDto.builder()
+	                    .bookId(book.getId())
+	                    .title(book.getTitle())
+	                    .description(book.getDescription())
+	                    .category(book.getCategory())
+	                    .bookType(book.getBookType().name())
+	                    .coverImageUrl(coverImageUrlMap.get(book.getId()))
+	                    .pageCount(book.getPageCount())
+	                    .viewCount(book.getViewCount())
+	                    .likeCount(book.getLikeCount())
+	                    .status(book.getStatus().name())
+	                    .build())
+	            .collect(Collectors.toList());
+	}
 	
+	@Override
+	public void updateMyWrittenBookStatus(Long memberId, Long bookId, UpdateBookStatusRequestDto requestDto) {
+	    Book book = bookRepository.findById(bookId)
+	            .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+
+	    if (!book.getMember().getId().equals(memberId)) {
+	        throw new CustomException(CommonErrorCode.FORBIDDEN);
+	    }
+
+	    BookStatus status = BookStatus.valueOf(requestDto.getStatus());
+	    book.setStatus(status);
+	}
+	
+	@Override
+	public void updateMyWrittenBookDescription(
+	        Long memberId,
+	        Long bookId,
+	        UpdateBookDescriptionRequestDto requestDto
+	) {
+	    Book book = bookRepository.findById(bookId)
+	            .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+
+	    if (!book.getMember().getId().equals(memberId)) {
+	        throw new CustomException(CommonErrorCode.FORBIDDEN);
+	    }
+
+	    book.setDescription(requestDto.getDescription());
+	}
 
 }
