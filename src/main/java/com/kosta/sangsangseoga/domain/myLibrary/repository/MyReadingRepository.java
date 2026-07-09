@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +16,7 @@ import com.kosta.sangsangseoga.domain.myLibrary.enums.ReadingStatus;
 public interface MyReadingRepository extends JpaRepository<MyReading, Long> {
 	
 	// 읽고 싶은 책 목록 조회
+	@EntityGraph(attributePaths = "book")
 	List<MyReading> findByMember_IdAndWishlistTrue(Long memberId);
 
 	// 내가 읽고 싶은 책으로 등록한 책인지 확인

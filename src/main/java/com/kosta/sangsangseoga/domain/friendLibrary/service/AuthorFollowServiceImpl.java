@@ -3,6 +3,8 @@ package com.kosta.sangsangseoga.domain.friendLibrary.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,11 +94,17 @@ public class AuthorFollowServiceImpl implements AuthorFollowService {
     
     @Override
     @Transactional(readOnly = true)
-    public AuthorListResponseDto getMyFollowedAuthors(Long memberId) throws Exception {
-        List<AuthorListItemDto> items = authorFollowRepository
-                .findByFollower_IdOrderByCreatedAtDesc(memberId)
-                .stream()
-                .map(authorFollow -> {
+    public AuthorListResponseDto getMyFollowedAuthors(Long memberId, int page, int size) throws Exception {
+    	Page<AuthorFollow> authorFollowPage =
+    	        authorFollowRepository.findByFollower_IdOrderByCreatedAtDesc(
+    	                memberId,
+    	                PageRequest.of(page - 1, size)
+    	        );
+
+    	List<AuthorListItemDto> items = authorFollowPage
+    	        .getContent()
+    	        .stream()
+    	        .map(authorFollow -> {
                     Member author = authorFollow.getAuthor();
 
                     long followerCount = authorFollowRepository.countByAuthor(author);
@@ -119,11 +127,11 @@ public class AuthorFollowServiceImpl implements AuthorFollowService {
                 })
                 .collect(Collectors.toList());
 
-        return AuthorListResponseDto.builder()
-                .items(items)
-                .totalCount((long) items.size())
-                .page(1)
-                .hasNext(false)
-                .build();
+    	return AuthorListResponseDto.builder()
+    	        .items(items)
+    	        .totalCount(authorFollowPage.getTotalElements())
+    	        .page(authorFollowPage.getNumber() + 1)
+    	        .hasNext(authorFollowPage.hasNext())
+    	        .build();
     }
 }

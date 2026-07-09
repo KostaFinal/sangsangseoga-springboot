@@ -11,5 +11,5 @@ public interface AuthorFollowService {
     // 언팔로우 - 204 응답이라 반환값 없음
     void unfollow(Long followerId, Long authorId) throws Exception;
     
-    AuthorListResponseDto getMyFollowedAuthors(Long memberId) throws Exception;
+    AuthorListResponseDto getMyFollowedAuthors(Long memberId, int page, int size) throws Exception;
 }

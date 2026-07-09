@@ -3,6 +3,8 @@ package com.kosta.sangsangseoga.domain.myLibrary.controller;
 import java.time.LocalDate;
 import java.util.List;
 
+import javax.validation.Valid;
+
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -70,7 +72,7 @@ public class ReadingPlanController {
     @PostMapping
     public ResponseEntity<ApiResponse<ReadingPlanResponseDto>> createReadingPlan(
             Authentication authentication,
-            @RequestBody ReadingPlanRequestDto requestDto) {
+            @Valid @RequestBody ReadingPlanRequestDto requestDto) {
 
         Long memberId = (Long) authentication.getPrincipal();
 
@@ -88,7 +90,7 @@ public class ReadingPlanController {
     public ResponseEntity<ApiResponse<ReadingPlanResponseDto>> updateReadingPlan(
             Authentication authentication,
             @PathVariable Long planId,
-            @RequestBody ReadingPlanRequestDto requestDto) {
+            @Valid @RequestBody ReadingPlanRequestDto requestDto) {
 
         Long memberId = (Long) authentication.getPrincipal();
 
