@@ -8,16 +8,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.book.entity.BookImage;
+import com.kosta.sangsangseoga.domain.book.repository.BookImageRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingPlanRequestDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingPlanResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.entity.ReadingPlan;
-import com.kosta.sangsangseoga.domain.myLibrary.repository.ReadingPlanRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.exception.ReadingErrorCode;
-import com.kosta.sangsangseoga.global.exception.CustomException;
+import com.kosta.sangsangseoga.domain.myLibrary.repository.ReadingPlanRepository;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
+import com.kosta.sangsangseoga.global.exception.CustomException;
 
 import lombok.RequiredArgsConstructor;
 @Service
@@ -33,6 +35,8 @@ public class ReadingPlanServiceImpl implements ReadingPlanService {
 
     // 도서 조회 Repository
     private final BookRepository bookRepository;
+    
+    private final BookImageRepository bookImageRepository;
 
     /**
      * 전체 독서 계획 조회
@@ -152,13 +156,18 @@ public class ReadingPlanServiceImpl implements ReadingPlanService {
     private ReadingPlanResponseDto toResponseDto(ReadingPlan readingPlan) {
 
         Book book = readingPlan.getBook();
+        
+        String coverImageUrl = bookImageRepository
+                .findByBookAndImageTypeAndDeletedAtIsNull(book, BookImage.ImageType.COVER)
+                .map(BookImage::getFileUrl)
+                .orElse(null);
 
         return ReadingPlanResponseDto.builder()
-                .planId(readingPlan.getId())
+                .planId(readingPlan.getId())	
                 .bookId(book.getId())
                 .bookTitle(book.getTitle())
                 .category(book.getCategory())
-                .coverImageId(book.getCoverImageId())
+                .coverImageUrl(coverImageUrl)
                 .planDate(readingPlan.getPlanDate())
                 .targetPage(readingPlan.getTargetPage())
                 .memo(readingPlan.getMemo())

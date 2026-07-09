@@ -1,28 +1,31 @@
 package com.kosta.sangsangseoga.domain.member.controller;
 
-import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentApproveRequestDto;
-import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentDecisionRequestDto;
-import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentPendingResponseDto;
-import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentRequestDto;
-import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentResponseDto;
-import com.kosta.sangsangseoga.domain.member.dto.ViewerPreferenceDto;
-import com.kosta.sangsangseoga.domain.member.dto.WithdrawRequestDto;
-import com.kosta.sangsangseoga.domain.member.service.MemberService;
-import com.kosta.sangsangseoga.global.common.ApiResponse;
-import com.kosta.sangsangseoga.global.security.AuthenticationHelper;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentApproveRequestDto;
+import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentDecisionRequestDto;
+import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentPendingResponseDto;
+import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentRequestDto;
+import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentResponseDto;
+import com.kosta.sangsangseoga.domain.member.dto.MemberMeResponseDto;
+import com.kosta.sangsangseoga.domain.member.dto.ViewerPreferenceDto;
+import com.kosta.sangsangseoga.domain.member.dto.WithdrawRequestDto;
+import com.kosta.sangsangseoga.domain.member.service.MemberService;
+import com.kosta.sangsangseoga.global.common.ApiResponse;
+import com.kosta.sangsangseoga.global.security.AuthenticationHelper;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
@@ -98,5 +101,16 @@ public class MemberController {
         Long memberId = AuthenticationHelper.resolveMemberId(authentication);
         GuardianConsentResponseDto response = memberService.withdrawGuardianConsent(consentId, memberId);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+    
+    @GetMapping("/api/members/me")
+    public ResponseEntity<ApiResponse<MemberMeResponseDto>> getMyInfo(
+            Authentication authentication) {
+
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
+
+        return ResponseEntity.ok(
+            ApiResponse.success(memberService.getMyInfo(memberId))
+        );
     }
 }
