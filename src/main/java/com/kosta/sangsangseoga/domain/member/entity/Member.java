@@ -36,26 +36,34 @@ public class Member extends BaseEntity {
     private Long id;
 
     /**
-     * 낙관적 락. 구독 시작/전환/해지/재개/자동갱신처럼 같은 회원 row를 동시에 읽고 쓸 수 있는
-     * 흐름(API 중복 호출, 배치와 API 동시 실행 등)에서 마지막에 커밋되는 쪽만 반영되고
-     * 나머지는 ObjectOptimisticLockingFailureException으로 실패하도록 막아준다.
+     * 낙관적 락. 구독 시작/전환/해지/재개/자동갱신, 상태 변경(정지/탈퇴/복원), 무료체험 소진처럼
+     * 같은 회원 row를 동시에 읽고 쓸 수 있는 흐름(API 중복 호출, 배치와 API 동시 실행,
+     * 관리자 처리와 회원 요청 동시 발생 등)에서 마지막에 커밋되는 쪽만 반영되고 나머지는
+     * ObjectOptimisticLockingFailureException으로 실패하도록 막아준다.
+     * 동시 수정 충돌에 안전한 프로필/뷰어 설정 등은 @OptimisticLock(excluded = true)로 제외했다.
      */
     @Version
     private Long version;
 
+    @OptimisticLock(excluded = true)
     @Column(nullable = false, unique = true)
     private String email;
 
+    @OptimisticLock(excluded = true)
     @Column(nullable = false)
     private String password;
 
+    @OptimisticLock(excluded = true)
     private LocalDate birthDate;
 
+    @OptimisticLock(excluded = true)
     @Column(unique = true)
     private String nickname;
 
+    @OptimisticLock(excluded = true)
     private String profileImageUrl;
 
+    @OptimisticLock(excluded = true)
     @Lob
     private String introduction;
 
@@ -63,6 +71,7 @@ public class Member extends BaseEntity {
     @Column(nullable = false)
     private MemberStatus status;
 
+    @OptimisticLock(excluded = true)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MemberRole role;

@@ -214,11 +214,18 @@ http://localhost:8080/swagger-ui/index.html
 
 `/api/admin/**` 등 ADMIN 권한이 필요한 API를 테스트할 때 쓸 수 있는 계정입니다.
 
-| 이메일 | 비밀번호 | 권한 | 비고 |
+| 이메일 | 비밀번호 | 권한/상태 | 비고 |
 |---|---|---|---|
-| `admintest2@example.com` | `test1234!` | ADMIN | 관리자 API 테스트용 계정. 로컬 DB를 리셋(전체 삭제 후 재시딩)해도 회원가입 API로 다시 만들 수 있음(아래 참고) |
+| `admin2@sangsang.com` | `test1234!` | ADMIN / ACTIVE | `dummy_data.sql`에 시딩되는 관리자 테스트 계정(id 62) |
+| `suspend@sangsang.com` | `test1234!` | USER / SUSPENDED | 정지 상태 로그인 차단 테스트용(id 63) |
+| `pending@sangsang.com` | `test1234!` | USER / PENDING | 보호자 동의 대기 상태 테스트용(id 64) |
+| `withdrawn@sangsang.com` | `test1234!` | USER / DELETED | 탈퇴 상태 로그인 차단 테스트용(id 65) |
+| `monthly@sangsang.com` | `test1234!` | USER / PREMIUM_MONTHLY | 월간 구독 회원 테스트용(id 66) |
+| `yearly@sangsang.com` | `test1234!` | USER / PREMIUM_YEARLY | 연간 구독 회원 테스트용(id 67) |
 
-**주의**: `dummy_data.sql`로 시딩되는 회원(예: id 1~3번 등)은 더미 데이터 생성기가 만든 임의의 비밀번호 해시라 **실제 로그인 가능한 평문 비밀번호가 없습니다.** ADMIN 권한 테스트가 필요하면 아래처럼 새 계정을 만들어서 쓰세요.
+`admin2@sangsang.com`부터 `yearly@sangsang.com`까지 6개 계정은 `dummy_data.sql`에 실제 `BCryptPasswordEncoder`로 암호화된 `test1234!` 해시로 시딩되어 있어, DB를 리셋하고 `dummy_data.sql`을 다시 실행해도 곧바로 로그인할 수 있습니다(단 SUSPENDED/PENDING/DELETED 계정은 상태값 자체 때문에 로그인 API가 의도적으로 막습니다).
+
+**주의**: 그 외 `dummy_data.sql`로 시딩되는 일반 더미 회원(id 1~60번)은 더미 데이터 생성기가 만든 임의의 비밀번호 해시라 **실제 로그인 가능한 평문 비밀번호가 없습니다.** 위 표에 없는 계정으로 로그인 테스트가 필요하면 아래처럼 새 계정을 만들어서 쓰세요.
 
 ```bash
 # 1) 회원가입
