@@ -2,6 +2,7 @@ package com.kosta.sangsangseoga.global.exception;
 
 import com.kosta.sangsangseoga.global.common.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.FieldError;
@@ -9,6 +10,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.stream.Collectors;
 
@@ -43,6 +45,20 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 쿼리 파라미터/경로 변수 타입 불일치 처리 (예: enum 쿼리 파라미터에 정의되지 않은 값 전달).
+     * 처리하지 않으면 500(INTERNAL_SERVER_ERROR)으로 떨어져서 클라이언트 입력 오류인지 서버 오류인지
+     * 구분이 안 되므로, 400으로 변환해 클라이언트에게 잘못된 요청임을 알려준다.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatchException(MethodArgumentTypeMismatchException e) {
+        String message = String.format("'%s' 파라미터의 값 '%s'이(가) 올바르지 않습니다.", e.getName(), e.getValue());
+        log.warn("파라미터 타입 불일치: {}", message);
+        return ResponseEntity
+                .status(CommonErrorCode.BAD_REQUEST.getStatus())
+                .body(ApiResponse.error(CommonErrorCode.BAD_REQUEST.name(), message));
+    }
+
+    /**
      * 지원하지 않는 HTTP 메서드로 요청한 경우 (예: POST 전용 API에 GET으로 접근)
      * 브라우저 주소창 직접 접근, Swagger "Try it out" 오용 등에서 흔히 발생한다.
      */
@@ -67,6 +83,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(errorCode.getStatus())
                 .body(ApiResponse.error(errorCode.name(), errorCode.getMessage()));
+    }
+
+    /**
+     * 클라이언트가 응답을 받기 전에 연결을 끊은 경우(브라우저 뒤로가기/새로고침/페이지 이탈,
+     * 소셜 로그인 팝업 중도 취소 등). 서버가 실제로 처리에 실패한 게 아니라 상대방이 이미
+     * 사라진 것뿐이므로, 잘못된 요청 취급하며 응답 바디를 쓰려 하지 않는다(써봐야 또 실패한다).
+     * ERROR 로그로 스택트레이스를 남기지도 않는다 - 운영상 흔히 발생하는 정상적인 상황이라
+     * 매번 에러 로그가 쌓이면 진짜 장애 신호를 파묻어 버린다.
+     */
+    @ExceptionHandler(ClientAbortException.class)
+    public void handleClientAbortException(ClientAbortException e) {
+        log.debug("클라이언트가 응답을 받기 전에 연결을 끊었습니다: {}", e.getMessage());
     }
 
     /**
