@@ -28,6 +28,14 @@ gemini:
 fastapi:
   base-url: ${FASTAPI_BASE_URL:http://localhost:8000}
 
+oauth:
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID:}
+    client-secret: ${KAKAO_CLIENT_SECRET:}   # 카카오 콘솔에서 Client Secret을 활성화한 경우에만 필요
+  naver:
+    client-id: ${NAVER_CLIENT_ID:}
+    client-secret: ${NAVER_CLIENT_SECRET:}
+
 ---
 # ===================================================================
 # 2. 로컬 개발 환경 (dev) - 기본 실행 환경

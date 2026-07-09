@@ -1,5 +1,6 @@
 package com.kosta.sangsangseoga.domain.member.entity;
 
+import com.kosta.sangsangseoga.domain.member.enums.AuthProvider;
 import com.kosta.sangsangseoga.domain.member.enums.MemberRole;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.domain.member.enums.ViewerFontSize;
@@ -21,6 +22,7 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 import javax.persistence.Version;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -28,7 +30,9 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "member")
+@Table(name = "member", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_member_auth_provider", columnNames = {"auth_provider", "oauth_provider_id"})
+})
 public class Member extends BaseEntity {
 
     @Id
@@ -79,6 +83,17 @@ public class Member extends BaseEntity {
     @Column(nullable = false)
     private Boolean freeTrialUsed;
 
+    /** 로컬(이메일/비밀번호) 가입이면 LOCAL, 소셜 로그인으로 가입했으면 KAKAO/NAVER. */
+    @OptimisticLock(excluded = true)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", nullable = false)
+    private AuthProvider authProvider;
+
+    /** 소셜 제공자가 내려주는 회원 식별자. LOCAL 계정은 NULL. (authProvider, oauthProviderId) 조합으로 유니크. */
+    @OptimisticLock(excluded = true)
+    @Column(name = "oauth_provider_id")
+    private String oauthProviderId;
+
     @OptimisticLock(excluded = true)
     @Enumerated(EnumType.STRING)
     private ViewerFontSize viewerFontSize;
@@ -109,7 +124,7 @@ public class Member extends BaseEntity {
     private Member(String email, String password, LocalDate birthDate, String nickname,
                     String profileImageUrl, String introduction, MemberStatus status, MemberRole role,
                     Boolean freeTrialUsed, ViewerFontSize viewerFontSize, ViewerViewType viewerViewType,
-                    PlanType subscriptionPlan) {
+                    PlanType subscriptionPlan, AuthProvider authProvider, String oauthProviderId) {
         this.email = email;
         this.password = password;
         this.birthDate = birthDate;
@@ -122,6 +137,8 @@ public class Member extends BaseEntity {
         this.viewerFontSize = viewerFontSize != null ? viewerFontSize : ViewerFontSize.MEDIUM;
         this.viewerViewType = viewerViewType != null ? viewerViewType : ViewerViewType.FLIP;
         this.subscriptionPlan = subscriptionPlan != null ? subscriptionPlan : PlanType.FREE;
+        this.authProvider = authProvider != null ? authProvider : AuthProvider.LOCAL;
+        this.oauthProviderId = oauthProviderId;
     }
 
     public void changePassword(String encodedPassword) {

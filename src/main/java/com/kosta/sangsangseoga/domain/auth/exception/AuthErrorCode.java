@@ -28,7 +28,14 @@ public enum AuthErrorCode implements ErrorCode {
     // 실패 시 GlobalExceptionHandler가 공통 BAD_REQUEST 코드로 응답한다.
     DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "이미 가입된 이메일 주소입니다."),
     DUPLICATE_NICKNAME(HttpStatus.BAD_REQUEST, "이미 사용 중인 닉네임입니다."),
-    INVALID_BIRTH_DATE(HttpStatus.BAD_REQUEST, "생년월일이 올바르지 않습니다.");
+    INVALID_BIRTH_DATE(HttpStatus.BAD_REQUEST, "생년월일이 올바르지 않습니다."),
+
+    // ===== OAuth (소셜 로그인) =====
+    UNSUPPORTED_OAUTH_PROVIDER(HttpStatus.BAD_REQUEST, "지원하지 않는 소셜 로그인 제공자입니다."),
+    OAUTH_AUTH_FAILED(HttpStatus.BAD_REQUEST, "소셜 로그인 인증에 실패했습니다. 다시 시도해 주세요."),
+    OAUTH_EMAIL_REQUIRED(HttpStatus.BAD_REQUEST, "이메일 제공에 동의해야 가입할 수 있습니다."),
+    INVALID_OAUTH_SIGNUP_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 소셜 회원가입 요청입니다."),
+    EXPIRED_OAUTH_SIGNUP_TOKEN(HttpStatus.UNAUTHORIZED, "소셜 회원가입 세션이 만료되었습니다. 처음부터 다시 시도해 주세요.");
 
     private final HttpStatus status;
     private final String message;
