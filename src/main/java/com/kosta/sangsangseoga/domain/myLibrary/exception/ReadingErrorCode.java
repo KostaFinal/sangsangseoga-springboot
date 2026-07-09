@@ -23,7 +23,8 @@ public enum ReadingErrorCode implements ErrorCode {
     BOOK_REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "독후감을 찾을 수 없습니다."),
     BOOK_REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 작성한 독후감이 있습니다."),
 	
-	MY_READING_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "이미 내 서재에 등록된 책입니다.");
+	MY_READING_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 내 서재에 등록된 책입니다.");
+
 
     private final HttpStatus status;
     private final String message;

@@ -2,6 +2,8 @@ package com.kosta.sangsangseoga.domain.myLibrary.controller;
 
 import java.util.List;
 
+import javax.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -48,7 +50,8 @@ public class BookReviewController {
 	@PostMapping
 	public ResponseEntity<ApiResponse<BookReviewResponseDto>> createReview(
 	        Authentication authentication,
-	        @RequestBody BookReviewRequestDto requestDto
+	        @Valid @RequestBody BookReviewRequestDto requestDto
+
 	) {
 	    Long memberId = (Long) authentication.getPrincipal();
 	    return ResponseEntity.ok(ApiResponse.success(bookReviewService.createReview(memberId, requestDto)));
@@ -59,7 +62,8 @@ public class BookReviewController {
 	public ResponseEntity<ApiResponse<BookReviewResponseDto>> updateReview(
 	        Authentication authentication,
 	        @PathVariable Long reviewId,
-	        @RequestBody BookReviewRequestDto requestDto
+	        @Valid @RequestBody BookReviewRequestDto requestDto
+
 	) {
 	    Long memberId = (Long) authentication.getPrincipal();
 	    return ResponseEntity.ok(ApiResponse.success(bookReviewService.updateReview(memberId, reviewId, requestDto)));
@@ -81,7 +85,8 @@ public class BookReviewController {
 	public ResponseEntity<ApiResponse<BookReviewResponseDto>> saveDraft(
 	        Authentication authentication,
 	        @PathVariable Long reviewId,
-	        @RequestBody BookReviewRequestDto requestDto
+	        @Valid @RequestBody BookReviewRequestDto requestDto
+
 	) {
 	    Long memberId = (Long) authentication.getPrincipal();
 	    return ResponseEntity.ok(ApiResponse.success(bookReviewService.saveDraft(memberId, reviewId, requestDto)));

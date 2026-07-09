@@ -66,7 +66,8 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	@Transactional(readOnly = true)
 	public List<WishlistBookResponseDto> getWishlist(Long memberId){
 		List<MyReading> myReadings = myReadingRepository
-	            .findByMember_IdAndReadingStatus(memberId, ReadingStatus.WISH);
+		        .findByMember_IdAndWishlistTrue(memberId);
+
 
 	    List<Book> books = myReadings.stream()
 	            .map(MyReading::getBook)
@@ -85,6 +86,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	                        .category(book.getCategory())
 	                        .bookType(book.getBookType().name())
 	                        .coverImageUrl(coverImageUrlMap.get(book.getId()))
+	                        .wishlist(myReading.getWishlist())
 	                        .build();
 	            })
 	            .collect(Collectors.toList());
@@ -97,11 +99,13 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	            .orElse(null);
 
 	    if (existing != null) {
-	        if (existing.getReadingStatus() == ReadingStatus.WISH) {
+	        if (Boolean.TRUE.equals(existing.getWishlist())) {
 	            return;
 	        }
 
-	        throw new CustomException(ReadingErrorCode.MY_READING_ALREADY_EXISTS);
+	        existing.setWishlist(true);
+	        return;
+
 	    }
 
 	    Member member = memberRepository.findById(memberId)
@@ -113,7 +117,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	    MyReading myReading = MyReading.builder()
 	            .member(member)
 	            .book(book)
-	            .readingStatus(ReadingStatus.WISH)
+	            .wishlist(true)
 	            .currentPage(1)
 	            .progress(0)
 	            .rereadCount(0)
@@ -125,15 +129,11 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 
 	@Override
 	public void deleteWishlist(Long memberId, Long bookId) {
-		MyReading myReading = myReadingRepository
-	            .findByMember_IdAndBook_IdAndReadingStatus(
-	                    memberId,
-	                    bookId,
-	                    ReadingStatus.WISH
-	            )
+	    MyReading myReading = myReadingRepository
+	            .findByMember_IdAndBook_IdAndWishlistTrue(memberId, bookId)
 	            .orElseThrow(() -> new CustomException(ReadingErrorCode.WISHLIST_NOT_FOUND));
 
-	    myReadingRepository.delete(myReading);
+	    myReading.setWishlist(false);
 	}
 
 	@Override
@@ -231,7 +231,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	        return;
 	    }
 
-	    if (myReading.getReadingStatus() == ReadingStatus.WISH) {
+	    if (myReading.getReadingStatus() == null) {
 	        myReading.setReadingStatus(ReadingStatus.READING);
 	    }
 
@@ -307,7 +307,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	@Transactional(readOnly = true)
 	public ReadingStatsResponseDto getReadingStats(Long memberId){
 		Long wishlistBookCount = myReadingRepository
-	            .countByMember_IdAndReadingStatus(memberId, ReadingStatus.WISH);
+		        .countByMember_IdAndWishlistTrue(memberId);
 
 	    Long readingBookCount = myReadingRepository
 	            .countByMember_IdAndReadingStatus(memberId, ReadingStatus.READING);
@@ -415,7 +415,14 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	        throw new CustomException(CommonErrorCode.FORBIDDEN);
 	    }
 
-	    BookStatus status = BookStatus.valueOf(requestDto.getStatus());
+
+	    BookStatus status;
+
+	    try {
+	        status = BookStatus.valueOf(requestDto.getStatus());
+	    } catch (IllegalArgumentException | NullPointerException e) {
+	        throw new CustomException(CommonErrorCode.BAD_REQUEST);
+	    }
 	    book.setStatus(status);
 	}
 	

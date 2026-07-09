@@ -134,7 +134,8 @@ public class MyLibraryController {
 	public ResponseEntity<ApiResponse<Void>> updateMyWrittenBookStatus(
 	        Authentication authentication,
 	        @PathVariable Long bookId,
-	        @RequestBody UpdateBookStatusRequestDto requestDto
+	        @Valid @RequestBody UpdateBookStatusRequestDto requestDto
+
 	) {
 	    Long memberId = getMemberId(authentication);
 	    myLibraryService.updateMyWrittenBookStatus(memberId, bookId, requestDto);
@@ -145,7 +146,8 @@ public class MyLibraryController {
 	public ResponseEntity<ApiResponse<Void>> updateMyWrittenBookDescription(
 	        Authentication authentication,
 	        @PathVariable Long bookId,
-	        @RequestBody UpdateBookDescriptionRequestDto requestDto
+	        @Valid @RequestBody UpdateBookDescriptionRequestDto requestDto
+
 	) {
 	    Long memberId = getMemberId(authentication);
 	    myLibraryService.updateMyWrittenBookDescription(memberId, bookId, requestDto);

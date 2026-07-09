@@ -55,6 +55,10 @@ public class MyReading extends BaseEntity {
     @Column(name = "reading_status")
     private ReadingStatus readingStatus;
     
+    @Column(name = "is_wishlist", nullable = false)
+    @Builder.Default
+    private Boolean wishlist = false;
+    
     @Column(name = "current_page")
     private Integer currentPage;
     
