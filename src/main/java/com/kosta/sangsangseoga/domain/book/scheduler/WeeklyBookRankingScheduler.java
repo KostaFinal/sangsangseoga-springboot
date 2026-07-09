@@ -28,7 +28,8 @@ public class WeeklyBookRankingScheduler {
     /**
      * 주간 인기 책 TOP5 집계
      * - 매주 월요일 00:00에 실행
-     * - 전체 PUBLISHED 책 중 score(조회수×1 + 좋아요×3) 기준 상위 5개 저장
+     * - 전체 PUBLISHED 책 중 이번 주 조회수/좋아요 기준 score(조회수×1 + 좋아요×3) 상위 5개 저장
+     * - 집계 후 전체 PUBLISHED 책의 이번 주 조회수/좋아요를 0으로 초기화해 다음 주 집계를 새로 시작
      */
     @Scheduled(cron = "0 0 0 * * MON")
     @Transactional
@@ -40,16 +41,19 @@ public class WeeklyBookRankingScheduler {
         // 이번 주 기존 데이터 전체 삭제 후 재집계
         weeklyBookRankingRepository.deleteByWeekStartDate(weekStartDate);
 
-        // 전체 PUBLISHED 책 중 score 기준 상위 5개 조회 후 저장
+        // 전체 PUBLISHED 책 중 이번 주 조회수/좋아요 기준 score 상위 5개 조회 후 저장
         List<Book> books = bookRepository.findTop5ForWeeklyRanking(PageRequest.of(0, 5));
         for (Book book : books) {
-            int score = book.getViewCount() * 1 + book.getLikeCount() * 3;
+            int score = book.getWeekViewCount() * 1 + book.getWeekLikeCount() * 3;
             weeklyBookRankingRepository.save(WeeklyBookRanking.builder()
                     .book(book)
                     .weekStartDate(weekStartDate)
                     .score(score)
                     .build());
         }
+
+        // 다음 주 집계를 위해 전체 PUBLISHED 책의 이번 주 조회수/좋아요를 0으로 초기화 (TOP5 안에 없던 책들도 포함)
+        bookRepository.resetWeeklyCounters();
 
         log.info("주간 인기 책 TOP5 집계 완료 - {}건", books.size());
     }

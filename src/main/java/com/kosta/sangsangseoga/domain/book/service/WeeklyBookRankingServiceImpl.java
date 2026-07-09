@@ -2,7 +2,9 @@ package com.kosta.sangsangseoga.domain.book.service;
 
 import com.kosta.sangsangseoga.domain.book.dto.WeeklyBookRankingDto;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.book.entity.BookImage;
 import com.kosta.sangsangseoga.domain.book.entity.WeeklyBookRanking;
+import com.kosta.sangsangseoga.domain.book.repository.BookImageRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.book.repository.WeeklyBookRankingRepository;
 
@@ -25,6 +27,14 @@ public class WeeklyBookRankingServiceImpl implements WeeklyBookRankingService {
 
     private final WeeklyBookRankingRepository weeklyBookRankingRepository;
     private final BookRepository bookRepository;
+    private final BookImageRepository bookImageRepository;
+
+    private String resolveCoverImageUrl(Book book) {
+        return bookImageRepository
+                .findByBookAndImageTypeAndDeletedAtIsNull(book, BookImage.ImageType.COVER)
+                .map(BookImage::getFileUrl)
+                .orElse(null);
+    }
 
     /**
      * 주간 인기 TOP5 조회
@@ -47,8 +57,8 @@ public class WeeklyBookRankingServiceImpl implements WeeklyBookRankingService {
                     .rankNum(i + 1)
                     .bookId(book.getId())
                     .title(book.getTitle())
-//                    .authorNickname(book.getMember().getNickname())
-                    .coverImageId(book.getCoverImageId())
+                    .authorNickname(book.getMember().getNickname())
+                    .coverImageUrl(resolveCoverImageUrl(book))
                     .viewCount(book.getViewCount())
                     .likeCount(book.getLikeCount())
                     .score(ranking.getScore())
@@ -84,8 +94,8 @@ public class WeeklyBookRankingServiceImpl implements WeeklyBookRankingService {
                     .rankNum(i + 1)
                     .bookId(book.getId())
                     .title(book.getTitle())
-//                    .authorNickname(book.getMember().getNickname())
-                    .coverImageId(book.getCoverImageId())
+                    .authorNickname(book.getMember().getNickname())
+                    .coverImageUrl(resolveCoverImageUrl(book))
                     .viewCount(book.getViewCount())
                     .likeCount(book.getLikeCount())
                     .score(score)
