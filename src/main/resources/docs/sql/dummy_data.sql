@@ -2,7 +2,7 @@ SET NAMES utf8mb4;
 -- SangSangSeoGa 더미 데이터 (자동 생성)
 SET FOREIGN_KEY_CHECKS=0;
 
--- member (60 rows)
+-- member (69 rows)
 INSERT INTO `member` (`id`, `version`, `email`, `password`, `birth_date`, `nickname`, `profile_image_url`, `introduction`, `status`, `role`, `free_trial_used`, `viewer_font_size`, `viewer_view_type`, `withdrawn_at`, `subscription_plan`, `subscription_start_at`, `subscription_end_at`, `daily_text_remaining`, `daily_image_remaining`, `last_token_reset_date`, `created_at`, `updated_at`, `auth_provider`, `oauth_provider_id`) VALUES
 (1, 0, 'seoyeongjin@example.org', '$2a$10$73c5b9e0516e9ad1fc1c2d32fef557a70c4a4ac0', '1999-05-24', 'coedoyun2287', NULL, NULL, 'ACTIVE', 'ADMIN', 1, 'LARGE', 'FADE', NULL, 'FREE', NULL, NULL, 0, 0, '2026-06-07', '2024-07-06 07:58:54', '2024-07-06 07:58:54', 'LOCAL', NULL),
 (2, 0, 'migyeonggim@example.org', '$2a$10$89067a736f9915ec56466252ed3e56043b047bdf', '1970-06-20', 'lgim3258', NULL, NULL, 'ACTIVE', 'ADMIN', 0, 'SMALL', 'FADE', NULL, 'FREE', NULL, NULL, 9, 4, '2026-06-03', '2024-12-20 00:40:23', '2024-12-27 00:40:23', 'LOCAL', NULL),
@@ -64,17 +64,36 @@ INSERT INTO `member` (`id`, `version`, `email`, `password`, `birth_date`, `nickn
 (58, 0, 'caeweoni@example.net', '$2a$10$bdb5cc75bce2cb67dc3962cc82ab0cf8d3701b22', '1979-08-28', 'usumin1071', 'https://cdn.sangsangseoga.com/profile/58.png', 'Quae est accusamus illum dolore sapiente beatae veniam officia.', 'SUSPENDED', 'USER', 1, 'SMALL', 'FLIP', NULL, 'FREE', NULL, NULL, 9, 4, '2026-06-07', '2024-04-04 04:43:17', '2024-04-12 04:43:17', 'LOCAL', NULL),
 (59, 0, 'migyeong46@example.com', '$2a$10$ef499db768c35536c72de9f7a7e43bd25e545afe', '1973-08-30', 'hyeonjungim9767', NULL, 'Ullam magni sunt sint eius ratione impedit vel.', 'ACTIVE', 'USER', 0, 'MEDIUM', 'FADE', NULL, 'FREE', NULL, NULL, 4, 9, '2026-06-24', '2025-02-03 22:29:17', '2025-02-06 22:29:17', 'LOCAL', NULL),
 (60, 0, 'ijaeho@example.net', '$2a$10$83f7e6c5f6eefff8173c3b78e82ef5999bf51d89', '1992-05-30', 'cmun1626', NULL, 'Laborum ex quis fugiat ut sit voluptatem dolores fugit sequi illum et.', 'ACTIVE', 'USER', 1, 'MEDIUM', 'FLIP', NULL, 'FREE', NULL, NULL, 2, 3, '2026-06-11', '2025-05-03 18:39:33', '2025-05-21 18:39:33', 'LOCAL', NULL),
-(61, 0, 'writer@sangsang.com', '$2a$10$nSkeVYLGzVKzq0Bgq7a8uOPHqXbuzY0VihxJ2r873QQ9e/Cvyrgsy', '2004-06-15', '테스트계정', NULL, NULL, 'ACTIVE', 'USER', 0, NULL, NULL, NULL, 'FREE', NULL, NULL, NULL, NULL, NULL, '2026-07-06 10:14:14', '2026-07-06 10:14:14', 'LOCAL', NULL);
+(61, 0, 'writer@sangsang.com', '$2a$10$nSkeVYLGzVKzq0Bgq7a8uOPHqXbuzY0VihxJ2r873QQ9e/Cvyrgsy', '2004-06-15', '테스트계정', NULL, NULL, 'ACTIVE', 'USER', 0, NULL, NULL, NULL, 'FREE', NULL, NULL, NULL, NULL, NULL, '2026-07-06 10:14:14', '2026-07-06 10:14:14', 'LOCAL', NULL),
+(62, 0, 'admin2@sangsang.com', '$2a$10$I91OTS3.S.thbseYfHaiqOsklubbBOo9tdtZZ7SS6UweTRE7IJLFy', '2000-01-01', '관리자테스트', NULL, '관리자 권한 테스트 계정입니다.', 'ACTIVE', 'ADMIN', 0, 'MEDIUM', 'FLIP', NULL, 'FREE', NULL, NULL, 5, 3, '2026-07-09', '2026-07-09 09:00:00', '2026-07-09 09:00:00', 'LOCAL', NULL),
+(63, 0, 'suspend@sangsang.com', '$2a$10$I91OTS3.S.thbseYfHaiqOsklubbBOo9tdtZZ7SS6UweTRE7IJLFy', '2000-01-01', '정지테스트', NULL, '이용 정지 상태 테스트 계정입니다.', 'SUSPENDED', 'USER', 0, 'MEDIUM', 'FLIP', NULL, 'FREE', NULL, NULL, 5, 3, '2026-07-09', '2026-07-09 09:00:00', '2026-07-09 09:00:00', 'LOCAL', NULL),
+(64, 0, 'pending@sangsang.com', '$2a$10$I91OTS3.S.thbseYfHaiqOsklubbBOo9tdtZZ7SS6UweTRE7IJLFy', '2000-01-01', '대기테스트', NULL, '보호자 동의 대기 상태 테스트 계정입니다.', 'PENDING', 'USER', 0, 'MEDIUM', 'FLIP', NULL, 'FREE', NULL, NULL, 5, 3, '2026-07-09', '2026-07-09 09:00:00', '2026-07-09 09:00:00', 'LOCAL', NULL),
+(65, 0, 'withdrawn@sangsang.com', '$2a$10$I91OTS3.S.thbseYfHaiqOsklubbBOo9tdtZZ7SS6UweTRE7IJLFy', '2000-01-01', '탈퇴테스트', NULL, '탈퇴 처리 테스트 계정입니다.', 'DELETED', 'USER', 0, 'MEDIUM', 'FLIP', '2026-07-08 09:00:00', 'FREE', NULL, NULL, 0, 0, '2026-07-08', '2026-07-09 09:00:00', '2026-07-09 09:00:00', 'LOCAL', NULL),
+(66, 0, 'monthly@sangsang.com', '$2a$10$I91OTS3.S.thbseYfHaiqOsklubbBOo9tdtZZ7SS6UweTRE7IJLFy', '2000-01-01', '월간구독테스트', NULL, '월간 구독 테스트 계정입니다.', 'ACTIVE', 'USER', 0, 'MEDIUM', 'FLIP', NULL, 'PREMIUM_MONTHLY', '2026-07-01 00:00:00', '2026-07-31 00:00:00', 30, 20, '2026-07-09', '2026-07-09 09:00:00', '2026-07-09 09:00:00', 'LOCAL', NULL),
+(67, 0, 'yearly@sangsang.com', '$2a$10$I91OTS3.S.thbseYfHaiqOsklubbBOo9tdtZZ7SS6UweTRE7IJLFy', '2000-01-01', '연간구독테스트', NULL, '연간 구독 테스트 계정입니다.', 'ACTIVE', 'USER', 0, 'MEDIUM', 'FLIP', NULL, 'PREMIUM_YEARLY', '2026-07-01 00:00:00', '2027-07-01 00:00:00', 30, 20, '2026-07-09', '2026-07-09 09:00:00', '2026-07-09 09:00:00', 'LOCAL', NULL),
+(68, 0, 'yearly_coverage1@example.com', '$2a$10$fakehash0000000000000000000005', '1988-07-22', '연간구독1', NULL, NULL, 'ACTIVE', 'USER', 0, 'MEDIUM', 'FLIP', NULL, 'PREMIUM_YEARLY', '2026-01-10 00:00:00', '2027-01-10 00:00:00', 30, 20, '2026-07-01', '2025-01-10 00:00:00', '2026-01-10 00:00:00', 'LOCAL', NULL),
+(69, 0, 'yearly_coverage2@example.com', '$2a$10$fakehash0000000000000000000006', '1995-11-05', '연간구독2', NULL, NULL, 'ACTIVE', 'USER', 1, 'SMALL', 'FADE', NULL, 'PREMIUM_YEARLY', '2026-02-15 00:00:00', '2027-02-15 00:00:00', 25, 15, '2026-07-02', '2025-02-15 00:00:00', '2026-02-15 00:00:00', 'LOCAL', NULL);
 
 
--- guardian_consent (6 rows)
+-- guardian_consent (16 rows)
 INSERT INTO `guardian_consent` (`id`, `member_id`, `guardian_email`, `guardian_id`, `status`, `requested_at`, `expires_at`, `approved_at`) VALUES
 (1, 4, 'zhan@example.com', 37, 'APPROVED', '2025-01-07 16:34:09', '2025-01-14 16:34:09', '2025-01-08 16:34:09'),
 (2, 6, 'ymin@example.net', 28, 'EXPIRED', '2025-10-26 07:15:22', '2025-11-02 07:15:22', NULL),
 (3, 7, 'myeongsuggim@example.net', 20, 'APPROVED', '2024-12-05 17:42:34', '2024-12-12 17:42:34', '2024-12-08 17:42:34'),
 (4, 42, 'jiyeon71@example.net', 47, 'EXPIRED', '2025-06-17 23:30:39', '2025-06-24 23:30:39', NULL),
 (5, 47, 'jgim@example.com', 5, 'APPROVED', '2026-04-28 07:02:32', '2026-05-05 07:02:32', '2026-05-01 07:02:32'),
-(6, 51, 'minjunhwang@example.com', 52, 'APPROVED', '2026-03-10 21:11:03', '2026-03-17 21:11:03', '2026-03-14 21:11:03');
+(6, 51, 'minjunhwang@example.com', 52, 'APPROVED', '2026-03-10 21:11:03', '2026-03-17 21:11:03', '2026-03-14 21:11:03'),
+(7, 4, 'guardian7@example.com', NULL, 'REQUESTED', '2026-06-01 09:00:00', '2026-06-08 09:00:00', NULL),
+(8, 9, 'guardian8@example.com', NULL, 'REQUESTED', '2026-06-02 09:00:00', '2026-06-09 09:00:00', NULL),
+(9, 15, 'guardian9@example.com', NULL, 'REQUESTED', '2026-06-03 09:00:00', '2026-06-10 09:00:00', NULL),
+(10, 20, 'guardian10@example.com', 5, 'REJECTED', '2026-05-01 09:00:00', '2026-05-08 09:00:00', NULL),
+(11, 25, 'guardian11@example.com', 6, 'REJECTED', '2026-05-02 09:00:00', '2026-05-09 09:00:00', NULL),
+(12, 30, 'guardian12@example.com', 7, 'REJECTED', '2026-05-03 09:00:00', '2026-05-10 09:00:00', NULL),
+(13, 35, 'guardian13@example.com', 8, 'WITHDRAWN', '2026-01-01 09:00:00', '2026-01-08 09:00:00', '2026-01-03 09:00:00'),
+(14, 40, 'guardian14@example.com', 9, 'WITHDRAWN', '2026-01-05 09:00:00', '2026-01-12 09:00:00', '2026-01-07 09:00:00'),
+(15, 45, 'guardian15@example.com', 10, 'WITHDRAWN', '2026-01-10 09:00:00', '2026-01-17 09:00:00', '2026-01-12 09:00:00'),
+(16, 50, 'guardian16@example.com', NULL, 'EXPIRED', '2025-12-01 09:00:00', '2025-12-08 09:00:00', NULL);
+
 
 -- book (150 rows)
 INSERT INTO `book` (`id`, `member_id`, `book_type`, `creation_mode`, `author_age_group`, `reader_age_group`, `title`, `description`, `category`, `target_lang`, `style_code`, `cover_image_id`, `confirmed_settings`, `status`, `page_count`, `view_count`, `like_count`, `comment_count`, `week_view_count`, `week_like_count`, `created_at`, `updated_at`) VALUES
@@ -3240,7 +3259,7 @@ UPDATE `book` SET `cover_image_id` = 1001 WHERE `id` = 148;
 UPDATE `book` SET `cover_image_id` = 1008 WHERE `id` = 149;
 UPDATE `book` SET `cover_image_id` = 1017 WHERE `id` = 150;
 
--- payment (80 rows)
+-- payment (84 rows)
 INSERT INTO `payment` (`id`, `member_id`, `amount`, `status`, `fail_reason`, `pg_transaction_id`, `paid_at`, `plan_type`, `created_at`) VALUES
 (1, 31, 19900, 'SUCCESS', NULL, '0cc0e1c0-b403-4e8b-8607-ff045635be33', '2026-03-04 00:21:07', 'FREE', '2026-03-04 00:18:07'),
 (2, 18, 19900, 'SUCCESS', NULL, '4ddc095d-fbe4-4f5e-9faf-70b54102223b', '2025-07-30 04:07:12', 'PREMIUM_MONTHLY', '2025-07-30 04:07:12'),
@@ -3321,7 +3340,12 @@ INSERT INTO `payment` (`id`, `member_id`, `amount`, `status`, `fail_reason`, `pg
 (77, 15, 19900, 'SUCCESS', NULL, 'd68c1a40-4a3c-4ee2-b8ff-672ecda799a8', '2025-06-17 05:12:22', 'FREE', '2025-06-17 05:12:22'),
 (78, 53, 9900, 'SUCCESS', NULL, '352d9bd5-3d89-4b54-a113-da780b97f02e', '2025-09-02 10:07:40', 'PREMIUM_MONTHLY', '2025-09-02 10:06:40'),
 (79, 56, 4900, 'FAILED', 'Quae iusto quidem fugit nobis.', 'c0216984-d28e-487f-a4d0-bc503cefd44c', '2025-12-25 02:23:54', 'FREE', '2025-12-25 02:23:54'),
-(80, 2, 4900, 'SUCCESS', NULL, '2ddba772-891c-4f1f-b1c7-6e2258bf3df2', '2026-04-17 00:30:12', 'FREE', '2026-04-17 00:30:12');
+(80, 2, 4900, 'SUCCESS', NULL, '2ddba772-891c-4f1f-b1c7-6e2258bf3df2', '2026-04-17 00:30:12', 'FREE', '2026-04-17 00:30:12'),
+(81, 66, 9900, 'SUCCESS', NULL, 'monthly-mock-txn-001', '2026-07-01 00:00:00', 'PREMIUM_MONTHLY', '2026-07-01 00:00:00'),
+(82, 67, 99000, 'SUCCESS', NULL, 'yearly-mock-txn-001', '2026-07-01 00:00:00', 'PREMIUM_YEARLY', '2026-07-01 00:00:00'),
+(83, 68, 99000, 'SUCCESS', NULL, 'yearly-mock-txn-002', '2026-01-10 00:00:00', 'PREMIUM_YEARLY', '2026-01-10 00:00:00'),
+(84, 69, 99000, 'SUCCESS', NULL, 'yearly-mock-txn-003', '2026-02-15 00:00:00', 'PREMIUM_YEARLY', '2026-02-15 00:00:00');
+
 
 -- ai_generation_usage (300 rows)
 INSERT INTO `ai_generation_usage` (`id`, `book_id`, `member_id`, `call_type`, `input_token_count`, `output_token_count`, `image_count`, `created_at`) VALUES
