@@ -32,6 +32,7 @@ public enum AuthErrorCode implements ErrorCode {
 
     // ===== OAuth (소셜 로그인) =====
     UNSUPPORTED_OAUTH_PROVIDER(HttpStatus.BAD_REQUEST, "지원하지 않는 소셜 로그인 제공자입니다."),
+    OAUTH_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "현재 이 소셜 로그인은 설정되어 있지 않아 이용할 수 없습니다."),
     OAUTH_AUTH_FAILED(HttpStatus.BAD_REQUEST, "소셜 로그인 인증에 실패했습니다. 다시 시도해 주세요."),
     OAUTH_EMAIL_REQUIRED(HttpStatus.BAD_REQUEST, "이메일 제공에 동의해야 가입할 수 있습니다."),
     INVALID_OAUTH_SIGNUP_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 소셜 회원가입 요청입니다."),

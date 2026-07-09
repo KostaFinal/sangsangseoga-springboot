@@ -107,6 +107,10 @@ CREATE DATABASE sangsangseoga CHARACTER SET utf8mb4;
 | `MAIL_FROM` | `no-reply@sangsangseoga.local` | 발신자 이메일 주소 |
 | `JWT_SECRET_KEY` | 기본 문자열 제공 | JWT 서명 키 |
 | `GEMINI_API_KEY` | 없음 (**필수**) | Gemini API 키. 없으면 AI 생성 기능만 실패하고 나머지 서버 구동에는 문제 없음 |
+| `KAKAO_CLIENT_ID` | 없음 | 카카오 로그인 REST API 키. 없어도 서버는 뜨지만, 카카오 로그인 API 호출 시 `OAUTH_NOT_CONFIGURED`(503)로 실패함 |
+| `KAKAO_CLIENT_SECRET` | 없음 | 카카오 콘솔에서 Client Secret을 활성화한 경우에만 필요(선택) |
+| `NAVER_CLIENT_ID` | 없음 | 네이버 로그인 클라이언트 ID. 없어도 서버는 뜨지만, 네이버 로그인 API 호출 시 `OAUTH_NOT_CONFIGURED`(503)로 실패함 |
+| `NAVER_CLIENT_SECRET` | 없음 | 네이버 로그인 클라이언트 시크릿(네이버는 카카오와 달리 항상 필수) |
 
 환경 변수는 아래 중 편한 방법으로 설정하면 됩니다.
 

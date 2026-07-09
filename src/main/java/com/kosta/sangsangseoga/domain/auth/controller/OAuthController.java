@@ -31,7 +31,7 @@ public class OAuthController {
     private final OAuthService oAuthService;
 
     @Operation(summary = "소셜 로그인 인가 URL 발급", description = "provider(kakao|naver)의 client_id를 조합한 완성된 인가 URL을 내려준다.")
-    @ApiErrorCodes({"UNSUPPORTED_OAUTH_PROVIDER"})
+    @ApiErrorCodes({"UNSUPPORTED_OAUTH_PROVIDER", "OAUTH_NOT_CONFIGURED"})
     @GetMapping("/authorize-url")
     public ResponseEntity<ApiResponse<OAuthAuthorizeUrlResponseDto>> getAuthorizeUrl(
             @PathVariable String provider,
@@ -41,7 +41,7 @@ public class OAuthController {
 
     @Operation(summary = "소셜 로그인/가입 콜백", description = "기존 회원이면 로그인 처리, 신규 회원이면 제공자가 생년월일을 줬는지에 따라 "
             + "즉시 가입(성인/미성년 분기) 또는 oauthSignupToken 발급으로 갈린다.")
-    @ApiErrorCodes({"UNSUPPORTED_OAUTH_PROVIDER", "OAUTH_AUTH_FAILED", "OAUTH_EMAIL_REQUIRED",
+    @ApiErrorCodes({"UNSUPPORTED_OAUTH_PROVIDER", "OAUTH_NOT_CONFIGURED", "OAUTH_AUTH_FAILED", "OAUTH_EMAIL_REQUIRED",
             "SUSPENDED_MEMBER", "DELETED_MEMBER", "PENDING_GUARDIAN_CONSENT",
             "DUPLICATE_EMAIL", "DUPLICATE_NICKNAME", "INVALID_BIRTH_DATE"})
     @PostMapping("/callback")

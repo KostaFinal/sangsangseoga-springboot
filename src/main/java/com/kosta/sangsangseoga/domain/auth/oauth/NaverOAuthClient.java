@@ -45,6 +45,7 @@ public class NaverOAuthClient implements OAuthClient {
 
     @Override
     public String buildAuthorizeUrl(String redirectUri) {
+        requireConfigured();
         return UriComponentsBuilder.fromHttpUrl(AUTHORIZE_URL)
                 .queryParam("response_type", "code")
                 .queryParam("client_id", properties.getClientId())
@@ -57,8 +58,23 @@ public class NaverOAuthClient implements OAuthClient {
 
     @Override
     public OAuthUserInfo fetchUserInfo(String code, String redirectUri) {
+        requireConfigured();
         String accessToken = exchangeToken(code);
         return fetchProfile(accessToken);
+    }
+
+    /**
+     * NAVER_CLIENT_ID/SECRET이 설정 안 된 상태로 두면, 이 메서드가 없을 경우 빈 값인 채로
+     * 네이버 서버까지 요청이 나가서 네이버 쪽 에러 메시지로만 원인을 알 수 있다. 여기서 먼저 걸러서
+     * "설정이 안 됐다"는 걸 바로 알 수 있게 한다. 서버 기동 자체는 막지 않는다 - 소셜 로그인은
+     * 선택적 기능이라 이거 하나 때문에 로컬 개발/다른 기능 테스트가 막히면 안 된다.
+     * 네이버는 카카오와 달리 client_secret이 항상 필수라 같이 확인한다.
+     */
+    private void requireConfigured() {
+        if (properties.getClientId() == null || properties.getClientId().isBlank()
+                || properties.getClientSecret() == null || properties.getClientSecret().isBlank()) {
+            throw new CustomException(AuthErrorCode.OAUTH_NOT_CONFIGURED);
+        }
     }
 
     private String exchangeToken(String code) {
