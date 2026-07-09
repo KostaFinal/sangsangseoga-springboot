@@ -48,6 +48,7 @@ public class BookLikeServiceImpl implements BookLikeService {
 
         // 좋아요 수 증가 후 현재 값 반환
         book.setLikeCount(book.getLikeCount() + 1);
+        book.setWeekLikeCount(book.getWeekLikeCount() + 1);
 
         return BookLikeDto.builder()
                 .bookId(bookId)
@@ -77,5 +78,7 @@ public class BookLikeServiceImpl implements BookLikeService {
 
         // 좋아요 수 감소 (0 이하로 내려가지 않도록)
         book.setLikeCount(Math.max(0, book.getLikeCount() - 1));
+        // 이번 주 좋아요는 저번 주에 누른 걸 이번 주에 취소하면 음수가 될 수 있음 (의도된 동작)
+        book.setWeekLikeCount(book.getWeekLikeCount() - 1);
     }
 }

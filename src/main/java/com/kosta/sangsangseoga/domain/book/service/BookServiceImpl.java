@@ -282,6 +282,7 @@ public class BookServiceImpl implements BookService {
                 .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
 
         book.setViewCount(book.getViewCount() + 1);
+        book.setWeekViewCount(book.getWeekViewCount() + 1);
 
         String coverImageUrl = bookImageRepository
                 .findByBookAndImageTypeAndDeletedAtIsNull(book, BookImage.ImageType.COVER)
