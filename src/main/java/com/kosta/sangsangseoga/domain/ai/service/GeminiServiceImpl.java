@@ -28,7 +28,7 @@ public class GeminiServiceImpl implements GeminiService {
 	@Value("${gemini.api.url}")
 	private String apiUrl;
 
-	private final RestTemplate restTemplate;
+	private final RestTemplate restTemplate = new RestTemplate();
 
 	@Override
 	public String generateReviewFeedback(String bookTitle, String reviewContent)  {

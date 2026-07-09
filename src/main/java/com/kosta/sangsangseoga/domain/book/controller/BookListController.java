@@ -3,6 +3,8 @@ package com.kosta.sangsangseoga.domain.book.controller;
 import com.kosta.sangsangseoga.domain.book.dto.BookContentsResponseDto;
 import com.kosta.sangsangseoga.domain.book.dto.BookDetailDto;
 import com.kosta.sangsangseoga.domain.book.dto.BookListResponseDto;
+import com.kosta.sangsangseoga.domain.book.dto.BookPublishRequestDto;
+import com.kosta.sangsangseoga.domain.book.dto.BookPublishResponseDto;
 import com.kosta.sangsangseoga.domain.book.dto.BookRecommendResponseDto;
 import com.kosta.sangsangseoga.domain.book.service.BookService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
@@ -17,6 +19,18 @@ import org.springframework.web.bind.annotation.*;
 public class BookListController {
 
     private final BookService bookService;
+
+    /**
+     * POST /api/books
+     * 책 생성(최종 저장) - 201
+     */
+    @PostMapping
+    public ResponseEntity<ApiResponse<BookPublishResponseDto>> publish(
+            @RequestBody BookPublishRequestDto request,
+            @AuthenticationPrincipal Long memberId) {
+        BookPublishResponseDto result = bookService.publish(memberId, request);
+        return ResponseEntity.status(201).body(ApiResponse.success(result));
+    }
 
     /**
      * GET /api/books
