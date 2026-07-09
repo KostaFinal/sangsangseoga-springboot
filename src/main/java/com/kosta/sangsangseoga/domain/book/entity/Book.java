@@ -76,4 +76,9 @@ public class Book extends BaseEntity {
 
     @Column(nullable = false)
     private Integer commentCount;
+
+    // 이번 주(월요일) 랭킹 집계 시점의 누적 조회수/좋아요 스냅샷 - 다음 주 집계 때 "이번 주 증가분"을 구하는 기준점.
+    // 기존 행에는 값이 없을 수 있어 nullable로 두고, 사용하는 쪽에서 null을 0으로 취급한다.
+    private Integer weekStartViewCount;
+    private Integer weekStartLikeCount;
 }
