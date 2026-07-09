@@ -1,12 +1,11 @@
 package com.kosta.sangsangseoga.domain.myLibrary.dto;
 
-
 import lombok.Builder;
 import lombok.Data;
 
 @Data
 @Builder
-public class WishlistBookResponseDto {
+public class MyWrittenBookResponseDto {
 	private Long bookId;
     private String title;
     private String description;
@@ -14,6 +13,7 @@ public class WishlistBookResponseDto {
     private String bookType;
     private String coverImageUrl;
     private Integer pageCount;
-    private Boolean wishlist;
-	
+    private Integer viewCount;
+    private Integer likeCount;
+    private String status;
 }

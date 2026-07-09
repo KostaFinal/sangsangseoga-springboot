@@ -17,4 +17,7 @@ public class BookRecommendItemDto {
     private String bookType;
     private String coverImageUrl;
     private String description;
+    private Integer viewCount;
+    private Integer likeCount;
+    private Integer commentCount;
 }

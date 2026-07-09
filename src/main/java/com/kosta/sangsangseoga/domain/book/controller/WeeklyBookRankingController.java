@@ -2,6 +2,7 @@ package com.kosta.sangsangseoga.domain.book.controller;
 
 
 import com.kosta.sangsangseoga.domain.book.dto.WeeklyBookRankingDto;
+import com.kosta.sangsangseoga.domain.book.scheduler.WeeklyBookRankingScheduler;
 import com.kosta.sangsangseoga.domain.book.service.WeeklyBookRankingService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 public class WeeklyBookRankingController {
 
     private final WeeklyBookRankingService weeklyBookRankingService;
+    private final WeeklyBookRankingScheduler weeklyBookRankingScheduler;
 
     /**
      * GET /api/books/weekly-ranking
@@ -33,5 +35,15 @@ public class WeeklyBookRankingController {
     public ResponseEntity<ApiResponse<WeeklyBookRankingDto>> getWeeklyNewReleases() throws Exception {
         WeeklyBookRankingDto result = weeklyBookRankingService.getWeeklyNewReleases();
         return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    /**
+     * [테스트용] POST /api/books/weekly-ranking/aggregate
+     * 매주 월요일 00:00 크론과 동일한 집계 로직을 즉시 실행. 확인 끝나면 제거 예정.
+     */
+    @PostMapping("/weekly-ranking/aggregate")
+    public ResponseEntity<ApiResponse<Void>> triggerWeeklyRankingAggregate() {
+        weeklyBookRankingScheduler.aggregateWeeklyRanking();
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

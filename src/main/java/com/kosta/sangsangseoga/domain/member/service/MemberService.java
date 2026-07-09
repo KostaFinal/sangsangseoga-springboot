@@ -15,6 +15,7 @@ import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentDecisionRequestD
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentPendingResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentResponseDto;
+import com.kosta.sangsangseoga.domain.member.dto.ViewerPreferenceDto;
 import com.kosta.sangsangseoga.domain.member.dto.WithdrawRequestDto;
 import com.kosta.sangsangseoga.domain.member.entity.GuardianConsent;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
@@ -275,6 +276,35 @@ public class MemberService {
             books.forEach(book -> book.setStatus(BookStatus.HIDDEN));
             bookRepository.saveAll(books);
         }
+    }
+
+    /**
+     * 뷰어 환경설정(글자 크기/페이지 전환 방식) 조회.
+     */
+    @Transactional(readOnly = true)
+    public ViewerPreferenceDto getViewerPreference(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        return ViewerPreferenceDto.builder()
+                .viewerFontSize(member.getViewerFontSize())
+                .viewerViewType(member.getViewerViewType())
+                .build();
+    }
+
+    /**
+     * 뷰어 환경설정(글자 크기/페이지 전환 방식) 저장.
+     */
+    public ViewerPreferenceDto updateViewerPreference(Long memberId, ViewerPreferenceDto request) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        member.updateViewerPreference(request.getViewerFontSize(), request.getViewerViewType());
+
+        return ViewerPreferenceDto.builder()
+                .viewerFontSize(member.getViewerFontSize())
+                .viewerViewType(member.getViewerViewType())
+                .build();
     }
 
     private GuardianConsentResponseDto toResponseDto(GuardianConsent consent) {

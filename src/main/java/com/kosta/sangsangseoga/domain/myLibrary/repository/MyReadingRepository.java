@@ -13,6 +13,15 @@ import com.kosta.sangsangseoga.domain.myLibrary.entity.MyReading;
 import com.kosta.sangsangseoga.domain.myLibrary.enums.ReadingStatus;
 
 public interface MyReadingRepository extends JpaRepository<MyReading, Long> {
+	
+	// 읽고 싶은 책 목록 조회
+	List<MyReading> findByMember_IdAndWishlistTrue(Long memberId);
+
+	// 내가 읽고 싶은 책으로 등록한 책인지 확인
+	Optional<MyReading> findByMember_IdAndBook_IdAndWishlistTrue(Long memberId, Long bookId);
+
+	// 읽고 싶은 책 개수
+	Long countByMember_IdAndWishlistTrue(Long memberId);
 
 	// 읽고 싶은 책 목록 조회
 	List<MyReading> findByMember_IdAndReadingStatus(Long memberId, ReadingStatus readingStatus);

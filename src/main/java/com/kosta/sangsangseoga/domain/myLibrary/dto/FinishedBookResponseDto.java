@@ -21,4 +21,6 @@ public class FinishedBookResponseDto {
 	private Integer rereadCount;
 	private String bookType;
 	private Integer pageCount;
+	private Integer viewCount;
+	private Integer likeCount;
 }
