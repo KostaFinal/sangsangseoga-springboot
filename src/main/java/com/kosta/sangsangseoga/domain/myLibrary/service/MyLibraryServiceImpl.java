@@ -2,6 +2,7 @@ package com.kosta.sangsangseoga.domain.myLibrary.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -9,15 +10,19 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.domain.book.entity.BookImage;
+import com.kosta.sangsangseoga.domain.book.enums.BookStatus;
 import com.kosta.sangsangseoga.domain.book.repository.BookImageRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.CategoryStatsDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.FinishedBookResponseDto;
+import com.kosta.sangsangseoga.domain.myLibrary.dto.MyWrittenBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingProgressRequestDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingStatsResponseDto;
+import com.kosta.sangsangseoga.domain.myLibrary.dto.UpdateBookDescriptionRequestDto;
+import com.kosta.sangsangseoga.domain.myLibrary.dto.UpdateBookStatusRequestDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.WishlistBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.entity.MyReading;
 import com.kosta.sangsangseoga.domain.myLibrary.enums.ReadingStatus;
@@ -38,23 +43,40 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	private final BookImageRepository bookImageRepository;
 	private final BookRepository bookRepository;
 	private final MemberRepository memberRepository;
+	
+	private Map<Long, String> getCoverImageUrlMap(List<Book> books) {
+	    if (books.isEmpty()) {
+	        return Map.of();
+	    }
+
+	    return bookImageRepository
+	            .findByBookInAndImageTypeAndDeletedAtIsNull(
+	                    books,
+	                    BookImage.ImageType.COVER
+	            )
+	            .stream()
+	            .collect(Collectors.toMap(
+	                    bookImage -> bookImage.getBook().getId(),
+	                    BookImage::getFileUrl,
+	                    (existing, replacement) -> existing
+	            ));
+	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public List<WishlistBookResponseDto> getWishlist(Long memberId){
-		return myReadingRepository
-	            .findByMember_IdAndReadingStatus(memberId, ReadingStatus.WISH)
-	            .stream()
+		List<MyReading> myReadings = myReadingRepository
+	            .findByMember_IdAndReadingStatus(memberId, ReadingStatus.WISH);
+
+	    List<Book> books = myReadings.stream()
+	            .map(MyReading::getBook)
+	            .collect(Collectors.toList());
+
+	    Map<Long, String> coverImageUrlMap = getCoverImageUrlMap(books);
+
+	    return myReadings.stream()
 	            .map(myReading -> {
 	                Book book = myReading.getBook();
-
-	                String coverImageUrl = bookImageRepository
-	                        .findByBookAndImageTypeAndDeletedAtIsNull(
-	                                book,
-	                                BookImage.ImageType.COVER
-	                        )
-	                        .map(BookImage::getFileUrl)
-	                        .orElse(null);
 
 	                return WishlistBookResponseDto.builder()
 	                        .bookId(book.getId())
@@ -62,7 +84,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	                        .description(book.getDescription())
 	                        .category(book.getCategory())
 	                        .bookType(book.getBookType().name())
-	                        .coverImageUrl(coverImageUrl)
+	                        .coverImageUrl(coverImageUrlMap.get(book.getId()))
 	                        .build();
 	            })
 	            .collect(Collectors.toList());
@@ -70,13 +92,16 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	
 	@Override
 	public void addWishlist(Long memberId, Long bookId) {
-	    MyReading existing = myReadingRepository
+		MyReading existing = myReadingRepository
 	            .findByMember_IdAndBook_Id(memberId, bookId)
 	            .orElse(null);
 
 	    if (existing != null) {
-	        existing.setReadingStatus(ReadingStatus.WISH);
-	        return;
+	        if (existing.getReadingStatus() == ReadingStatus.WISH) {
+	            return;
+	        }
+
+	        throw new CustomException(ReadingErrorCode.MY_READING_ALREADY_EXISTS);
 	    }
 
 	    Member member = memberRepository.findById(memberId)
@@ -114,19 +139,18 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	@Override
 	@Transactional(readOnly = true)
 	public List<ReadingBookResponseDto> getReadingList(Long memberId)  {
-		return myReadingRepository
-				.findByMember_IdAndReadingStatusOrderByRecentReadAtDesc(memberId, ReadingStatus.READING)
-	            .stream()
+		List<MyReading> myReadings = myReadingRepository
+	            .findByMember_IdAndReadingStatusOrderByRecentReadAtDesc(memberId, ReadingStatus.READING);
+
+	    List<Book> books = myReadings.stream()
+	            .map(MyReading::getBook)
+	            .collect(Collectors.toList());
+
+	    Map<Long, String> coverImageUrlMap = getCoverImageUrlMap(books);
+
+	    return myReadings.stream()
 	            .map(myReading -> {
 	                Book book = myReading.getBook();
-
-	                String coverImageUrl = bookImageRepository
-	                        .findByBookAndImageTypeAndDeletedAtIsNull(
-	                                book,
-	                                BookImage.ImageType.COVER
-	                        )
-	                        .map(BookImage::getFileUrl)
-	                        .orElse(null);
 
 	                return ReadingBookResponseDto.builder()
 	                        .bookId(book.getId())
@@ -134,7 +158,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	                        .description(book.getDescription())
 	                        .category(book.getCategory())
 	                        .bookType(book.getBookType().name())
-	                        .coverImageUrl(coverImageUrl)
+	                        .coverImageUrl(coverImageUrlMap.get(book.getId()))
 	                        .currentPage(myReading.getCurrentPage())
 	                        .progress(myReading.getProgress())
 	                        .pageCount(book.getPageCount())
@@ -146,20 +170,18 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	@Override
 	@Transactional(readOnly = true)
 	public List<FinishedBookResponseDto> getFinishedList(Long memberId)  {
-		return myReadingRepository
-				.findByMember_IdAndRereadCountGreaterThanOrderByCompletedAtDesc(memberId,0)
-	            .stream()
+		List<MyReading> myReadings = myReadingRepository
+	            .findByMember_IdAndRereadCountGreaterThanOrderByCompletedAtDesc(memberId, 0);
+
+	    List<Book> books = myReadings.stream()
+	            .map(MyReading::getBook)
+	            .collect(Collectors.toList());
+
+	    Map<Long, String> coverImageUrlMap = getCoverImageUrlMap(books);
+
+	    return myReadings.stream()
 	            .map(myReading -> {
-
 	                Book book = myReading.getBook();
-
-	                String coverImageUrl = bookImageRepository
-	                        .findByBookAndImageTypeAndDeletedAtIsNull(
-	                                book,
-	                                BookImage.ImageType.COVER
-	                        )
-	                        .map(BookImage::getFileUrl)
-	                        .orElse(null);
 
 	                return FinishedBookResponseDto.builder()
 	                        .bookId(book.getId())
@@ -167,14 +189,15 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	                        .description(book.getDescription())
 	                        .category(book.getCategory())
 	                        .bookType(book.getBookType().name())
-	                        .coverImageUrl(coverImageUrl)
+	                        .coverImageUrl(coverImageUrlMap.get(book.getId()))
 	                        .startedAt(myReading.getCreatedAt())
 	                        .completedAt(myReading.getCompletedAt())
 	                        .readingTime(myReading.getReadingTime())
 	                        .readingStatus(myReading.getReadingStatus().name())
 	                        .rereadCount(myReading.getRereadCount())
+	                        .viewCount(book.getViewCount())
+	                        .likeCount(book.getLikeCount())
 	                        .build();
-
 	            })
 	            .collect(Collectors.toList());
 	}
@@ -215,6 +238,16 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	    myReading.setCurrentPage(requestDto.getCurrentPage());
 	    myReading.setProgress(requestDto.getProgress());
 	    myReading.setRecentReadAt(LocalDateTime.now());
+	    
+	    Integer addedReadingTime = requestDto.getReadingTime();
+
+	    if (addedReadingTime != null && addedReadingTime > 0) {
+	        Integer currentReadingTime = myReading.getReadingTime() != null
+	                ? myReading.getReadingTime()
+	                : 0;
+
+	        myReading.setReadingTime(currentReadingTime + addedReadingTime);
+	    }
 	}
 
 	@Override
@@ -315,7 +348,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	                    .build())
 	            .collect(Collectors.toList());
 	    
-	    List<Book> writtenBooks = bookRepository.findByMember_IdAndStatus(memberId, "PUBLISHED");
+	    List<Book> writtenBooks = bookRepository.findByMember_IdAndStatus(memberId, BookStatus.PUBLISHED);
 
 	    Long writtenBookCount = (long) writtenBooks.size();
 
@@ -350,6 +383,56 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	            .build();
 	}
 
+	@Override
+	@Transactional(readOnly = true)
+	public List<MyWrittenBookResponseDto> getMyWrittenBooks(Long memberId) {
+	    List<Book> books = bookRepository.findByMember_IdAndStatus(memberId, BookStatus.PUBLISHED);
+
+	    Map<Long, String> coverImageUrlMap = getCoverImageUrlMap(books);
+
+	    return books.stream()
+	            .map(book -> MyWrittenBookResponseDto.builder()
+	                    .bookId(book.getId())
+	                    .title(book.getTitle())
+	                    .description(book.getDescription())
+	                    .category(book.getCategory())
+	                    .bookType(book.getBookType().name())
+	                    .coverImageUrl(coverImageUrlMap.get(book.getId()))
+	                    .pageCount(book.getPageCount())
+	                    .viewCount(book.getViewCount())
+	                    .likeCount(book.getLikeCount())
+	                    .status(book.getStatus().name())
+	                    .build())
+	            .collect(Collectors.toList());
+	}
 	
+	@Override
+	public void updateMyWrittenBookStatus(Long memberId, Long bookId, UpdateBookStatusRequestDto requestDto) {
+	    Book book = bookRepository.findById(bookId)
+	            .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+
+	    if (!book.getMember().getId().equals(memberId)) {
+	        throw new CustomException(CommonErrorCode.FORBIDDEN);
+	    }
+
+	    BookStatus status = BookStatus.valueOf(requestDto.getStatus());
+	    book.setStatus(status);
+	}
+	
+	@Override
+	public void updateMyWrittenBookDescription(
+	        Long memberId,
+	        Long bookId,
+	        UpdateBookDescriptionRequestDto requestDto
+	) {
+	    Book book = bookRepository.findById(bookId)
+	            .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+
+	    if (!book.getMember().getId().equals(memberId)) {
+	        throw new CustomException(CommonErrorCode.FORBIDDEN);
+	    }
+
+	    book.setDescription(requestDto.getDescription());
+	}
 
 }
