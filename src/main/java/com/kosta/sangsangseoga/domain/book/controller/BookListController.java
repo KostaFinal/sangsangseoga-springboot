@@ -73,6 +73,17 @@ public class BookListController {
     }
 
     /**
+     * POST /api/books/:id/view
+     * 책 읽기 시작 시 조회수 증가 - 200
+     */
+    @PostMapping("/{id}/view")
+    public ResponseEntity<ApiResponse<Integer>> increaseViewCount(
+            @PathVariable Long id) throws Exception {
+        Integer viewCount = bookService.increaseViewCount(id);
+        return ResponseEntity.ok(ApiResponse.success(viewCount));
+    }
+
+    /**
      * GET /api/books/:id/contents
      * 책 본문(페이지) 조회 - 200
      */

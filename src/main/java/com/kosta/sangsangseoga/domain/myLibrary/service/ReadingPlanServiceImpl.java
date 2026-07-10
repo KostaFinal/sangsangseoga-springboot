@@ -2,22 +2,25 @@ package com.kosta.sangsangseoga.domain.myLibrary.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.book.entity.BookImage;
+import com.kosta.sangsangseoga.domain.book.repository.BookImageRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingPlanRequestDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingPlanResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.entity.ReadingPlan;
-import com.kosta.sangsangseoga.domain.myLibrary.repository.ReadingPlanRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.exception.ReadingErrorCode;
-import com.kosta.sangsangseoga.global.exception.CustomException;
+import com.kosta.sangsangseoga.domain.myLibrary.repository.ReadingPlanRepository;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
+import com.kosta.sangsangseoga.global.exception.CustomException;
 
 import lombok.RequiredArgsConstructor;
 @Service
@@ -33,6 +36,69 @@ public class ReadingPlanServiceImpl implements ReadingPlanService {
 
     // 도서 조회 Repository
     private final BookRepository bookRepository;
+    
+    private final BookImageRepository bookImageRepository;
+    
+    private Map<Long, String> buildCoverImageMap(List<ReadingPlan> readingPlans) {
+        List<Book> books = readingPlans.stream()
+                .map(ReadingPlan::getBook)
+                .collect(Collectors.toList());
+
+        return bookImageRepository
+                .findByBookInAndImageTypeAndDeletedAtIsNull(books, BookImage.ImageType.COVER)
+                .stream()
+                .collect(Collectors.toMap(
+                        image -> image.getBook().getId(),
+                        BookImage::getFileUrl,
+                        (existing, replacement) -> existing
+                ));
+    }
+    
+    /**
+     * Entity → ResponseDto 변환
+     */
+    private ReadingPlanResponseDto toResponseDto(ReadingPlan readingPlan) {
+
+        Book book = readingPlan.getBook();
+        
+        String coverImageUrl = bookImageRepository
+                .findByBookAndImageTypeAndDeletedAtIsNull(book, BookImage.ImageType.COVER)
+                .map(BookImage::getFileUrl)
+                .orElse(null);
+
+        return ReadingPlanResponseDto.builder()
+                .planId(readingPlan.getId())	
+                .bookId(book.getId())
+                .bookTitle(book.getTitle())
+                .category(book.getCategory())
+                .coverImageUrl(coverImageUrl)
+                .planDate(readingPlan.getPlanDate())
+                .targetPage(readingPlan.getTargetPage())
+                .memo(readingPlan.getMemo())
+                .isCompleted(readingPlan.getIsCompleted())
+                .completedAt(readingPlan.getCompletedAt())
+                .build();
+    }
+    
+    private ReadingPlanResponseDto toResponseDto(
+            ReadingPlan readingPlan,
+            Map<Long, String> coverImageMap) {
+
+        Book book = readingPlan.getBook();
+
+        return ReadingPlanResponseDto.builder()
+                .planId(readingPlan.getId())
+                .bookId(book.getId())
+                .bookTitle(book.getTitle())
+                .category(book.getCategory())
+                .coverImageUrl(coverImageMap.get(book.getId()))
+                .planDate(readingPlan.getPlanDate())
+                .targetPage(readingPlan.getTargetPage())
+                .memo(readingPlan.getMemo())
+                .isCompleted(readingPlan.getIsCompleted())
+                .completedAt(readingPlan.getCompletedAt())
+                .build();
+    }
 
     /**
      * 전체 독서 계획 조회
@@ -41,10 +107,14 @@ public class ReadingPlanServiceImpl implements ReadingPlanService {
     @Transactional(readOnly = true)
     public List<ReadingPlanResponseDto> getReadingPlans(Long memberId){
 
-        return readingPlanRepository.findByMember_IdOrderByPlanDateAsc(memberId)
-                .stream()
-                .map(this::toResponseDto)
-                .collect(Collectors.toList());
+    	List<ReadingPlan> readingPlans =
+    	        readingPlanRepository.findByMember_IdOrderByPlanDateAsc(memberId);
+
+    	Map<Long, String> coverImageMap = buildCoverImageMap(readingPlans);
+
+    	return readingPlans.stream()
+    	        .map(plan -> toResponseDto(plan, coverImageMap))
+    	        .collect(Collectors.toList());
     }
 
     /**
@@ -54,10 +124,14 @@ public class ReadingPlanServiceImpl implements ReadingPlanService {
     @Transactional(readOnly = true)
     public List<ReadingPlanResponseDto> getReadingPlansByDate(Long memberId, LocalDate planDate){
 
-        return readingPlanRepository.findByMember_IdAndPlanDateOrderByIdAsc(memberId, planDate)
-                .stream()
-                .map(this::toResponseDto)
-                .collect(Collectors.toList());
+    	List<ReadingPlan> readingPlans =
+    	        readingPlanRepository.findByMember_IdAndPlanDateOrderByIdAsc(memberId, planDate);
+
+    	Map<Long, String> coverImageMap = buildCoverImageMap(readingPlans);
+
+    	return readingPlans.stream()
+    	        .map(plan -> toResponseDto(plan, coverImageMap))
+    	        .collect(Collectors.toList());
     }
 
     /**
@@ -146,25 +220,6 @@ public class ReadingPlanServiceImpl implements ReadingPlanService {
         return toResponseDto(readingPlan);
     }
 
-    /**
-     * Entity → ResponseDto 변환
-     */
-    private ReadingPlanResponseDto toResponseDto(ReadingPlan readingPlan) {
-
-        Book book = readingPlan.getBook();
-
-        return ReadingPlanResponseDto.builder()
-                .planId(readingPlan.getId())
-                .bookId(book.getId())
-                .bookTitle(book.getTitle())
-                .category(book.getCategory())
-                .coverImageId(book.getCoverImageId())
-                .planDate(readingPlan.getPlanDate())
-                .targetPage(readingPlan.getTargetPage())
-                .memo(readingPlan.getMemo())
-                .isCompleted(readingPlan.getIsCompleted())
-                .completedAt(readingPlan.getCompletedAt())
-                .build();
-    }
+    
 
 }

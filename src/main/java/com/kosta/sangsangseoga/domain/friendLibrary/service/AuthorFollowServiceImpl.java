@@ -1,16 +1,28 @@
 package com.kosta.sangsangseoga.domain.friendLibrary.service;
 
-import com.kosta.sangsangseoga.domain.member.entity.Member;
-import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.book.enums.BookStatus;
+import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.dto.AuthorFollowDto;
+import com.kosta.sangsangseoga.domain.friendLibrary.dto.AuthorListItemDto;
+import com.kosta.sangsangseoga.domain.friendLibrary.dto.AuthorListResponseDto;
 import com.kosta.sangsangseoga.domain.friendLibrary.entity.AuthorFollow;
 import com.kosta.sangsangseoga.domain.friendLibrary.exception.FriendLibraryErrorCode;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.AuthorFollowRepository;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +31,7 @@ public class AuthorFollowServiceImpl implements AuthorFollowService {
 
     private final AuthorFollowRepository authorFollowRepository;
     private final MemberRepository memberRepository;
+    private final BookRepository bookRepository;
 
     /**
      * 팔로우
@@ -77,5 +90,48 @@ public class AuthorFollowServiceImpl implements AuthorFollowService {
                 .orElseThrow(() -> new CustomException(FriendLibraryErrorCode.FOLLOW_NOT_FOUND));
 
         authorFollowRepository.delete(authorFollow);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public AuthorListResponseDto getMyFollowedAuthors(Long memberId, int page, int size) throws Exception {
+    	Page<AuthorFollow> authorFollowPage =
+    	        authorFollowRepository.findByFollower_IdOrderByCreatedAtDesc(
+    	                memberId,
+    	                PageRequest.of(page - 1, size)
+    	        );
+
+    	List<AuthorListItemDto> items = authorFollowPage
+    	        .getContent()
+    	        .stream()
+    	        .map(authorFollow -> {
+                    Member author = authorFollow.getAuthor();
+
+                    long followerCount = authorFollowRepository.countByAuthor(author);
+                    long worksCount = bookRepository.countByMemberAndStatus(author, BookStatus.PUBLISHED);
+                    String representativeWork = bookRepository
+                            .findTopByMemberAndStatusOrderByLikeCountDesc(author, BookStatus.PUBLISHED)
+                            .map(Book::getTitle)
+                            .orElse(null);
+
+                    return AuthorListItemDto.builder()
+                            .id(author.getId())
+                            .nickname(author.getNickname())
+                            .profileImageUrl(author.getProfileImageUrl())
+                            .introduction(author.getIntroduction())
+                            .followerCount(followerCount)
+                            .worksCount(worksCount)
+                            .representativeWork(representativeWork)
+                            .isFollowedByMe(true)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+    	return AuthorListResponseDto.builder()
+    	        .items(items)
+    	        .totalCount(authorFollowPage.getTotalElements())
+    	        .page(authorFollowPage.getNumber() + 1)
+    	        .hasNext(authorFollowPage.hasNext())
+    	        .build();
     }
 }

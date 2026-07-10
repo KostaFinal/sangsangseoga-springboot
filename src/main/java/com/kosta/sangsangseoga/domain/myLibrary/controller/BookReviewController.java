@@ -6,6 +6,7 @@ import javax.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -50,8 +51,8 @@ public class BookReviewController {
 	@PostMapping
 	public ResponseEntity<ApiResponse<BookReviewResponseDto>> createReview(
 	        Authentication authentication,
-	        @Valid @RequestBody BookReviewRequestDto requestDto
-
+	        @Validated(BookReviewRequestDto.OnPublish.class)
+	        @RequestBody BookReviewRequestDto requestDto
 	) {
 	    Long memberId = (Long) authentication.getPrincipal();
 	    return ResponseEntity.ok(ApiResponse.success(bookReviewService.createReview(memberId, requestDto)));
@@ -62,8 +63,8 @@ public class BookReviewController {
 	public ResponseEntity<ApiResponse<BookReviewResponseDto>> updateReview(
 	        Authentication authentication,
 	        @PathVariable Long reviewId,
-	        @Valid @RequestBody BookReviewRequestDto requestDto
-
+	        @Validated(BookReviewRequestDto.OnPublish.class)
+	        @RequestBody BookReviewRequestDto requestDto
 	) {
 	    Long memberId = (Long) authentication.getPrincipal();
 	    return ResponseEntity.ok(ApiResponse.success(bookReviewService.updateReview(memberId, reviewId, requestDto)));

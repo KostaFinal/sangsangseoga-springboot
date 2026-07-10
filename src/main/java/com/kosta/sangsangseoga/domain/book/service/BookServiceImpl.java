@@ -272,7 +272,6 @@ public class BookServiceImpl implements BookService {
 
     /**
      * 책 상세 조회
-     * - 조회수 증가
      * - 비로그인(memberId=null) 시 isLikedByMe, isBookmarkedByMe = false
      */
     @Override
@@ -280,9 +279,6 @@ public class BookServiceImpl implements BookService {
     public BookDetailDto getBook(Long bookId, Long memberId) throws Exception {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
-
-        book.setViewCount(book.getViewCount() + 1);
-        book.setWeekViewCount(book.getWeekViewCount() + 1);
 
         String coverImageUrl = bookImageRepository
                 .findByBookAndImageTypeAndDeletedAtIsNull(book, BookImage.ImageType.COVER)
@@ -321,6 +317,21 @@ public class BookServiceImpl implements BookService {
                 .tags(tags)
                 .createdAt(book.getCreatedAt())
                 .build();
+    }
+
+    /**
+     * 책 읽기 시작 시 조회수 증가
+     */
+    @Override
+    @Transactional
+    public Integer increaseViewCount(Long bookId) throws Exception {
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+
+        book.setViewCount(book.getViewCount() + 1);
+        book.setWeekViewCount(book.getWeekViewCount() + 1);
+
+        return book.getViewCount();
     }
 
     /**

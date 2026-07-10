@@ -1,10 +1,24 @@
 package com.kosta.sangsangseoga.domain.member.controller;
 
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentApproveRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentDecisionRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentPendingResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentResponseDto;
+import com.kosta.sangsangseoga.domain.member.dto.MemberMeResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.ViewerPreferenceDto;
 import com.kosta.sangsangseoga.domain.member.dto.WithdrawRequestDto;
 import com.kosta.sangsangseoga.domain.member.service.MemberService;
@@ -14,19 +28,8 @@ import com.kosta.sangsangseoga.global.security.AuthenticationHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Member", description = "회원 정보/보호자 동의")
 @RestController
@@ -37,6 +40,14 @@ public class MemberController {
     // 서로 다른 최상위 경로라 클래스 레벨 매핑 없이 메서드별로 전체 경로를 지정합니다.
 
     private final MemberService memberService;
+
+    @Operation(summary = "내 정보 조회")
+    @ApiErrorCodes({"MEMBER_NOT_FOUND"})
+    @GetMapping("/api/members/me")
+    public ResponseEntity<ApiResponse<MemberMeResponseDto>> getMyInfo(Authentication authentication) {
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
+        return ResponseEntity.ok(ApiResponse.success(memberService.getMyInfo(memberId)));
+    }
 
     @Operation(summary = "회원 탈퇴")
     @ApiErrorCodes({"MEMBER_NOT_FOUND", "ALREADY_DELETED_MEMBER", "WRONG_PASSWORD"})
