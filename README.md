@@ -218,17 +218,19 @@ http://localhost:8080/swagger-ui/index.html
 
 `/api/admin/**` 등 ADMIN 권한이 필요한 API를 테스트할 때 쓸 수 있는 계정입니다.
 
-| 이메일 | 비밀번호 | 권한/상태 | 비고 |
-|---|---|---|---|
-| `admin2@sangsang.com` | `test1234!` | ADMIN / ACTIVE | `dummy_data.sql`에 시딩되는 관리자 테스트 계정(id 62) |
-| `suspend@sangsang.com` | `test1234!` | USER / SUSPENDED | 정지 상태 로그인 차단 테스트용(id 63) |
-| `pending@sangsang.com` | `test1234!` | USER / PENDING | 보호자 동의 대기 상태 테스트용(id 64) |
-| `withdrawn@sangsang.com` | `test1234!` | USER / DELETED | 탈퇴 상태 로그인 차단 테스트용(id 65) |
-| `monthly@sangsang.com` | `test1234!` | USER / PREMIUM_MONTHLY | 월간 구독 회원 테스트용(id 66) |
-| `yearly@sangsang.com` | `test1234!` | USER / PREMIUM_YEARLY | 연간 구독 회원 테스트용(id 67) |
-| `guardian@sangsang.com` | `test1234!` | USER / ACTIVE | 보호자 동의 처리 테스트용(id 70). `pending@sangsang.com`(id 64)의 보호자로 연결되어 있음 |
+| 이메일 | 비밀번호 | 권한/상태 | 보유 책 수 | 비고 |
+|---|---|---|---|---|
+| `admin2@sangsang.com` | `test1234!` | ADMIN / ACTIVE | 2권 | `dummy_data.sql`에 시딩되는 관리자 테스트 계정(id 62) |
+| `suspend@sangsang.com` | `test1234!` | USER / SUSPENDED | 1권 | 정지 상태 로그인 차단 테스트용(id 63) |
+| `pending@sangsang.com` | `test1234!` | USER / PENDING | 1권 | 보호자 동의 대기 상태 테스트용(id 64) |
+| `withdrawn@sangsang.com` | `test1234!` | USER / DELETED | 1권 | 탈퇴 상태 로그인 차단 테스트용(id 65) |
+| `monthly@sangsang.com` | `test1234!` | USER / PREMIUM_MONTHLY | 3권 | 월간 구독 회원 테스트용(id 66) |
+| `yearly@sangsang.com` | `test1234!` | USER / PREMIUM_YEARLY | 12권 | 연간 구독 회원 테스트용(id 67). 다작 작가 계정 |
+| `guardian@sangsang.com` | `test1234!` | USER / ACTIVE | 3권 | 보호자 동의 처리 테스트용(id 70). `pending@sangsang.com`(id 64)의 보호자로 연결되어 있음 |
 
 `admin2@sangsang.com`부터 `guardian@sangsang.com`까지 7개 계정은 `dummy_data.sql`에 실제 `BCryptPasswordEncoder`로 암호화된 `test1234!` 해시로 시딩되어 있어, DB를 리셋하고 `dummy_data.sql`을 다시 실행해도 곧바로 로그인할 수 있습니다(단 SUSPENDED/PENDING/DELETED 계정은 상태값 자체 때문에 로그인 API가 의도적으로 막습니다).
+
+이 외에 `writer@sangsang.com`(id 61, 12권 보유)도 다작 작가 계정으로 시딩되어 있지만, 아래 "주의" 문단에 나오듯 로그인 가능한 평문 비밀번호는 없습니다. 다른 계정으로 로그인해 이 계정이 쓴 책들을 조회/좋아요/댓글/리뷰하는 용도로 쓰면 됩니다.
 
 ### 보호자 동의(부모-자녀) 테스트 흐름
 
@@ -257,6 +259,37 @@ curl -X POST http://localhost:8080/api/auth/login -H "Content-Type: application/
 ```
 
 ⚠️ 4번을 실행하면 `pending@sangsang.com`이 영구적으로 `ACTIVE`로 바뀝니다. "보호자 동의 대기" 상태 자체를 다시 테스트하려면 DB를 리셋하고 `dummy_data.sql`을 다시 실행하세요.
+
+### 더미 데이터로 내 서재 / 친구 서재 테스트하기
+
+회원가입 → AI 동화 생성 → 발행 과정을 거치지 않아도, `dummy_data.sql`이 테스트 계정별로 이미 책과 독서 기록을 채워두었기 때문에 로그인만으로 바로 "내 서재"/"친구 서재" 흐름을 확인할 수 있습니다.
+
+- 각 테스트 계정은 위 표의 권수만큼 직접 쓴 책(`book`)을 갖고 있고, 책마다 페이지(`book_page`)·삽화(`book_image`)·태그(`book_tag`)·AI 생성 이력(`ai_generation_usage`)이 함께 채워져 있습니다.
+- 다른 회원(테스트 계정 포함)이 남긴 댓글(`comment`)·좋아요(`book_like`)·리뷰(`book_review`)도 미리 연결되어 있어 책 상세/댓글 API에서 바로 데이터를 확인할 수 있습니다.
+- 각 테스트 계정 본인도 다른 사람의 책을 읽은 기록(`my_reading`)·북마크(`bookmark`)·독서 메모(`reading_memo`)·독서 계획(`reading_plan`)·작가 팔로우(`author_follow`)를 1건 이상 갖고 있습니다.
+- `book_page.content_text_en`은 실제 영어 문장으로 채워져 있어(더 이상 라틴어 아님) 다국어 뷰어 테스트에도 바로 쓸 수 있습니다.
+
+```bash
+# 1) guardian 계정으로 로그인 (3권 보유)
+GUARDIAN_TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"guardian@sangsang.com","password":"test1234!"}' | jq -r .data.accessToken)
+
+# 2) 내가 쓴 책 목록 (내 서재 - 저술)
+curl http://localhost:8080/api/books/my -H "Authorization: Bearer $GUARDIAN_TOKEN"
+
+# 3) 내가 읽고 있는 책 목록 (내 서재 - 독서)
+curl http://localhost:8080/api/bookshelves/reading -H "Authorization: Bearer $GUARDIAN_TOKEN"
+
+# 4) 책 상세/본문/댓글 조회 (다른 계정의 서재를 구경하는 느낌으로, bookId는 2번 응답에서 확인)
+curl http://localhost:8080/api/books/183
+curl http://localhost:8080/api/books/183/contents
+curl http://localhost:8080/api/books/183/comments
+
+# 5) 다른 계정(yearly, 12권 보유)으로 로그인해서 guardian이 쓴 책에 좋아요
+YEARLY_TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"yearly@sangsang.com","password":"test1234!"}' | jq -r .data.accessToken)
+curl -X POST http://localhost:8080/api/books/183/likes -H "Authorization: Bearer $YEARLY_TOKEN"
+```
 
 **주의**: 그 외 `dummy_data.sql`로 시딩되는 일반 더미 회원(id 1~61번, `writer@sangsang.com` 포함)은 임의의/알 수 없는 비밀번호 해시라 **실제 로그인 가능한 평문 비밀번호가 없습니다.** 위 표에 없는 계정으로 로그인 테스트가 필요하면 아래처럼 새 계정을 만들어서 쓰세요.
 
