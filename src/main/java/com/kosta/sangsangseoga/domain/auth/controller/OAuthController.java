@@ -8,6 +8,7 @@ import com.kosta.sangsangseoga.domain.auth.service.OAuthService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
 import com.kosta.sangsangseoga.global.config.ApiErrorCodes;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -32,6 +33,7 @@ public class OAuthController {
 
     @Operation(summary = "소셜 로그인 인가 URL 발급", description = "provider(kakao|naver)의 client_id를 조합한 완성된 인가 URL을 내려준다.")
     @ApiErrorCodes({"UNSUPPORTED_OAUTH_PROVIDER", "OAUTH_NOT_CONFIGURED"})
+    @SecurityRequirements
     @GetMapping("/authorize-url")
     public ResponseEntity<ApiResponse<OAuthAuthorizeUrlResponseDto>> getAuthorizeUrl(
             @PathVariable String provider,
@@ -44,6 +46,7 @@ public class OAuthController {
     @ApiErrorCodes({"UNSUPPORTED_OAUTH_PROVIDER", "OAUTH_NOT_CONFIGURED", "OAUTH_AUTH_FAILED", "OAUTH_EMAIL_REQUIRED",
             "SUSPENDED_MEMBER", "DELETED_MEMBER", "PENDING_GUARDIAN_CONSENT",
             "DUPLICATE_EMAIL", "DUPLICATE_NICKNAME", "INVALID_BIRTH_DATE"})
+    @SecurityRequirements
     @PostMapping("/callback")
     public ResponseEntity<ApiResponse<OAuthCallbackResponseDto>> callback(
             @PathVariable String provider,
@@ -55,6 +58,7 @@ public class OAuthController {
             + "oauthSignupToken + 사용자가 입력한 닉네임/생년월일로 가입을 마무리한다.")
     @ApiErrorCodes({"INVALID_OAUTH_SIGNUP_TOKEN", "EXPIRED_OAUTH_SIGNUP_TOKEN",
             "DUPLICATE_EMAIL", "DUPLICATE_NICKNAME", "INVALID_BIRTH_DATE"})
+    @SecurityRequirements
     @PostMapping("/complete-signup")
     public ResponseEntity<ApiResponse<OAuthCallbackResponseDto>> completeSignup(
             @PathVariable String provider,

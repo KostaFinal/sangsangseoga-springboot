@@ -12,6 +12,7 @@ import com.kosta.sangsangseoga.global.common.ApiResponse;
 import com.kosta.sangsangseoga.global.config.ApiErrorCodes;
 import com.kosta.sangsangseoga.global.security.AuthenticationHelper;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -69,6 +70,7 @@ public class MemberController {
 
     @Operation(summary = "보호자 동의 요청 생성", description = "보호자 이메일로 동의 요청 메일을 발송한다.")
     @ApiErrorCodes({"MEMBER_NOT_FOUND", "ALREADY_APPROVED_MEMBER"})
+    @SecurityRequirements
     @PostMapping("/api/guardian-consents")
     public ResponseEntity<ApiResponse<GuardianConsentResponseDto>> requestGuardianConsent(
             @RequestBody GuardianConsentRequestDto request) {
@@ -89,6 +91,7 @@ public class MemberController {
     @Operation(summary = "보호자 동의 처리(이메일 링크, 비로그인)", description = "메일에 담긴 목적 한정 토큰으로 승인/거절한다.")
     @ApiErrorCodes({"GUARDIAN_CONSENT_NOT_FOUND", "GUARDIAN_CONSENT_ALREADY_PROCESSED",
             "GUARDIAN_CONSENT_EXPIRED", "INVALID_CONSENT_TOKEN", "BAD_REQUEST"})
+    @SecurityRequirements
     @PatchMapping("/api/guardian-consents/{consentId}")
     public ResponseEntity<ApiResponse<GuardianConsentResponseDto>> processGuardianConsent(
             @PathVariable Long consentId,

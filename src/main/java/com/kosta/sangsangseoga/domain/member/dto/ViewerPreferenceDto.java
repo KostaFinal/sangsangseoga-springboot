@@ -2,6 +2,7 @@ package com.kosta.sangsangseoga.domain.member.dto;
 
 import com.kosta.sangsangseoga.domain.member.enums.ViewerFontSize;
 import com.kosta.sangsangseoga.domain.member.enums.ViewerViewType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,6 +16,9 @@ import lombok.Setter;
 @Builder
 public class ViewerPreferenceDto {
 
+    @Schema(description = "뷰어 글자 크기")
     private ViewerFontSize viewerFontSize;
+
+    @Schema(description = "페이지 전환 방식")
     private ViewerViewType viewerViewType;
 }

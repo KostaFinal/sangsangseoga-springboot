@@ -1,6 +1,7 @@
 package com.kosta.sangsangseoga.domain.member.dto;
 
 import com.kosta.sangsangseoga.domain.member.enums.GuardianConsentStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -10,7 +11,9 @@ import lombok.Setter;
 @NoArgsConstructor
 public class GuardianConsentApproveRequestDto {
 
+    @Schema(description = "동의 요청 메일에 담긴 목적 한정 토큰")
     private String token;
-    // APPROVED 또는 REJECTED만 허용 (서비스단에서 검증)
+
+    @Schema(description = "APPROVED 또는 REJECTED만 허용된다(그 외 값은 400 처리)", allowableValues = {"APPROVED", "REJECTED"})
     private GuardianConsentStatus status;
 }
