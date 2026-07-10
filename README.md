@@ -94,7 +94,24 @@ CREATE DATABASE sangsangseoga CHARACTER SET utf8mb4;
 
 ### 4. 환경 변수 설정
 
-`src/main/resources/application.yml`의 `dev` 프로필 기준입니다. 대부분 기본값이 있어 로컬 개발 시 없어도 실행되지만, 필요하면 아래처럼 재정의할 수 있습니다.
+`src/main/resources/application.yml`은 공통 설정 + `dev`/`prod` 프로필로 나뉘어 있습니다. 아래 표도 그 구조를 그대로 따릅니다.
+
+#### 4-1. 공통 환경변수 (dev/prod 동일하게 적용)
+
+| 변수명 | 기본값 | 설명 |
+| --- | --- | --- |
+| `GEMINI_API_KEY` | 없음 (**필수**) | Gemini API 키. **dev/prod 관계없이 값이 없으면 스프링 컨텍스트 초기화 자체가 실패해 서버가 아예 뜨지 않습니다** (AI 기능만 실패하는 게 아님). 로컬에서 AI 기능을 안 쓰더라도 서버를 켜려면 아무 문자열이든 값을 넣어야 합니다 |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | 사용할 Gemini 모델명. `gemini.api.url`의 모델 경로에 그대로 들어갑니다(예: `gemini-2.5-pro`로 교체 가능) |
+| `REPLICATE_API_TOKEN` | 없음(빈 값 허용) | Replicate API 토큰. 현재 `ReplicateClient`가 미구현 스텁이라 실제로 소비하는 코드는 없고, 향후 이미지 생성 연동을 대비해 설정값만 미리 열어둔 상태입니다. 없어도 서버 구동에 영향 없음 |
+| `FASTAPI_BASE_URL` | `http://localhost:8000` | AI 텍스트/이미지 생성을 위임하는 별도 FastAPI 서비스 주소 |
+| `KAKAO_CLIENT_ID` | 없음 | 카카오 로그인 REST API 키. 없어도 서버는 뜨지만, 카카오 로그인 API 호출 시 `OAUTH_NOT_CONFIGURED`(503)로 실패함 |
+| `KAKAO_CLIENT_SECRET` | 없음 | 카카오 콘솔에서 Client Secret을 활성화한 경우에만 필요(선택) |
+| `NAVER_CLIENT_ID` | 없음 | 네이버 로그인 클라이언트 ID. 없어도 서버는 뜨지만, 네이버 로그인 API 호출 시 `OAUTH_NOT_CONFIGURED`(503)로 실패함 |
+| `NAVER_CLIENT_SECRET` | 없음 | 네이버 로그인 클라이언트 시크릿(네이버는 카카오와 달리 항상 필수) |
+
+⚠️ `GEMINI_API_KEY`/`REPLICATE_API_TOKEN`처럼 실제 발급받은 키는 **절대 커밋하지 마세요**(`application.yml`에 직접 값을 채워넣지 말고 항상 환경변수로 주입). 로컬 실행용 값은 아래 방법 중 하나로 셸/IDE 환경에만 설정합니다.
+
+#### 4-2. `dev` 프로필 전용 (로컬 개발, 기본값 있음)
 
 | 변수명 | 기본값(dev) | 설명 |
 | --- | --- | --- |
@@ -105,12 +122,29 @@ CREATE DATABASE sangsangseoga CHARACTER SET utf8mb4;
 | `MAIL_HOST` | `localhost` | SMTP 호스트. 로컬은 docker-compose의 MailHog(1025)로 발송 |
 | `MAIL_PORT` | `1025` | SMTP 포트 (MailHog 기본 포트) |
 | `MAIL_FROM` | `no-reply@sangsangseoga.local` | 발신자 이메일 주소 |
-| `JWT_SECRET_KEY` | 기본 문자열 제공 | JWT 서명 키 |
-| `GEMINI_API_KEY` | 없음 (**필수**) | Gemini API 키. 없으면 AI 생성 기능만 실패하고 나머지 서버 구동에는 문제 없음 |
-| `KAKAO_CLIENT_ID` | 없음 | 카카오 로그인 REST API 키. 없어도 서버는 뜨지만, 카카오 로그인 API 호출 시 `OAUTH_NOT_CONFIGURED`(503)로 실패함 |
-| `KAKAO_CLIENT_SECRET` | 없음 | 카카오 콘솔에서 Client Secret을 활성화한 경우에만 필요(선택) |
-| `NAVER_CLIENT_ID` | 없음 | 네이버 로그인 클라이언트 ID. 없어도 서버는 뜨지만, 네이버 로그인 API 호출 시 `OAUTH_NOT_CONFIGURED`(503)로 실패함 |
-| `NAVER_CLIENT_SECRET` | 없음 | 네이버 로그인 클라이언트 시크릿(네이버는 카카오와 달리 항상 필수) |
+| `JWT_SECRET_KEY` | 기본 문자열 제공 | JWT 서명 키. dev 전용 기본값이라 운영에는 그대로 쓰면 안 됨 |
+| `FRONTEND_URL` | `http://localhost:5173` | 프론트엔드 로컬 개발 서버 주소(CORS, 메일 링크 등에 사용) |
+
+dev 프로필은 위 변수 없이도 문서 상단의 로컬 기본값(MariaDB `root`/설정된 비밀번호, 로컬 Redis, MailHog)으로 바로 실행됩니다. `GEMINI_API_KEY`만 위 4-1의 이유로 반드시 채워야 합니다.
+
+#### 4-3. `prod` 프로필 전용 (배포, 기본값 없음 - 전부 필수)
+
+| 변수명 | 설명 |
+| --- | --- |
+| `PROD_DB_HOST` | 운영 MariaDB 호스트 주소 |
+| `PROD_DB_USERNAME` | 운영 MariaDB 계정 |
+| `PROD_DB_PASSWORD` | 운영 MariaDB 비밀번호 |
+| `PROD_REDIS_HOST` | 운영 Redis 호스트 주소 |
+| `PROD_REDIS_PORT` | 운영 Redis 포트 (기본값 `6379`) |
+| `MAIL_HOST` | 운영 SMTP 호스트 (예: Gmail, AWS SES SMTP 등) |
+| `MAIL_PORT` | 운영 SMTP 포트 (기본값 `587`) |
+| `MAIL_USERNAME` | 운영 SMTP 인증 계정 |
+| `MAIL_PASSWORD` | 운영 SMTP 인증 비밀번호 |
+| `MAIL_FROM` | 운영 발신자 이메일 주소 |
+| `JWT_SECRET_KEY` | JWT 서명 키. dev와 달리 기본값이 없어 누락 시 서버 구동 자체가 실패합니다(해킹 방지를 위한 의도된 동작) |
+| `FRONTEND_URL` | 운영 프론트엔드 도메인 |
+
+prod 프로필은 위 표의 변수를 **전부** 배포 환경(CI/CD, 컨테이너 orchestrator의 secret 등)에 주입해야 서버가 기동됩니다. 값이 하나라도 비어있으면 `PropertyPlaceholderHelper`가 플레이스홀더를 못 찾아 컨텍스트 초기화 단계에서 즉시 실패합니다. `GEMINI_API_KEY`/`GEMINI_MODEL`/`REPLICATE_API_TOKEN`/`FASTAPI_BASE_URL`/`KAKAO_*`/`NAVER_*`는 프로필과 무관하게 4-1의 값을 그대로 사용합니다.
 
 환경 변수는 아래 중 편한 방법으로 설정하면 됩니다.
 
@@ -128,7 +162,7 @@ export GEMINI_API_KEY=발급받은키
 $env:GEMINI_API_KEY="발급받은키"
 ```
 
-운영(`prod`) 프로필은 `PROD_DB_HOST`, `PROD_DB_USERNAME`, `PROD_DB_PASSWORD`, `PROD_REDIS_HOST`, `JWT_SECRET_KEY`, `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`을 반드시 환경변수로 주입해야 서버가 뜹니다(기본값 없음).
+prod 배포 시에는 위와 같은 방식 대신, 배포 환경(서버의 systemd 환경파일, Docker `-e`/`--env-file`, CI/CD의 secret 저장소 등)에 4-3 표의 변수를 전부 주입합니다. 자세한 필수 변수 목록은 위 "4-3. `prod` 프로필 전용" 표를 참고하세요.
 
 ### 5. Redis / MailHog 컨테이너 실행 (Docker)
 

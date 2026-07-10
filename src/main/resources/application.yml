@@ -23,7 +23,13 @@ jwt:
 gemini:
   api:
     key: ${GEMINI_API_KEY}
-    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+    model: ${GEMINI_MODEL:gemini-2.5-flash}
+    url: https://generativelanguage.googleapis.com/v1beta/models/${gemini.api.model}:generateContent
+
+replicate:
+  api:
+    # 아직 실제로 호출하는 서비스가 없는 예비 설정값(ReplicateClient 미구현 스텁). 값이 없어도 기동에는 문제없음.
+    token: ${REPLICATE_API_TOKEN:}
 
 fastapi:
   base-url: ${FASTAPI_BASE_URL:http://localhost:8000}
