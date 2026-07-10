@@ -17,7 +17,10 @@ public interface BookService {
     
  // 책 상세 조회
     BookDetailDto getBook(Long bookId, Long memberId) throws Exception;
-    
+
+ // 책 읽기 시작 시 조회수 증가
+    Integer increaseViewCount(Long bookId) throws Exception;
+
  // 책 본문(페이지) 조회
     BookContentsResponseDto getContents(Long bookId) throws Exception;
     
