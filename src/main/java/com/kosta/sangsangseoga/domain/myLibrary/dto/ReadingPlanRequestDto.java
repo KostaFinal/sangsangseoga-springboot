@@ -17,15 +17,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ReadingPlanRequestDto {
 	
-	 @NotNull(message = "책 ID는 필수입니다.")
-	    private Long bookId;
+	public interface OnCreate {}
+    public interface OnUpdate {}
 
-	    @NotNull(message = "계획 날짜는 필수입니다.")
-	    private LocalDate planDate;
+    @NotNull(message = "책 ID는 필수입니다.", groups = OnCreate.class)
+    private Long bookId;
 
-	    @Min(value = 1, message = "목표 페이지는 1 이상이어야 합니다.")
-	    private Integer targetPage;
+    @NotNull(message = "계획 날짜는 필수입니다.")
+    private LocalDate planDate;
 
-	    @Size(max = 500, message = "메모는 500자 이하로 입력해 주세요.")
-	    private String memo;
+    @Min(value = 1, message = "목표 페이지는 1 이상이어야 합니다.")
+    private Integer targetPage;
+
+    private String memo;
 }

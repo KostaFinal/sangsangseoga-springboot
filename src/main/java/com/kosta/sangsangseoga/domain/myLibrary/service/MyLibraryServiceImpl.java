@@ -283,7 +283,8 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	@Override
 	@Transactional(readOnly = true)
 	public List<MyWrittenBookResponseDto> getMyWrittenBooks(Long memberId) {
-		List<Book> books = bookRepository.findByMember_IdAndStatus(memberId, BookStatus.PUBLISHED);
+		List<Book> books = bookRepository
+		        .findByMember_IdOrderByCreatedAtDesc(memberId);
 
 		Map<Long, String> coverImageUrlMap = getCoverImageUrlMap(books);
 
@@ -297,23 +298,36 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	}
 
 	@Override
-	public void updateMyWrittenBookStatus(Long memberId, Long bookId, UpdateBookStatusRequestDto requestDto) {
-		Book book = bookRepository.findById(bookId)
-				.orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+	public void updateMyWrittenBookStatus(
+	        Long memberId,
+	        Long bookId,
+	        UpdateBookStatusRequestDto requestDto
+	) {
+	    Book book = bookRepository.findById(bookId)
+	            .orElseThrow(() ->
+	                    new CustomException(CommonErrorCode.BOOK_NOT_FOUND)
+	            );
 
-		if (!book.getMember().getId().equals(memberId)) {
-			throw new CustomException(CommonErrorCode.FORBIDDEN);
-		}
+	    if (!book.getMember().getId().equals(memberId)) {
+	        throw new CustomException(CommonErrorCode.FORBIDDEN);
+	    }
 
-		BookStatus status;
+	    BookStatus status;
 
-		try {
-			status = BookStatus.valueOf(requestDto.getStatus());
-		} catch (IllegalArgumentException | NullPointerException e) {
-			log.warn("Invalid book status value: {}", requestDto.getStatus());
-			throw new CustomException(CommonErrorCode.BAD_REQUEST);
-		}
-		book.setStatus(status);
+	    try {
+	        status = BookStatus.valueOf(requestDto.getStatus());
+	    } catch (IllegalArgumentException | NullPointerException e) {
+	        log.warn(
+	                "Invalid book status value: {}",
+	                requestDto.getStatus()
+	        );
+	        throw new CustomException(CommonErrorCode.BAD_REQUEST);
+	    }
+
+	    book.setStatus(status);
+
+	    // DB 저장을 명시적으로 실행
+	    bookRepository.save(book);
 	}
 
 	@Override

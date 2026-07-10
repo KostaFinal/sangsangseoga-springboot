@@ -8,6 +8,7 @@ import javax.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -72,8 +73,8 @@ public class ReadingPlanController {
     @PostMapping
     public ResponseEntity<ApiResponse<ReadingPlanResponseDto>> createReadingPlan(
             Authentication authentication,
-            @Valid @RequestBody ReadingPlanRequestDto requestDto) {
-
+            @Validated(ReadingPlanRequestDto.OnCreate.class)
+            @RequestBody ReadingPlanRequestDto requestDto) {
         Long memberId = (Long) authentication.getPrincipal();
 
         return ResponseEntity.ok(
@@ -90,8 +91,8 @@ public class ReadingPlanController {
     public ResponseEntity<ApiResponse<ReadingPlanResponseDto>> updateReadingPlan(
             Authentication authentication,
             @PathVariable Long planId,
-            @Valid @RequestBody ReadingPlanRequestDto requestDto) {
-
+            @Validated
+            @RequestBody ReadingPlanRequestDto requestDto) {
         Long memberId = (Long) authentication.getPrincipal();
 
         return ResponseEntity.ok(

@@ -320,6 +320,11 @@ public class BookServiceImpl implements BookService {
                 .isBookmarkedByMe(isBookmarkedByMe)
                 .tags(tags)
                 .createdAt(book.getCreatedAt())
+                .status(
+                	    book.getStatus() != null
+                	        ? book.getStatus().name()
+                	        : null
+                	)
                 .build();
     }
 

@@ -58,26 +58,8 @@ public class ReadingPlanServiceImpl implements ReadingPlanService {
      * Entity → ResponseDto 변환
      */
     private ReadingPlanResponseDto toResponseDto(ReadingPlan readingPlan) {
-
-        Book book = readingPlan.getBook();
-        
-        String coverImageUrl = bookImageRepository
-                .findByBookAndImageTypeAndDeletedAtIsNull(book, BookImage.ImageType.COVER)
-                .map(BookImage::getFileUrl)
-                .orElse(null);
-
-        return ReadingPlanResponseDto.builder()
-                .planId(readingPlan.getId())	
-                .bookId(book.getId())
-                .bookTitle(book.getTitle())
-                .category(book.getCategory())
-                .coverImageUrl(coverImageUrl)
-                .planDate(readingPlan.getPlanDate())
-                .targetPage(readingPlan.getTargetPage())
-                .memo(readingPlan.getMemo())
-                .isCompleted(readingPlan.getIsCompleted())
-                .completedAt(readingPlan.getCompletedAt())
-                .build();
+        Map<Long, String> coverImageMap = buildCoverImageMap(List.of(readingPlan));
+        return toResponseDto(readingPlan, coverImageMap);
     }
     
     private ReadingPlanResponseDto toResponseDto(
