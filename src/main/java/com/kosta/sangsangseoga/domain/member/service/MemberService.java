@@ -43,8 +43,10 @@ import com.kosta.sangsangseoga.global.jwt.ActionTokenExpiredException;
 import com.kosta.sangsangseoga.global.jwt.ActionTokenInvalidException;
 import com.kosta.sangsangseoga.global.jwt.ActionTokenProvider;
 import com.kosta.sangsangseoga.global.jwt.RefreshTokenService;
+import com.kosta.sangsangseoga.global.jwt.TokenBlacklistService;
 import com.kosta.sangsangseoga.global.mail.MailService;
 
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -60,6 +62,7 @@ public class MemberService {
     private final ActionTokenProvider actionTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
+    private final TokenBlacklistService tokenBlacklistService;
     private final ApplicationEventPublisher eventPublisher;
     private final BookRepository bookRepository;
     private final BookLikeRepository bookLikeRepository;
@@ -189,7 +192,12 @@ public class MemberService {
 
         consent.withdraw();
         if (consent.getMember().getStatus() == MemberStatus.ACTIVE) {
+            Long memberId = consent.getMember().getId();
             consent.getMember().revertToPending();
+            eventPublisher.publishEvent(new AfterCommitTask(this, () -> {
+                tokenBlacklistService.invalidateTokensIssuedBefore(memberId, Instant.now());
+                refreshTokenService.delete(memberId);
+            }));
         }
 
         return toResponseDto(consent);
@@ -246,7 +254,10 @@ public class MemberService {
 
         member.cancelSubscriptionImmediately();
         member.withdraw();
-        eventPublisher.publishEvent(new AfterCommitTask(this, () -> refreshTokenService.delete(memberId)));
+        eventPublisher.publishEvent(new AfterCommitTask(this, () -> {
+            tokenBlacklistService.invalidateTokensIssuedBefore(memberId, Instant.now());
+            refreshTokenService.delete(memberId);
+        }));
 
         bookLikeRepository.deleteAllByMember(member);
         bookmarkRepository.deleteAllByMember(member);

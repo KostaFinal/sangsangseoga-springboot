@@ -107,6 +107,10 @@ CREATE DATABASE sangsangseoga CHARACTER SET utf8mb4;
 | `MAIL_FROM` | `no-reply@sangsangseoga.local` | 발신자 이메일 주소 |
 | `JWT_SECRET_KEY` | 기본 문자열 제공 | JWT 서명 키 |
 | `GEMINI_API_KEY` | 없음 (**필수**) | Gemini API 키. 없으면 AI 생성 기능만 실패하고 나머지 서버 구동에는 문제 없음 |
+| `KAKAO_CLIENT_ID` | 없음 | 카카오 로그인 REST API 키. 없어도 서버는 뜨지만, 카카오 로그인 API 호출 시 `OAUTH_NOT_CONFIGURED`(503)로 실패함 |
+| `KAKAO_CLIENT_SECRET` | 없음 | 카카오 콘솔에서 Client Secret을 활성화한 경우에만 필요(선택) |
+| `NAVER_CLIENT_ID` | 없음 | 네이버 로그인 클라이언트 ID. 없어도 서버는 뜨지만, 네이버 로그인 API 호출 시 `OAUTH_NOT_CONFIGURED`(503)로 실패함 |
+| `NAVER_CLIENT_SECRET` | 없음 | 네이버 로그인 클라이언트 시크릿(네이버는 카카오와 달리 항상 필수) |
 
 환경 변수는 아래 중 편한 방법으로 설정하면 됩니다.
 
@@ -222,8 +226,37 @@ http://localhost:8080/swagger-ui/index.html
 | `withdrawn@sangsang.com` | `test1234!` | USER / DELETED | 탈퇴 상태 로그인 차단 테스트용(id 65) |
 | `monthly@sangsang.com` | `test1234!` | USER / PREMIUM_MONTHLY | 월간 구독 회원 테스트용(id 66) |
 | `yearly@sangsang.com` | `test1234!` | USER / PREMIUM_YEARLY | 연간 구독 회원 테스트용(id 67) |
+| `guardian@sangsang.com` | `test1234!` | USER / ACTIVE | 보호자 동의 처리 테스트용(id 70). `pending@sangsang.com`(id 64)의 보호자로 연결되어 있음 |
 
-`admin2@sangsang.com`부터 `yearly@sangsang.com`까지 6개 계정은 `dummy_data.sql`에 실제 `BCryptPasswordEncoder`로 암호화된 `test1234!` 해시로 시딩되어 있어, DB를 리셋하고 `dummy_data.sql`을 다시 실행해도 곧바로 로그인할 수 있습니다(단 SUSPENDED/PENDING/DELETED 계정은 상태값 자체 때문에 로그인 API가 의도적으로 막습니다).
+`admin2@sangsang.com`부터 `guardian@sangsang.com`까지 7개 계정은 `dummy_data.sql`에 실제 `BCryptPasswordEncoder`로 암호화된 `test1234!` 해시로 시딩되어 있어, DB를 리셋하고 `dummy_data.sql`을 다시 실행해도 곧바로 로그인할 수 있습니다(단 SUSPENDED/PENDING/DELETED 계정은 상태값 자체 때문에 로그인 API가 의도적으로 막습니다).
+
+### 보호자 동의(부모-자녀) 테스트 흐름
+
+`guardian@sangsang.com`(보호자)과 `pending@sangsang.com`(자녀, 보호자 동의 대기)이 `guardian_consent`(id 17, `REQUESTED` 상태)로 미리 연결되어 있습니다. 실제 로그인으로 승인 플로우 전체를 테스트할 수 있습니다.
+
+```bash
+# 1) 자녀 계정 로그인 시도 -> 보호자 동의 대기라 차단됨
+curl -X POST http://localhost:8080/api/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"pending@sangsang.com","password":"test1234!"}'
+
+# 2) 보호자 계정으로 로그인
+GUARDIAN_TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"guardian@sangsang.com","password":"test1234!"}' | jq -r .data.accessToken)
+
+# 3) 보호자에게 온 미처리 동의 요청 확인
+curl http://localhost:8080/api/guardian-consents/pending -H "Authorization: Bearer $GUARDIAN_TOKEN"
+
+# 4) 동의 승인 (consentId는 위 응답의 값, 기본 시딩 상태에서는 17)
+curl -X PATCH http://localhost:8080/api/guardian-consents/17/decision \
+  -H "Authorization: Bearer $GUARDIAN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"status":"APPROVED"}'
+
+# 5) 자녀 계정으로 다시 로그인 -> 이제 성공
+curl -X POST http://localhost:8080/api/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"pending@sangsang.com","password":"test1234!"}'
+```
+
+⚠️ 4번을 실행하면 `pending@sangsang.com`이 영구적으로 `ACTIVE`로 바뀝니다. "보호자 동의 대기" 상태 자체를 다시 테스트하려면 DB를 리셋하고 `dummy_data.sql`을 다시 실행하세요.
 
 **주의**: 그 외 `dummy_data.sql`로 시딩되는 일반 더미 회원(id 1~61번, `writer@sangsang.com` 포함)은 임의의/알 수 없는 비밀번호 해시라 **실제 로그인 가능한 평문 비밀번호가 없습니다.** 위 표에 없는 계정으로 로그인 테스트가 필요하면 아래처럼 새 계정을 만들어서 쓰세요.
 

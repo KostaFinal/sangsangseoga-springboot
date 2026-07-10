@@ -22,13 +22,22 @@ public enum AuthErrorCode implements ErrorCode {
     INVALID_RESET_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 비밀번호 재설정 요청입니다."),
     EXPIRED_RESET_TOKEN(HttpStatus.UNAUTHORIZED, "비밀번호 재설정 링크가 만료되었습니다. 다시 요청해 주세요."),
     WEAK_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호는 영문, 숫자, 특수문자를 조합해 8자 이상이어야 합니다."),
+    OAUTH_ACCOUNT_PASSWORD_RESET_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "소셜 로그인으로 가입한 계정은 비밀번호를 재설정할 수 없습니다."),
 
     // ===== Signup =====
     // 이메일/닉네임/비밀번호/생년월일 형식 검증은 SignupRequestDto의 Bean Validation이 담당하며,
     // 실패 시 GlobalExceptionHandler가 공통 BAD_REQUEST 코드로 응답한다.
     DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "이미 가입된 이메일 주소입니다."),
     DUPLICATE_NICKNAME(HttpStatus.BAD_REQUEST, "이미 사용 중인 닉네임입니다."),
-    INVALID_BIRTH_DATE(HttpStatus.BAD_REQUEST, "생년월일이 올바르지 않습니다.");
+    INVALID_BIRTH_DATE(HttpStatus.BAD_REQUEST, "생년월일이 올바르지 않습니다."),
+
+    // ===== OAuth (소셜 로그인) =====
+    UNSUPPORTED_OAUTH_PROVIDER(HttpStatus.BAD_REQUEST, "지원하지 않는 소셜 로그인 제공자입니다."),
+    OAUTH_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "현재 이 소셜 로그인은 설정되어 있지 않아 이용할 수 없습니다."),
+    OAUTH_AUTH_FAILED(HttpStatus.BAD_REQUEST, "소셜 로그인 인증에 실패했습니다. 다시 시도해 주세요."),
+    OAUTH_EMAIL_REQUIRED(HttpStatus.BAD_REQUEST, "이메일 제공에 동의해야 가입할 수 있습니다."),
+    INVALID_OAUTH_SIGNUP_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 소셜 회원가입 요청입니다."),
+    EXPIRED_OAUTH_SIGNUP_TOKEN(HttpStatus.UNAUTHORIZED, "소셜 회원가입 세션이 만료되었습니다. 처음부터 다시 시도해 주세요.");
 
     private final HttpStatus status;
     private final String message;

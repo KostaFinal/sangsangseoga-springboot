@@ -21,10 +21,15 @@ public class RefreshTokenService {
     private final JwtProperties jwtProperties;
 
     public void save(Long memberId, String refreshToken) {
+        save(memberId, refreshToken, jwtProperties.getRefreshTokenExpiration());
+    }
+
+    /** 발급한 Refresh Token의 실제 만료기간(TTL)과 Redis 저장 TTL을 반드시 맞추기 위한 오버로드. */
+    public void save(Long memberId, String refreshToken, long ttlMillis) {
         redisTemplate.opsForValue().set(
                 key(memberId),
                 refreshToken,
-                Duration.ofMillis(jwtProperties.getRefreshTokenExpiration())
+                Duration.ofMillis(ttlMillis)
         );
     }
 

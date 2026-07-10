@@ -17,7 +17,10 @@ public class JwtProperties {
 
     private String secretKey;
     private long accessTokenExpiration = 3600000;
-    private long refreshTokenExpiration = 2592000000L;
+    private long refreshTokenExpiration = 2592000000L; // 30일 - 로그인 시 rememberMe=true
+
+    /** 로그인 시 rememberMe=false(또는 미지정)일 때 발급하는 짧은 Refresh Token 만료기간. 기본 1일. */
+    private long refreshTokenShortExpiration = 86400000L;
 
     /**
      * prod 프로필은 application.yml에서 JWT_SECRET_KEY에 기본값을 주지 않으므로,
