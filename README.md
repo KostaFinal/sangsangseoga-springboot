@@ -174,7 +174,9 @@ docker compose down
 ```bash
 # Mac/Linux
 ./gradlew bootRun
+```
 
+```powershell
 # Windows
 gradlew.bat bootRun
 ```
@@ -193,13 +195,18 @@ gradlew.bat bootRun
 mysql -u root -p sangsangseoga < src/main/resources/docs/sql/dummy_data.sql
 ```
 
-(GUI 툴을 쓴다면 DBeaver, HeidiSQL 등에서 해당 파일을 열어 전체 실행해도 됩니다.)
+(GUI 툴을 쓴다면 DBeaver, HeidiSQL 등에서 해당 파일을 열어 전체 실행해도 됩니다. Windows에서 `mysql` 명령을 찾을 수 없다면 아래 "트러블슈팅"의 "`mysql` 명령을 찾을 수 없음" 항목을 참고하세요.)
 
 ### 8. 서버 재실행
 
 ```bash
-./gradlew bootRun        # Mac/Linux
-gradlew.bat bootRun       # Windows
+# Mac/Linux
+./gradlew bootRun
+```
+
+```powershell
+# Windows
+gradlew.bat bootRun
 ```
 
 IntelliJ에서는 Run 버튼, STS에서는 `Run As → Spring Boot App` 또는 Boot Dashboard의 Restart로 동일하게 재실행할 수 있습니다.
@@ -213,6 +220,8 @@ http://localhost:8080/swagger-ui/index.html
 ```
 
 로그인(`/api/auth/login`)으로 발급받은 Access Token을 우측 상단 `Authorize` 버튼에 입력하면, 이후 모든 요청에 `Authorization: Bearer <token>` 헤더가 자동으로 포함됩니다.
+
+> **아래 curl 예시 관련 안내**: 이 문서의 curl 시나리오(`$(...)` 커맨드 치환, `jq`, `\` 줄바꿈 등)는 Mac/Linux 셸 또는 Windows의 **Git Bash** 기준입니다. Windows PowerShell/cmd에서는 문법이 달라 그대로 붙여넣으면 동작하지 않습니다. Windows에서는 Git Bash로 실행하거나, curl 대신 위 Swagger UI에서 동일한 요청을 테스트하는 것을 권장합니다.
 
 ## 테스트 계정
 
@@ -299,7 +308,7 @@ curl -X POST http://localhost:8080/api/auth/signup \
   -H "Content-Type: application/json" \
   -d '{"email":"내이메일@example.com","password":"원하는비번","nickname":"닉네임","birthDate":"1990-01-01"}'
 
-# 2) DB에서 방금 만든 계정을 ADMIN으로 승격
+# 2) DB에서 방금 만든 계정을 ADMIN으로 승격 (mysql이 PATH에 없다면 트러블슈팅의 "`mysql` 명령을 찾을 수 없음" 참고)
 mysql -u root -p sangsangseoga -e "UPDATE member SET role='ADMIN' WHERE email='내이메일@example.com';"
 ```
 
