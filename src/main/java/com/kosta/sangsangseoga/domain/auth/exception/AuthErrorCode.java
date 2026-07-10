@@ -22,6 +22,7 @@ public enum AuthErrorCode implements ErrorCode {
     INVALID_RESET_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 비밀번호 재설정 요청입니다."),
     EXPIRED_RESET_TOKEN(HttpStatus.UNAUTHORIZED, "비밀번호 재설정 링크가 만료되었습니다. 다시 요청해 주세요."),
     WEAK_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호는 영문, 숫자, 특수문자를 조합해 8자 이상이어야 합니다."),
+    OAUTH_ACCOUNT_PASSWORD_RESET_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "소셜 로그인으로 가입한 계정은 비밀번호를 재설정할 수 없습니다."),
 
     // ===== Signup =====
     // 이메일/닉네임/비밀번호/생년월일 형식 검증은 SignupRequestDto의 Bean Validation이 담당하며,

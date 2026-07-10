@@ -72,8 +72,8 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 
-    @Operation(summary = "비밀번호 재설정 메일 발송 요청")
-    @ApiErrorCodes({"MEMBER_NOT_FOUND"})
+    @Operation(summary = "비밀번호 재설정 메일 발송 요청", description = "소셜 로그인으로 가입한 계정은 이용할 수 없다.")
+    @ApiErrorCodes({"MEMBER_NOT_FOUND", "OAUTH_ACCOUNT_PASSWORD_RESET_NOT_ALLOWED"})
     @SecurityRequirements
     @PostMapping("/password/reset_request")
     public ResponseEntity<ApiResponse<Void>> requestPasswordReset(@RequestBody PasswordResetRequestDto request) {

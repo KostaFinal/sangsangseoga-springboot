@@ -11,6 +11,7 @@ import com.kosta.sangsangseoga.domain.auth.dto.TokenRefreshRequestDto;
 import com.kosta.sangsangseoga.domain.auth.dto.TokenRefreshResponseDto;
 import com.kosta.sangsangseoga.domain.auth.exception.AuthErrorCode;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.member.enums.AuthProvider;
 import com.kosta.sangsangseoga.domain.member.enums.MemberAgeGroup;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
@@ -211,11 +212,18 @@ public class AuthService {
     }
 
     /**
-     * 비밀번호 재설정 인증 메일 발송 요청.
+     * 비밀번호 재설정 인증 메일 발송 요청. 소셜 로그인 계정은 실제로 아는 비밀번호가 없고
+     * (가입 시 무작위 값으로 채워짐 - OAuthService.signup 참고) 오직 소셜 로그인으로만 인증하므로,
+     * 여기서 비밀번호를 새로 설정할 수 있게 해주면 그 이후로 이메일/비밀번호 로그인까지 뚫려버린다.
+     * 그래서 LOCAL 계정만 허용한다.
      */
     public void requestPasswordReset(PasswordResetRequestDto request) {
         Member member = memberRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        if (member.getAuthProvider() != AuthProvider.LOCAL) {
+            throw new CustomException(AuthErrorCode.OAUTH_ACCOUNT_PASSWORD_RESET_NOT_ALLOWED);
+        }
 
         String passwordFingerprint = String.valueOf(member.getPassword().hashCode());
         String token = actionTokenProvider.create(
