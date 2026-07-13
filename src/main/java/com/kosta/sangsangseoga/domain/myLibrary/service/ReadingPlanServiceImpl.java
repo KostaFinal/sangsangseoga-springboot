@@ -58,8 +58,13 @@ public class ReadingPlanServiceImpl implements ReadingPlanService {
      * Entity → ResponseDto 변환
      */
     private ReadingPlanResponseDto toResponseDto(ReadingPlan readingPlan) {
+
         Map<Long, String> coverImageMap = buildCoverImageMap(List.of(readingPlan));
         return toResponseDto(readingPlan, coverImageMap);
+
+
+        
+
     }
     
     private ReadingPlanResponseDto toResponseDto(

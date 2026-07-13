@@ -33,11 +33,16 @@ public class JwtTokenProvider {
     }
 
     public String createRefreshToken(Long memberId) {
+        return createRefreshToken(memberId, jwtProperties.getRefreshTokenExpiration());
+    }
+
+    /** rememberMe 등으로 만료기간을 상황에 따라 다르게 주고 싶을 때 쓰는 오버로드. */
+    public String createRefreshToken(Long memberId, long ttlMillis) {
         return JWT.create()
                 .withSubject(String.valueOf(memberId))
                 .withClaim(CLAIM_TOKEN_TYPE, TOKEN_TYPE_REFRESH)
                 .withIssuedAt(new Date())
-                .withExpiresAt(Date.from(Instant.now().plusMillis(jwtProperties.getRefreshTokenExpiration())))
+                .withExpiresAt(Date.from(Instant.now().plusMillis(ttlMillis)))
                 .sign(algorithm());
     }
 
@@ -64,6 +69,11 @@ public class JwtTokenProvider {
     public String getRole(String token) {
         DecodedJWT decoded = JWT.require(algorithm()).build().verify(token);
         return decoded.getClaim(CLAIM_ROLE).asString();
+    }
+
+    public Date getIssuedAt(String token) {
+        DecodedJWT decoded = JWT.require(algorithm()).build().verify(token);
+        return decoded.getIssuedAt();
     }
 
     /**

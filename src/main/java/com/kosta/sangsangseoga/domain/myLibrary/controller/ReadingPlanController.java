@@ -75,6 +75,7 @@ public class ReadingPlanController {
             Authentication authentication,
             @Validated(ReadingPlanRequestDto.OnCreate.class)
             @RequestBody ReadingPlanRequestDto requestDto) {
+
         Long memberId = (Long) authentication.getPrincipal();
 
         return ResponseEntity.ok(
@@ -91,8 +92,9 @@ public class ReadingPlanController {
     public ResponseEntity<ApiResponse<ReadingPlanResponseDto>> updateReadingPlan(
             Authentication authentication,
             @PathVariable Long planId,
-            @Validated
-            @RequestBody ReadingPlanRequestDto requestDto) {
+            @Valid @RequestBody ReadingPlanRequestDto requestDto) {
+
+
         Long memberId = (Long) authentication.getPrincipal();
 
         return ResponseEntity.ok(

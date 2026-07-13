@@ -3,7 +3,10 @@ package com.kosta.sangsangseoga.domain.subscription.controller;
 import com.kosta.sangsangseoga.domain.subscription.dto.PaymentPageResponseDto;
 import com.kosta.sangsangseoga.domain.subscription.service.PaymentService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
+import com.kosta.sangsangseoga.global.config.ApiErrorCodes;
 import com.kosta.sangsangseoga.global.security.AuthenticationHelper;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 
+@Tag(name = "Payment", description = "결제 내역")
 @RestController
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor
@@ -26,6 +30,8 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
+    @Operation(summary = "결제 내역 조회", description = "페이지네이션, 인보이스 표시용 마스킹된 카드번호 포함.")
+    @ApiErrorCodes({})
     @GetMapping
     public ResponseEntity<ApiResponse<PaymentPageResponseDto>> getPaymentHistory(
             Authentication authentication,

@@ -1,5 +1,16 @@
 package com.kosta.sangsangseoga.domain.auth.service;
 
+
+import java.time.LocalDate;
+import java.time.Period;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.kosta.sangsangseoga.domain.auth.dto.LoginRequestDto;
 import com.kosta.sangsangseoga.domain.auth.dto.LoginResponseDto;
@@ -11,28 +22,22 @@ import com.kosta.sangsangseoga.domain.auth.dto.TokenRefreshRequestDto;
 import com.kosta.sangsangseoga.domain.auth.dto.TokenRefreshResponseDto;
 import com.kosta.sangsangseoga.domain.auth.exception.AuthErrorCode;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.member.enums.AuthProvider;
 import com.kosta.sangsangseoga.domain.member.enums.MemberAgeGroup;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
+import com.kosta.sangsangseoga.global.event.AfterCommitTask;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import com.kosta.sangsangseoga.global.jwt.ActionTokenExpiredException;
 import com.kosta.sangsangseoga.global.jwt.ActionTokenInvalidException;
 import com.kosta.sangsangseoga.global.jwt.ActionTokenProvider;
+import com.kosta.sangsangseoga.global.jwt.JwtProperties;
 import com.kosta.sangsangseoga.global.jwt.JwtTokenProvider;
 import com.kosta.sangsangseoga.global.jwt.RefreshTokenService;
-import com.kosta.sangsangseoga.global.event.AfterCommitTask;
 import com.kosta.sangsangseoga.global.mail.MailService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.Period;
-import java.util.Map;
-import java.util.regex.Pattern;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -51,6 +56,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final ActionTokenProvider actionTokenProvider;
     private final JwtTokenProvider jwtTokenProvider;
+    private final JwtProperties jwtProperties;
     private final RefreshTokenService refreshTokenService;
     private final ApplicationEventPublisher eventPublisher;
     private final MailService mailService;
@@ -58,9 +64,11 @@ public class AuthService {
     /**
      * 회원가입. 이메일/비밀번호/닉네임/생년월일 형식은 SignupRequestDto의 Bean Validation(@Valid)이
      * 컨트롤러 진입 시점에 검증한다. 여기서는 DB 조회가 필요한 중복 검증과 가입 처리를 담당한다.
-     * 생년월일로 연령대를 판정해 만 14세 미만은 보호자 동의 대기(PENDING) 상태로,
-     * 그 외는 즉시 활성(ACTIVE) 상태로 가입 처리한다. 가입 직후 자동 로그인을 위해
-     * Access/Refresh Token을 함께 발급한다.
+     * 생년월일로 연령대를 판정해 만 14세 미만은 보호자 동의 대기(PENDING) 상태로 가입 처리하고,
+     * 이 경우 토큰을 발급하지 않는다(로그인 시에도 동일하게 PENDING_GUARDIAN_CONSENT로 막히므로,
+     * 가입 시점에 토큰을 쥐어주면 보호자 동의 없이도 그 토큰으로 API를 호출할 수 있게 되어 게이트가
+     * 무력화된다). 그 외(만 14세 이상)는 즉시 활성(ACTIVE) 상태로 가입 처리하고 자동 로그인을 위해
+     * Access/Refresh Token을 함께 발급한다. 소셜 로그인 가입(OAuthService.signup)과 동일한 규칙이다.
      */
     public SignupResponseDto signup(SignupRequestDto request) {
         if (memberRepository.existsByEmail(request.getEmail())) {
@@ -81,6 +89,16 @@ public class AuthService {
                 .status(initialStatus)
                 .build();
         memberRepository.save(member);
+
+        if (initialStatus == MemberStatus.PENDING) {
+            return SignupResponseDto.builder()
+                    .memberId(member.getId())
+                    .email(member.getEmail())
+                    .nickname(member.getNickname())
+                    .role(member.getRole().name())
+                    .pendingGuardianConsent(true)
+                    .build();
+        }
 
         String accessToken = jwtTokenProvider.createAccessToken(member.getId(), member.getRole().name());
         String refreshToken = jwtTokenProvider.createRefreshToken(member.getId());
@@ -125,6 +143,7 @@ public class AuthService {
     /**
      * 이메일/비밀번호 로그인. Access/Refresh Token을 동시 발급하고,
      * Refresh Token은 회원 ID를 키로 Redis 화이트리스트에 저장한다.
+     * rememberMe=true면 Refresh Token을 기본 만료기간(30일)으로, false/미지정이면 짧은 만료기간(1일)으로 발급한다.
      */
     public LoginResponseDto login(LoginRequestDto request) {
         Member member = memberRepository.findByEmail(request.getEmail())
@@ -143,10 +162,15 @@ public class AuthService {
             throw new CustomException(AuthErrorCode.LOGIN_FAILED);
         }
 
+        long refreshTokenTtl = Boolean.TRUE.equals(request.getRememberMe())
+                ? jwtProperties.getRefreshTokenExpiration()
+                : jwtProperties.getRefreshTokenShortExpiration();
+
         String accessToken = jwtTokenProvider.createAccessToken(member.getId(), member.getRole().name());
-        String refreshToken = jwtTokenProvider.createRefreshToken(member.getId());
+        String refreshToken = jwtTokenProvider.createRefreshToken(member.getId(), refreshTokenTtl);
         Long memberId = member.getId();
-        eventPublisher.publishEvent(new AfterCommitTask(this, () -> refreshTokenService.save(memberId, refreshToken)));
+        eventPublisher.publishEvent(new AfterCommitTask(this,
+                () -> refreshTokenService.save(memberId, refreshToken, refreshTokenTtl)));
 
         return LoginResponseDto.builder()
                 .memberId(member.getId())
@@ -191,11 +215,18 @@ public class AuthService {
     }
 
     /**
-     * 비밀번호 재설정 인증 메일 발송 요청.
+     * 비밀번호 재설정 인증 메일 발송 요청. 소셜 로그인 계정은 실제로 아는 비밀번호가 없고
+     * (가입 시 무작위 값으로 채워짐 - OAuthService.signup 참고) 오직 소셜 로그인으로만 인증하므로,
+     * 여기서 비밀번호를 새로 설정할 수 있게 해주면 그 이후로 이메일/비밀번호 로그인까지 뚫려버린다.
+     * 그래서 LOCAL 계정만 허용한다.
      */
     public void requestPasswordReset(PasswordResetRequestDto request) {
         Member member = memberRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        if (member.getAuthProvider() != AuthProvider.LOCAL) {
+            throw new CustomException(AuthErrorCode.OAUTH_ACCOUNT_PASSWORD_RESET_NOT_ALLOWED);
+        }
 
         String passwordFingerprint = String.valueOf(member.getPassword().hashCode());
         String token = actionTokenProvider.create(

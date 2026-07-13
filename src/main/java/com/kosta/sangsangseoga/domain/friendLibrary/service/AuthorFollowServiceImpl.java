@@ -95,11 +95,12 @@ public class AuthorFollowServiceImpl implements AuthorFollowService {
     @Override
     @Transactional(readOnly = true)
     public AuthorListResponseDto getMyFollowedAuthors(Long memberId, int page, int size) throws Exception {
+
     	
     	 if (page < 1 || size < 1) {
     	        throw new CustomException(CommonErrorCode.BAD_REQUEST);
     	    }
-    	
+
     	Page<AuthorFollow> authorFollowPage =
     	        authorFollowRepository.findByFollower_IdOrderByCreatedAtDesc(
     	                memberId,

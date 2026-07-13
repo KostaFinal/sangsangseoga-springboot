@@ -1,6 +1,7 @@
 package com.kosta.sangsangseoga.domain.member.repository;
 
 import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.member.enums.AuthProvider;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.domain.subscription.enums.PlanType;
 import org.springframework.data.domain.Page;
@@ -21,6 +22,8 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     boolean existsByEmail(String email);
 
     boolean existsByNickname(String nickname);
+
+    Optional<Member> findByAuthProviderAndOauthProviderId(AuthProvider authProvider, String oauthProviderId);
 
     List<Member> findBySubscriptionPlanInAndLastTokenResetDateNot(List<PlanType> subscriptionPlans, LocalDate lastTokenResetDate);
 

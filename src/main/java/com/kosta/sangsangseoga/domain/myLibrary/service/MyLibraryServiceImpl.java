@@ -283,8 +283,12 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	@Override
 	@Transactional(readOnly = true)
 	public List<MyWrittenBookResponseDto> getMyWrittenBooks(Long memberId) {
-		List<Book> books = bookRepository
-		        .findByMember_IdOrderByCreatedAtDesc(memberId);
+
+//		List<Book> books = bookRepository
+//		        .findByMember_IdOrderByCreatedAtDesc(memberId);
+
+		List<Book> books = bookRepository.findByMember_IdAndStatus(memberId, BookStatus.PUBLISHED);
+
 
 		Map<Long, String> coverImageUrlMap = getCoverImageUrlMap(books);
 
@@ -298,6 +302,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	}
 
 	@Override
+
 	public void updateMyWrittenBookStatus(
 	        Long memberId,
 	        Long bookId,
@@ -308,9 +313,11 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	                    new CustomException(CommonErrorCode.BOOK_NOT_FOUND)
 	            );
 
-	    if (!book.getMember().getId().equals(memberId)) {
-	        throw new CustomException(CommonErrorCode.FORBIDDEN);
-	    }
+
+		if (!book.getMember().getId().equals(memberId)) {
+			throw new CustomException(CommonErrorCode.FORBIDDEN);
+		}
+
 
 	    BookStatus status;
 
@@ -328,6 +335,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 
 	    // DB 저장을 명시적으로 실행
 	    bookRepository.save(book);
+
 	}
 
 	@Override
