@@ -28,7 +28,7 @@ public class AdminReportListItemDto {
     @Schema(description = "신고 사유 상세(자유 텍스트)", nullable = true)
     private String reasonDetail;
 
-    @Schema(description = "신고 상태. 이 목록 API 자체는 PENDING만 조회한다.")
+    @Schema(description = "신고 상태")
     private ReportStatus status;
 
     @Schema(description = "신고한 회원 ID")

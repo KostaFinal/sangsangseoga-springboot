@@ -1,5 +1,6 @@
 package com.kosta.sangsangseoga.domain.admin.controller;
 
+import com.kosta.sangsangseoga.domain.admin.dto.AdminActionLogListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberStatusChangeRequestDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberStatusChangeResponseDto;
@@ -7,6 +8,7 @@ import com.kosta.sangsangseoga.domain.admin.dto.AdminReportListItemDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessRequestDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessResponseDto;
+import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportStatus;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
 import com.kosta.sangsangseoga.global.config.ApiErrorCodes;
@@ -20,18 +22,19 @@ import javax.validation.Valid;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 
-@Tag(name="Admin", description = "관리자 신고 처리 API (ADMIN 권한 필요)")
+@Tag(name="Admin", description = "관리자 신고 처리/회원 관리 API (ADMIN 권한 필요)")
 @RequestMapping("/api/admin")
 public interface AdminApi {
 
     /**
      * GET /api/admin/reports
-     * 아직 처리되지 않은(PENDING) 신고 목록 조회.
+     * 신고 목록 조회. status를 생략하면 PENDING(미처리) 신고만 조회한다.
      */
-    @Operation(summary = "미처리 신고 목록 조회", description = "PENDING 상태 신고를 최신순으로 페이지네이션 조회한다.")
+    @Operation(summary = "신고 목록 조회", description = "status(PENDING/RESOLVED/REJECTED) 상태 신고를 최신순으로 페이지네이션 조회한다. 생략 시 PENDING만 조회한다.")
     @ApiErrorCodes({}) // 인증(401) / 인가(403) 실패 외 도메인 에러 없음
     @GetMapping("/reports")
     ResponseEntity<ApiResponse<AdminReportListResponseDto>> getPendingReports(
+        @RequestParam(required = false) ReportStatus status,
         @RequestParam(defaultValue = "0") @Min(0) int page,
         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size);
 
@@ -74,4 +77,15 @@ public interface AdminApi {
         Authentication authentication,
         @PathVariable Long memberId,
         @Valid @RequestBody AdminMemberStatusChangeRequestDto request);
+
+    /**
+     * GET /api/admin/action-logs
+     * 관리자가 신고를 처리한 이력 조회.
+     */
+    @Operation(summary = "관리자 처리 이력 조회", description = "관리자가 신고를 처리한 이력(누가/언제/무슨 조치)을 최신순으로 페이지네이션 조회한다.")
+    @ApiErrorCodes({}) // 인증(401) / 인가(403) 실패 외 도메인 에러 없음
+    @GetMapping("/action-logs")
+    ResponseEntity<ApiResponse<AdminActionLogListResponseDto>> getActionLogs(
+        @RequestParam(defaultValue = "0") @Min(0) int page,
+        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size);
 }

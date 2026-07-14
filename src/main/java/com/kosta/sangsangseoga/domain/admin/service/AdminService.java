@@ -1,5 +1,7 @@
 package com.kosta.sangsangseoga.domain.admin.service;
 
+import com.kosta.sangsangseoga.domain.admin.dto.AdminActionLogListItemDto;
+import com.kosta.sangsangseoga.domain.admin.dto.AdminActionLogListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberListItemDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberStatusChangeRequestDto;
@@ -60,8 +62,8 @@ public class AdminService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
-    public AdminReportListResponseDto getPendingReports(Pageable pageable) {
-        Page<Report> reports = reportRepository.findByStatusOrderByCreatedAtDesc(ReportStatus.PENDING, pageable);
+    public AdminReportListResponseDto getReports(ReportStatus status, Pageable pageable) {
+        Page<Report> reports = reportRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
 
         List<AdminReportListItemDto> items = reports.getContent().stream()
                 .map(this::toListItemDto)
@@ -229,6 +231,38 @@ public class AdminService {
                 .memberId(member.getId())
                 .status(member.getStatus())
                 .processedAt(LocalDateTime.now())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public AdminActionLogListResponseDto getActionLogs(Pageable pageable) {
+        Page<AdminActionLog> logs = adminActionLogRepository.findAllByOrderByCreatedAtDesc(pageable);
+
+        List<AdminActionLogListItemDto> items = logs.getContent().stream()
+                .map(this::toActionLogListItemDto)
+                .collect(Collectors.toList());
+
+        return AdminActionLogListResponseDto.builder()
+                .items(items)
+                .totalCount(logs.getTotalElements())
+                .page(logs.getNumber())
+                .hasNext(logs.hasNext())
+                .build();
+    }
+
+    private AdminActionLogListItemDto toActionLogListItemDto(AdminActionLog actionLog) {
+        Report report = actionLog.getReport();
+        Member admin = actionLog.getAdmin();
+        return AdminActionLogListItemDto.builder()
+                .actionLogId(actionLog.getId())
+                .reportId(report.getId())
+                .targetType(report.getTargetType())
+                .targetId(report.getTargetId())
+                .adminId(admin.getId())
+                .adminNickname(admin.getNickname())
+                .actionType(actionLog.getActionType())
+                .actionReason(actionLog.getActionReason())
+                .createdAt(actionLog.getCreatedAt())
                 .build();
     }
 
