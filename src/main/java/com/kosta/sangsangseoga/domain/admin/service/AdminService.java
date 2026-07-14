@@ -86,9 +86,10 @@ public class AdminService {
 
         Map<Long, String> authorNicknames = resolveAuthorNicknames(content);
         Map<Long, Long> commentParentBookIds = resolveCommentParentBookIds(content);
+        Map<Long, AdminActionLog> resolutionByReportId = resolveResolutionByReportId(content);
 
         List<AdminReportListItemDto> items = content.stream()
-                .map(report -> toListItemDto(report, authorNicknames, commentParentBookIds))
+                .map(report -> toListItemDto(report, authorNicknames, commentParentBookIds, resolutionByReportId))
                 .collect(Collectors.toList());
 
         return AdminReportListResponseDto.builder()
@@ -131,6 +132,22 @@ public class AdminService {
         }
         return commentRepository.findAllById(commentIds).stream()
                 .collect(Collectors.toMap(Comment::getId, comment -> comment.getBook().getId()));
+    }
+
+    /**
+     * status=RESOLVED/REJECTED인 신고들의 처리 이력(AdminActionLog)을 reportId 기준으로 배치 조회한다.
+     * 신고 1건은 최대 1번만 처리되므로(재처리 불가) reportId당 로그가 하나뿐이다.
+     */
+    private Map<Long, AdminActionLog> resolveResolutionByReportId(List<Report> reports) {
+        List<Long> resolvedReportIds = reports.stream()
+                .filter(report -> report.getStatus() != ReportStatus.PENDING)
+                .map(Report::getId)
+                .collect(Collectors.toList());
+        if (resolvedReportIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return adminActionLogRepository.findByReportIdInWithAdmin(resolvedReportIds).stream()
+                .collect(Collectors.toMap(actionLog -> actionLog.getReport().getId(), actionLog -> actionLog));
     }
 
     /**
@@ -475,10 +492,11 @@ public class AdminService {
                 .build();
     }
 
-    private AdminReportListItemDto toListItemDto(Report report,
-            Map<Long, String> authorNicknames, Map<Long, Long> commentParentBookIds) {
+    private AdminReportListItemDto toListItemDto(Report report, Map<Long, String> authorNicknames,
+            Map<Long, Long> commentParentBookIds, Map<Long, AdminActionLog> resolutionByReportId) {
         Member reporter = report.getReporter();
         ReportTargetType targetType = report.getTargetType();
+        AdminActionLog resolution = resolutionByReportId.get(report.getId());
         return AdminReportListItemDto.builder()
                 .reportId(report.getId())
                 .targetType(targetType)
@@ -489,6 +507,8 @@ public class AdminService {
                 .reason(report.getReason())
                 .reasonDetail(report.getReasonDetail())
                 .status(report.getStatus())
+                .resolvedReason(resolution != null ? resolution.getActionReason() : null)
+                .resolvedByNickname(resolution != null ? resolution.getAdmin().getNickname() : null)
                 .reporterId(reporter.getId())
                 .reporterNickname(reporter.getNickname())
                 .createdAt(report.getCreatedAt())

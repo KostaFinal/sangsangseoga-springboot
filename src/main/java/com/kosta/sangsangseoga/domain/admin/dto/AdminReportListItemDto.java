@@ -37,6 +37,12 @@ public class AdminReportListItemDto {
     @Schema(description = "신고 상태")
     private ReportStatus status;
 
+    @Schema(description = "처리 사유. status=RESOLVED/REJECTED일 때만 채워짐(action-logs의 처리 이력에서 가져옴). PENDING이면 null.", nullable = true)
+    private String resolvedReason;
+
+    @Schema(description = "처리한 관리자 닉네임. status=RESOLVED/REJECTED일 때만 채워짐. PENDING이면 null.", nullable = true)
+    private String resolvedByNickname;
+
     @Schema(description = "신고한 회원 ID")
     private Long reporterId;
 
