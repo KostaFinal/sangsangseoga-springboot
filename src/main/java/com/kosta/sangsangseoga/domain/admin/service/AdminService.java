@@ -252,8 +252,10 @@ public class AdminService {
     }
 
     @Transactional(readOnly = true)
-    public AdminActionLogListResponseDto getActionLogs(Pageable pageable) {
-        Page<AdminActionLog> logs = adminActionLogRepository.findAllByOrderByCreatedAtDesc(pageable);
+    public AdminActionLogListResponseDto getActionLogs(AdminActionType actionType, Pageable pageable) {
+        Page<AdminActionLog> logs = actionType != null
+                ? adminActionLogRepository.findByActionTypeOrderByCreatedAtDesc(actionType, pageable)
+                : adminActionLogRepository.findAllByOrderByCreatedAtDesc(pageable);
 
         List<AdminActionLogListItemDto> items = logs.getContent().stream()
                 .map(this::toActionLogListItemDto)

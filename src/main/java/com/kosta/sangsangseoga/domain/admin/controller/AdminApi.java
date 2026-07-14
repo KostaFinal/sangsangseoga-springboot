@@ -11,6 +11,7 @@ import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminTokenTimelineItemDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminTokenTrendItemDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminTokenUsageItemDto;
+import com.kosta.sangsangseoga.domain.admin.enums.AdminActionType;
 import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportStatus;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
@@ -87,10 +88,12 @@ public interface AdminApi {
      * GET /api/admin/action-logs
      * 관리자가 신고를 처리한 이력 조회.
      */
-    @Operation(summary = "관리자 처리 이력 조회", description = "관리자가 신고를 처리한 이력(누가/언제/무슨 조치)을 최신순으로 페이지네이션 조회한다.")
+    @Operation(summary = "관리자 처리 이력 조회", description = "관리자가 신고를 처리한 이력(누가/언제/무슨 조치)을 최신순으로 페이지네이션 조회한다. "
+            + "actionType을 생략하면 전체 조치 종류를 조회한다.")
     @ApiErrorCodes({}) // 인증(401) / 인가(403) 실패 외 도메인 에러 없음
     @GetMapping("/action-logs")
     ResponseEntity<ApiResponse<AdminActionLogListResponseDto>> getActionLogs(
+        @RequestParam(required = false) AdminActionType actionType,
         @RequestParam(defaultValue = "0") @Min(0) int page,
         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size);
 

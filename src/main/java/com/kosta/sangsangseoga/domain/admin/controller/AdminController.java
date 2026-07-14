@@ -10,6 +10,7 @@ import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminTokenTimelineItemDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminTokenTrendItemDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminTokenUsageItemDto;
+import com.kosta.sangsangseoga.domain.admin.enums.AdminActionType;
 import com.kosta.sangsangseoga.domain.admin.service.AdminService;
 import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportStatus;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
@@ -77,10 +78,10 @@ public class AdminController implements AdminApi {
 
     @Override
     public ResponseEntity<ApiResponse<AdminActionLogListResponseDto>> getActionLogs(
-            int page, int size) {
+            AdminActionType actionType, int page, int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(ApiResponse.success(adminService.getActionLogs(pageable)));
+        return ResponseEntity.ok(ApiResponse.success(adminService.getActionLogs(actionType, pageable)));
     }
 
     @Override
