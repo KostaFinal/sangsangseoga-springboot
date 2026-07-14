@@ -125,7 +125,8 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 			return ReadingBookResponseDto.builder().bookId(book.getId()).title(book.getTitle())
 					.description(book.getDescription()).category(book.getCategory()).bookType(book.getBookType().name())
 					.coverImageUrl(coverImageUrlMap.get(book.getId())).currentPage(myReading.getCurrentPage())
-					.progress(myReading.getProgress()).pageCount(book.getPageCount()).build();
+					.progress(myReading.getProgress()).pageCount(book.getPageCount()).readingStatus(myReading.getReadingStatus().name())
+			        .recentReadAt(myReading.getRecentReadAt()).build();
 		}).collect(Collectors.toList());
 	}
 
@@ -228,7 +229,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 		return ReadingBookResponseDto.builder().bookId(book.getId()).title(book.getTitle()).category(book.getCategory())
 				.bookType(book.getBookType().name()).currentPage(myReading.getCurrentPage())
 				.progress(myReading.getProgress()).pageCount(book.getPageCount())
-				.readingStatus(myReading.getReadingStatus().name()).build();
+				.readingStatus(myReading.getReadingStatus().name()).recentReadAt(myReading.getRecentReadAt()).build();
 	}
 
 	@Override
@@ -284,10 +285,10 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	@Transactional(readOnly = true)
 	public List<MyWrittenBookResponseDto> getMyWrittenBooks(Long memberId) {
 
-//		List<Book> books = bookRepository
-//		        .findByMember_IdOrderByCreatedAtDesc(memberId);
+		List<Book> books = bookRepository
+		        .findByMember_IdOrderByCreatedAtDesc(memberId);
 
-		List<Book> books = bookRepository.findByMember_IdAndStatus(memberId, BookStatus.PUBLISHED);
+//		List<Book> books = bookRepository.findByMember_IdAndStatus(memberId, BookStatus.PUBLISHED);
 
 
 		Map<Long, String> coverImageUrlMap = getCoverImageUrlMap(books);

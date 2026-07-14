@@ -8,6 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.kosta.sangsangseoga.domain.ai.service.GeminiService;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.book.entity.BookImage;
+import com.kosta.sangsangseoga.domain.book.repository.BookImageRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
@@ -15,8 +17,6 @@ import com.kosta.sangsangseoga.domain.myLibrary.dto.AiFeedbackResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.BookReviewRequestDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.BookReviewResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.entity.BookReview;
-import com.kosta.sangsangseoga.domain.myLibrary.entity.MyReading;
-import com.kosta.sangsangseoga.domain.myLibrary.enums.ReadingStatus;
 import com.kosta.sangsangseoga.domain.myLibrary.exception.ReadingErrorCode;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.BookReviewRepository;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
@@ -33,18 +33,18 @@ public class BookReviewServiceImpl implements BookReviewService {
 	private final BookRepository bookRepository;
 	private final MemberRepository memberRepository;
 	private final GeminiService geminiService;
+	private final BookImageRepository bookImageRepository;
 
 	@Override
 	@Transactional(readOnly = true)
-	public List<BookReviewResponseDto> getReviews(Long memberId){
+	public List<BookReviewResponseDto> getReviews(Long memberId) {
 		return bookReviewRepository.findByMember_IdOrderByCreatedAtDesc(memberId).stream().map(this::toResponseDto)
 				.collect(Collectors.toList());
 	}
-	
 
 	@Override
 	@Transactional(readOnly = true)
-	public BookReviewResponseDto getReview(Long memberId, Long reviewId){
+	public BookReviewResponseDto getReview(Long memberId, Long reviewId) {
 		BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
 				.orElseThrow(() -> new CustomException(ReadingErrorCode.BOOK_REVIEW_NOT_FOUND));
 
@@ -52,14 +52,16 @@ public class BookReviewServiceImpl implements BookReviewService {
 	}
 
 	@Override
-	public BookReviewResponseDto createReview(Long memberId, BookReviewRequestDto requestDto){
+	public BookReviewResponseDto createReview(Long memberId, BookReviewRequestDto requestDto) {
 		bookReviewRepository.findByMember_IdAndBook_Id(memberId, requestDto.getBookId()).ifPresent(review -> {
 			throw new CustomException(ReadingErrorCode.BOOK_REVIEW_ALREADY_EXISTS);
 		});
 
-		Member member = memberRepository.findById(memberId).orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+		Member member = memberRepository.findById(memberId)
+				.orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
 
-		Book book = bookRepository.findById(requestDto.getBookId()).orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+		Book book = bookRepository.findById(requestDto.getBookId())
+				.orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
 
 		BookReview review = BookReview.builder().member(member).book(book).content(requestDto.getContent())
 				.isDraft(requestDto.getIsDraft() != null ? requestDto.getIsDraft() : false).build();
@@ -81,7 +83,7 @@ public class BookReviewServiceImpl implements BookReviewService {
 	}
 
 	@Override
-	public void deleteReview(Long memberId, Long reviewId){
+	public void deleteReview(Long memberId, Long reviewId) {
 		BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
 				.orElseThrow(() -> new CustomException(ReadingErrorCode.BOOK_REVIEW_NOT_FOUND));
 
@@ -89,7 +91,7 @@ public class BookReviewServiceImpl implements BookReviewService {
 	}
 
 	@Override
-	public BookReviewResponseDto saveDraft(Long memberId, Long reviewId, BookReviewRequestDto requestDto){
+	public BookReviewResponseDto saveDraft(Long memberId, Long reviewId, BookReviewRequestDto requestDto) {
 		BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
 				.orElseThrow(() -> new CustomException(ReadingErrorCode.BOOK_REVIEW_NOT_FOUND));
 
@@ -101,7 +103,7 @@ public class BookReviewServiceImpl implements BookReviewService {
 
 	@Override
 	@Transactional(readOnly = true)
-	public AiFeedbackResponseDto getAiFeedback(Long memberId, Long reviewId){
+	public AiFeedbackResponseDto getAiFeedback(Long memberId, Long reviewId) {
 		BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
 				.orElseThrow(() -> new CustomException(ReadingErrorCode.BOOK_REVIEW_NOT_FOUND));
 
@@ -112,14 +114,18 @@ public class BookReviewServiceImpl implements BookReviewService {
 	private BookReviewResponseDto toResponseDto(BookReview review) {
 		Book book = review.getBook();
 
+		String coverImageUrl = bookImageRepository
+				.findByBookAndImageTypeAndDeletedAtIsNull(book, BookImage.ImageType.COVER).map(BookImage::getFileUrl)
+				.orElse(null);
+
 		return BookReviewResponseDto.builder().reviewId(review.getId()).bookId(book.getId()).bookTitle(book.getTitle())
-				.coverImageId(book.getCoverImageId()).content(review.getContent()).isDraft(review.getIsDraft())
+				.coverImageUrl(coverImageUrl).content(review.getContent()).isDraft(review.getIsDraft())
 				.aiFeedbackContent(review.getAiFeedbackContent()).aiFeedbackCreatedAt(review.getAiFeedbackCreatedAt())
 				.createdAt(review.getCreatedAt()).updatedAt(review.getUpdatedAt()).build();
 	}
 
 	@Override
-	public AiFeedbackResponseDto requestAiFeedback(Long memberId, Long reviewId){
+	public AiFeedbackResponseDto requestAiFeedback(Long memberId, Long reviewId) {
 		BookReview review = bookReviewRepository.findByIdAndMember_Id(reviewId, memberId)
 				.orElseThrow(() -> new CustomException(ReadingErrorCode.BOOK_REVIEW_NOT_FOUND));
 
@@ -127,11 +133,8 @@ public class BookReviewServiceImpl implements BookReviewService {
 
 		review.updateAiFeedback(feedback);
 
-		return AiFeedbackResponseDto.builder()
-				.reviewId(review.getId())
-				.aiFeedbackContent(review.getAiFeedbackContent())
-				.aiFeedbackCreatedAt(review.getAiFeedbackCreatedAt())
-				.build();
+		return AiFeedbackResponseDto.builder().reviewId(review.getId()).aiFeedbackContent(review.getAiFeedbackContent())
+				.aiFeedbackCreatedAt(review.getAiFeedbackCreatedAt()).build();
 	}
 
 }
