@@ -53,6 +53,7 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,9 +82,13 @@ public class AdminService {
     @Transactional(readOnly = true)
     public AdminReportListResponseDto getReports(ReportStatus status, Pageable pageable) {
         Page<Report> reports = reportRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
+        List<Report> content = reports.getContent();
 
-        List<AdminReportListItemDto> items = reports.getContent().stream()
-                .map(this::toListItemDto)
+        Map<Long, String> authorNicknames = resolveAuthorNicknames(content);
+        Map<Long, Long> commentParentBookIds = resolveCommentParentBookIds(content);
+
+        List<AdminReportListItemDto> items = content.stream()
+                .map(report -> toListItemDto(report, authorNicknames, commentParentBookIds))
                 .collect(Collectors.toList());
 
         return AdminReportListResponseDto.builder()
@@ -92,6 +97,40 @@ public class AdminService {
                 .page(reports.getNumber())
                 .hasNext(reports.hasNext())
                 .build();
+    }
+
+    /**
+     * targetType=AUTHOR인 신고들의 targetId(memberId)를 배치 조회해 닉네임 맵을 만든다.
+     * FE의 "신고 대상 확인" 이동 기능이 항목마다 회원 조회를 따로 하지 않도록 목록 응답에 미리 채워준다.
+     */
+    private Map<Long, String> resolveAuthorNicknames(List<Report> reports) {
+        List<Long> authorIds = reports.stream()
+                .filter(report -> report.getTargetType() == ReportTargetType.AUTHOR)
+                .map(Report::getTargetId)
+                .distinct()
+                .collect(Collectors.toList());
+        if (authorIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return memberRepository.findAllById(authorIds).stream()
+                .collect(Collectors.toMap(Member::getId, Member::getNickname));
+    }
+
+    /**
+     * targetType=COMMENT인 신고들의 targetId(commentId)를 배치 조회해 원본 도서 ID 맵을 만든다.
+     * 댓글은 도서 상세 화면 안에서만 보이므로 FE가 이동하려면 부모 도서 ID가 필요하다.
+     */
+    private Map<Long, Long> resolveCommentParentBookIds(List<Report> reports) {
+        List<Long> commentIds = reports.stream()
+                .filter(report -> report.getTargetType() == ReportTargetType.COMMENT)
+                .map(Report::getTargetId)
+                .distinct()
+                .collect(Collectors.toList());
+        if (commentIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return commentRepository.findAllById(commentIds).stream()
+                .collect(Collectors.toMap(Comment::getId, comment -> comment.getBook().getId()));
     }
 
     /**
@@ -256,9 +295,15 @@ public class AdminService {
         Page<AdminActionLog> logs = actionType != null
                 ? adminActionLogRepository.findByActionTypeOrderByCreatedAtDesc(actionType, pageable)
                 : adminActionLogRepository.findAllByOrderByCreatedAtDesc(pageable);
+        List<Report> reports = logs.getContent().stream()
+                .map(AdminActionLog::getReport)
+                .collect(Collectors.toList());
+
+        Map<Long, String> authorNicknames = resolveAuthorNicknames(reports);
+        Map<Long, Long> commentParentBookIds = resolveCommentParentBookIds(reports);
 
         List<AdminActionLogListItemDto> items = logs.getContent().stream()
-                .map(this::toActionLogListItemDto)
+                .map(actionLog -> toActionLogListItemDto(actionLog, authorNicknames, commentParentBookIds))
                 .collect(Collectors.toList());
 
         return AdminActionLogListResponseDto.builder()
@@ -269,14 +314,19 @@ public class AdminService {
                 .build();
     }
 
-    private AdminActionLogListItemDto toActionLogListItemDto(AdminActionLog actionLog) {
+    private AdminActionLogListItemDto toActionLogListItemDto(AdminActionLog actionLog,
+            Map<Long, String> authorNicknames, Map<Long, Long> commentParentBookIds) {
         Report report = actionLog.getReport();
         Member admin = actionLog.getAdmin();
+        ReportTargetType targetType = report.getTargetType();
         return AdminActionLogListItemDto.builder()
                 .actionLogId(actionLog.getId())
                 .reportId(report.getId())
-                .targetType(report.getTargetType())
+                .targetType(targetType)
                 .targetId(report.getTargetId())
+                .targetNickname(targetType == ReportTargetType.AUTHOR ? authorNicknames.get(report.getTargetId()) : null)
+                .targetParentBookId(targetType == ReportTargetType.COMMENT
+                        ? commentParentBookIds.get(report.getTargetId()) : null)
                 .adminId(admin.getId())
                 .adminNickname(admin.getNickname())
                 .actionType(actionLog.getActionType())
@@ -425,12 +475,17 @@ public class AdminService {
                 .build();
     }
 
-    private AdminReportListItemDto toListItemDto(Report report) {
+    private AdminReportListItemDto toListItemDto(Report report,
+            Map<Long, String> authorNicknames, Map<Long, Long> commentParentBookIds) {
         Member reporter = report.getReporter();
+        ReportTargetType targetType = report.getTargetType();
         return AdminReportListItemDto.builder()
                 .reportId(report.getId())
-                .targetType(report.getTargetType())
+                .targetType(targetType)
                 .targetId(report.getTargetId())
+                .targetNickname(targetType == ReportTargetType.AUTHOR ? authorNicknames.get(report.getTargetId()) : null)
+                .targetParentBookId(targetType == ReportTargetType.COMMENT
+                        ? commentParentBookIds.get(report.getTargetId()) : null)
                 .reason(report.getReason())
                 .reasonDetail(report.getReasonDetail())
                 .status(report.getStatus())
