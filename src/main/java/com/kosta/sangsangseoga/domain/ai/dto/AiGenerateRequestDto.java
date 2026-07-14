@@ -37,9 +37,9 @@ public class AiGenerateRequestDto {
             description = "Python(FastAPI)이 기대하는 taskType. 어떤 작업을 수행할지 결정한다.",
             example = "WRITE_PAGE",
             allowableValues = {
-                    "NORMALIZE_SETTING", "COLLECT_SETTING", "CREATE_SETTING_OPTIONS",
+                    "NORMALIZE_SETTING", "COLLECT_SETTING", "CREATE_SETTING_OPTIONS", "TRANSLATE_TEXT",
                     "CREATE_PAGE_PLAN", "WRITE_PAGE", "REWRITE_PAGE",
-                    "CREATE_SCENE_PLAN", "WRITE_SCENE",
+                    "CREATE_SCENE_PLAN", "WRITE_SCENE", "REWRITE_SCENE", "WRITE_SCENE_SEGMENT",
                     "CREATE_IMAGE_PROMPT", "CREATE_COVER_PROMPT"
             }
     )
