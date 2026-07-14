@@ -7,6 +7,9 @@ import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberStatusChangeResponseD
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessRequestDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessResponseDto;
+import com.kosta.sangsangseoga.domain.admin.dto.AdminTokenTimelineItemDto;
+import com.kosta.sangsangseoga.domain.admin.dto.AdminTokenTrendItemDto;
+import com.kosta.sangsangseoga.domain.admin.dto.AdminTokenUsageItemDto;
 import com.kosta.sangsangseoga.domain.admin.service.AdminService;
 import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportStatus;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
@@ -20,6 +23,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * 관리자 전용 엔드포인트. /api/admin/**는 SecurityConfig에서 hasRole("ADMIN")으로 막혀 있어
@@ -76,5 +81,20 @@ public class AdminController implements AdminApi {
 
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(ApiResponse.success(adminService.getActionLogs(pageable)));
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<List<AdminTokenTrendItemDto>>> getTokenTrends(String unit) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getTokenTrends(unit)));
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<List<AdminTokenUsageItemDto>>> getTokenUsages() {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getTokenUsages()));
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<List<AdminTokenTimelineItemDto>>> getTokenUsageTimeline(Long userId) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getTokenUsageTimeline(userId)));
     }
 }

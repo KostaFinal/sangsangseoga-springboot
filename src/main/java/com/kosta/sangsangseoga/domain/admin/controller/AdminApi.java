@@ -8,6 +8,9 @@ import com.kosta.sangsangseoga.domain.admin.dto.AdminReportListItemDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessRequestDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessResponseDto;
+import com.kosta.sangsangseoga.domain.admin.dto.AdminTokenTimelineItemDto;
+import com.kosta.sangsangseoga.domain.admin.dto.AdminTokenTrendItemDto;
+import com.kosta.sangsangseoga.domain.admin.dto.AdminTokenUsageItemDto;
 import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportStatus;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
@@ -21,6 +24,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
+import javax.validation.constraints.Pattern;
+import java.util.List;
 
 @Tag(name="Admin", description = "관리자 신고 처리/회원 관리 API (ADMIN 권한 필요)")
 @RequestMapping("/api/admin")
@@ -88,4 +93,35 @@ public interface AdminApi {
     ResponseEntity<ApiResponse<AdminActionLogListResponseDto>> getActionLogs(
         @RequestParam(defaultValue = "0") @Min(0) int page,
         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size);
+
+    /**
+     * GET /api/admin/token/trends
+     * AI 사용량 트렌드(그래프용 시계열) 조회.
+     */
+    @Operation(summary = "AI 사용량 트렌드 조회", description = "unit=daily면 최근 7일, unit=monthly면 최근 5개월의 프리미엄/일반 회원 "
+            + "텍스트·이미지 사용량을 시계열로 조회한다. 실사용 이력이 없는 구간도 0으로 채워서 반환한다.")
+    @ApiErrorCodes({}) // 인증(401) / 인가(403) 실패 외 도메인 에러 없음
+    @GetMapping("/token/trends")
+    ResponseEntity<ApiResponse<List<AdminTokenTrendItemDto>>> getTokenTrends(
+        @RequestParam(defaultValue = "daily") @Pattern(regexp = "daily|monthly") String unit);
+
+    /**
+     * GET /api/admin/token/usages
+     * 회원별 AI 사용량 누적 랭킹 조회.
+     */
+    @Operation(summary = "회원별 AI 사용량 조회", description = "회원별 누적 텍스트/이미지 생성 사용량을 많은 순으로 조회한다. "
+            + "어뷰징 판정 로직이 아직 없어 status는 항상 NORMAL로 내려온다.")
+    @ApiErrorCodes({}) // 인증(401) / 인가(403) 실패 외 도메인 에러 없음
+    @GetMapping("/token/usages")
+    ResponseEntity<ApiResponse<List<AdminTokenUsageItemDto>>> getTokenUsages();
+
+    /**
+     * GET /api/admin/token/usages/{userId}/timeline
+     * 특정 회원의 AI 작업 타임라인 조회.
+     */
+    @Operation(summary = "회원별 AI 작업 타임라인 조회", description = "특정 회원의 AI 생성 호출 이력을 최신순으로 조회한다.")
+    @ApiErrorCodes({"MEMBER_NOT_FOUND"})
+    @GetMapping("/token/usages/{userId}/timeline")
+    ResponseEntity<ApiResponse<List<AdminTokenTimelineItemDto>>> getTokenUsageTimeline(
+        @PathVariable Long userId);
 }
