@@ -1,5 +1,16 @@
 package com.kosta.sangsangseoga.domain.auth.service;
 
+
+import java.time.LocalDate;
+import java.time.Period;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.kosta.sangsangseoga.domain.auth.dto.LoginRequestDto;
 import com.kosta.sangsangseoga.domain.auth.dto.LoginResponseDto;
@@ -15,6 +26,7 @@ import com.kosta.sangsangseoga.domain.member.enums.AuthProvider;
 import com.kosta.sangsangseoga.domain.member.enums.MemberAgeGroup;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
+import com.kosta.sangsangseoga.global.event.AfterCommitTask;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import com.kosta.sangsangseoga.global.jwt.ActionTokenExpiredException;
@@ -23,18 +35,9 @@ import com.kosta.sangsangseoga.global.jwt.ActionTokenProvider;
 import com.kosta.sangsangseoga.global.jwt.JwtProperties;
 import com.kosta.sangsangseoga.global.jwt.JwtTokenProvider;
 import com.kosta.sangsangseoga.global.jwt.RefreshTokenService;
-import com.kosta.sangsangseoga.global.event.AfterCommitTask;
 import com.kosta.sangsangseoga.global.mail.MailService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.Period;
-import java.util.Map;
-import java.util.regex.Pattern;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor

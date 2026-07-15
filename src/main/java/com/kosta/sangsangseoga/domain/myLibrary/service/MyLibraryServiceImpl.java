@@ -5,14 +5,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.domain.book.entity.BookImage;
+import com.kosta.sangsangseoga.domain.book.entity.BookTag;
 import com.kosta.sangsangseoga.domain.book.enums.BookStatus;
 import com.kosta.sangsangseoga.domain.book.repository.BookImageRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
+import com.kosta.sangsangseoga.domain.book.repository.BookTagRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.CategoryStatsDto;
@@ -29,6 +33,7 @@ import com.kosta.sangsangseoga.domain.myLibrary.enums.ReadingStatus;
 import com.kosta.sangsangseoga.domain.myLibrary.exception.ReadingErrorCode;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.BookReviewRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.MyReadingRepository;
+import com.kosta.sangsangseoga.domain.subscription.dto.UpdateBookTagsRequestDto;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 
@@ -46,6 +51,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	private final BookImageRepository bookImageRepository;
 	private final BookRepository bookRepository;
 	private final MemberRepository memberRepository;
+	private final BookTagRepository bookTagRepository;
 
 	private Map<Long, String> getCoverImageUrlMap(List<Book> books) {
 		if (books.isEmpty()) {
@@ -125,7 +131,8 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 			return ReadingBookResponseDto.builder().bookId(book.getId()).title(book.getTitle())
 					.description(book.getDescription()).category(book.getCategory()).bookType(book.getBookType().name())
 					.coverImageUrl(coverImageUrlMap.get(book.getId())).currentPage(myReading.getCurrentPage())
-					.progress(myReading.getProgress()).pageCount(book.getPageCount()).build();
+					.progress(myReading.getProgress()).pageCount(book.getPageCount()).readingStatus(myReading.getReadingStatus().name())
+			        .recentReadAt(myReading.getRecentReadAt()).build();
 		}).collect(Collectors.toList());
 	}
 
@@ -228,7 +235,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 		return ReadingBookResponseDto.builder().bookId(book.getId()).title(book.getTitle()).category(book.getCategory())
 				.bookType(book.getBookType().name()).currentPage(myReading.getCurrentPage())
 				.progress(myReading.getProgress()).pageCount(book.getPageCount())
-				.readingStatus(myReading.getReadingStatus().name()).build();
+				.readingStatus(myReading.getReadingStatus().name()).recentReadAt(myReading.getRecentReadAt()).build();
 	}
 
 	@Override
@@ -282,38 +289,79 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 
 	@Override
 	@Transactional(readOnly = true)
-	public List<MyWrittenBookResponseDto> getMyWrittenBooks(Long memberId) {
-		List<Book> books = bookRepository.findByMember_IdAndStatus(memberId, BookStatus.PUBLISHED);
+	public Page<MyWrittenBookResponseDto> getMyWrittenBooks(
+	        Long memberId,
+	        int page,
+	        int size
+	) {
+		Page<Book> bookPage = bookRepository
+		        .findByMember_IdAndStatusNotOrderByCreatedAtDesc(
+		                memberId,
+		                BookStatus.DELETED,
+		                PageRequest.of(page - 1, size)
+		        );
 
-		Map<Long, String> coverImageUrlMap = getCoverImageUrlMap(books);
+	    List<Book> books = bookPage.getContent();
+	    Map<Long, String> coverImageUrlMap = getCoverImageUrlMap(books);
 
-		return books.stream()
-				.map(book -> MyWrittenBookResponseDto.builder().bookId(book.getId()).title(book.getTitle())
-						.description(book.getDescription()).category(book.getCategory())
-						.bookType(book.getBookType().name()).coverImageUrl(coverImageUrlMap.get(book.getId()))
-						.pageCount(book.getPageCount()).viewCount(book.getViewCount()).likeCount(book.getLikeCount())
-						.status(book.getStatus().name()).build())
-				.collect(Collectors.toList());
+	    return bookPage.map(book ->
+	            MyWrittenBookResponseDto.builder()
+	                    .bookId(book.getId())
+	                    .title(book.getTitle())
+	                    .description(book.getDescription())
+	                    .category(book.getCategory())
+	                    .bookType(
+	                            book.getBookType() != null
+	                                    ? book.getBookType().name()
+	                                    : null
+	                    )
+	                    .coverImageUrl(coverImageUrlMap.get(book.getId()))
+	                    .pageCount(book.getPageCount())
+	                    .viewCount(book.getViewCount())
+	                    .likeCount(book.getLikeCount())
+	                    .status(
+	                            book.getStatus() != null
+	                                    ? book.getStatus().name()
+	                                    : null
+	                    )
+	                    .build()
+	    );
 	}
 
 	@Override
-	public void updateMyWrittenBookStatus(Long memberId, Long bookId, UpdateBookStatusRequestDto requestDto) {
-		Book book = bookRepository.findById(bookId)
-				.orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+
+	public void updateMyWrittenBookStatus(
+	        Long memberId,
+	        Long bookId,
+	        UpdateBookStatusRequestDto requestDto
+	) {
+	    Book book = bookRepository.findById(bookId)
+	            .orElseThrow(() ->
+	                    new CustomException(CommonErrorCode.BOOK_NOT_FOUND)
+	            );
+
 
 		if (!book.getMember().getId().equals(memberId)) {
 			throw new CustomException(CommonErrorCode.FORBIDDEN);
 		}
 
-		BookStatus status;
 
-		try {
-			status = BookStatus.valueOf(requestDto.getStatus());
-		} catch (IllegalArgumentException | NullPointerException e) {
-			log.warn("Invalid book status value: {}", requestDto.getStatus());
-			throw new CustomException(CommonErrorCode.BAD_REQUEST);
-		}
-		book.setStatus(status);
+	    BookStatus status;
+
+	    try {
+	        status = BookStatus.valueOf(requestDto.getStatus());
+	    } catch (IllegalArgumentException | NullPointerException e) {
+	        log.warn(
+	                "Invalid book status value: {}",
+	                requestDto.getStatus()
+	        );
+	        throw new CustomException(CommonErrorCode.BAD_REQUEST);
+	    }
+
+	    book.setStatus(status);
+
+	    
+
 	}
 
 	@Override
@@ -326,6 +374,77 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 		}
 
 		book.setDescription(requestDto.getDescription());
+	}
+	
+	@Override
+	public void updateMyWrittenBookTags(
+	        Long memberId,
+	        Long bookId,
+	        UpdateBookTagsRequestDto requestDto
+	) {
+	    Book book = bookRepository.findById(bookId)
+	            .orElseThrow(() ->
+	                    new CustomException(CommonErrorCode.BOOK_NOT_FOUND)
+	            );
+
+	    if (!book.getMember().getId().equals(memberId)) {
+	        throw new CustomException(CommonErrorCode.FORBIDDEN);
+	    }
+
+	    List<String> normalizedTags = requestDto.getTags().stream()
+	            .filter(tag -> tag != null && !tag.isBlank())
+	            .map(String::trim)
+	            .map(tag -> tag.startsWith("#")
+	                    ? tag.substring(1).trim()
+	                    : tag)
+	            .filter(tag -> !tag.isBlank())
+	            .distinct()
+	            .collect(Collectors.toList());
+
+	    if (normalizedTags.size() > 10) {
+	        throw new CustomException(CommonErrorCode.BAD_REQUEST);
+	    }
+
+	    boolean invalidTagExists = normalizedTags.stream()
+	            .anyMatch(tag -> tag.length() > 50);
+
+	    if (invalidTagExists) {
+	        throw new CustomException(CommonErrorCode.BAD_REQUEST);
+	    }
+
+	    bookTagRepository.deleteByBook(book);
+	    
+	 // 기존 태그 DELETE SQL을 새 태그 INSERT보다 먼저 실행
+	    bookTagRepository.flush();
+
+	    List<BookTag> newBookTags = normalizedTags.stream()
+	            .map(tagName ->
+	                    BookTag.builder()
+	                            .book(book)
+	                            .tagName(tagName)
+	                            .build()
+	            )
+	            .collect(Collectors.toList());
+
+	    bookTagRepository.saveAll(newBookTags);
+	}
+	
+	@Override
+	public void deleteMyWrittenBook(Long memberId, Long bookId) {
+	    Book book = bookRepository.findById(bookId)
+	            .orElseThrow(() ->
+	                    new CustomException(CommonErrorCode.BOOK_NOT_FOUND)
+	            );
+
+	    if (!book.getMember().getId().equals(memberId)) {
+	        throw new CustomException(CommonErrorCode.FORBIDDEN);
+	    }
+
+	    if (book.getStatus() == BookStatus.DELETED) {
+	        throw new CustomException(CommonErrorCode.BOOK_NOT_FOUND);
+	    }
+
+	    book.setStatus(BookStatus.DELETED);
 	}
 
 }

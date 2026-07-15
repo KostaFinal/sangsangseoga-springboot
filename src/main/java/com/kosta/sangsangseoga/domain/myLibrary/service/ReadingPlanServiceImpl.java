@@ -40,6 +40,11 @@ public class ReadingPlanServiceImpl implements ReadingPlanService {
     private final BookImageRepository bookImageRepository;
     
     private Map<Long, String> buildCoverImageMap(List<ReadingPlan> readingPlans) {
+    	
+    	if (readingPlans == null || readingPlans.isEmpty()) {
+            return Map.of();
+        }
+    	
         List<Book> books = readingPlans.stream()
                 .map(ReadingPlan::getBook)
                 .collect(Collectors.toList());
@@ -59,25 +64,12 @@ public class ReadingPlanServiceImpl implements ReadingPlanService {
      */
     private ReadingPlanResponseDto toResponseDto(ReadingPlan readingPlan) {
 
-        Book book = readingPlan.getBook();
-        
-        String coverImageUrl = bookImageRepository
-                .findByBookAndImageTypeAndDeletedAtIsNull(book, BookImage.ImageType.COVER)
-                .map(BookImage::getFileUrl)
-                .orElse(null);
+        Map<Long, String> coverImageMap = buildCoverImageMap(List.of(readingPlan));
+        return toResponseDto(readingPlan, coverImageMap);
 
-        return ReadingPlanResponseDto.builder()
-                .planId(readingPlan.getId())	
-                .bookId(book.getId())
-                .bookTitle(book.getTitle())
-                .category(book.getCategory())
-                .coverImageUrl(coverImageUrl)
-                .planDate(readingPlan.getPlanDate())
-                .targetPage(readingPlan.getTargetPage())
-                .memo(readingPlan.getMemo())
-                .isCompleted(readingPlan.getIsCompleted())
-                .completedAt(readingPlan.getCompletedAt())
-                .build();
+
+        
+
     }
     
     private ReadingPlanResponseDto toResponseDto(

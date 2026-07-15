@@ -57,10 +57,40 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 	// 내가 작성한 공개 책 목록 조회
 	List<Book> findByMember_IdAndStatus(Long memberId, BookStatus status);
 
-    // 작가(회원)의 공개된 작품 수 (작가 검색/프로필용)
-    long countByMemberAndStatus(Member member, BookStatus status);
+	// 작가(회원)의 공개된 작품 수 (작가 검색/프로필용)
+	long countByMemberAndStatus(Member member, BookStatus status);
 
-    // 작가(회원)의 대표작품 - 좋아요 가장 많은 공개 작품 1건 (작가 검색/프로필용)
-    Optional<Book> findTopByMemberAndStatusOrderByLikeCountDesc(Member member, BookStatus status);
+	// 작가(회원)의 대표작품 - 좋아요 가장 많은 공개 작품 1건 (작가 검색/프로필용)
+	Optional<Book> findTopByMemberAndStatusOrderByLikeCountDesc(Member member, BookStatus status);
+
+	// 여러 작가의 공개 작품 수를 작가별로 집계
+	@Query("SELECT b.member.id, COUNT(b) "
+	        + "FROM Book b "
+	        + "WHERE b.member.id IN :authorIds "
+	        + "AND b.status = :status "
+	        + "GROUP BY b.member.id")
+	List<Object[]> countPublishedBooksByAuthorIds(
+	        @Param("authorIds") List<Long> authorIds,
+	        @Param("status") BookStatus status
+	);
+	
+	// 내가 작성한 모든 책 조회 - 공개/비공개 포함, 최신순
+	Page<Book> findByMember_IdOrderByCreatedAtDesc(
+	        Long memberId,
+	        Pageable pageable
+	);
+	
+	// 내가 작성한 책 조회 - 삭제 상태 제외, 최신순
+	Page<Book> findByMember_IdAndStatusNotOrderByCreatedAtDesc(
+	        Long memberId,
+	        BookStatus status,
+	        Pageable pageable
+	);
+	
+	Optional<Book> findByIdAndStatusNot(
+	        Long bookId,
+	        BookStatus status
+	);
+	
 
 }

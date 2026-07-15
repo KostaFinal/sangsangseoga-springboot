@@ -1,4 +1,4 @@
-SET NAMES utf8mb4;
+﻿SET NAMES utf8mb4;
 -- SangSangSeoGa 더미 데이터 (자동 생성)
 SET FOREIGN_KEY_CHECKS=0;
 
@@ -4308,7 +4308,10 @@ INSERT INTO `report` (`id`, `member_id`, `target_type`, `target_id`, `reason`, `
 (59, 47, 'COMMENT', 55, 'SPAM', '반복적으로 스팸성 댓글을 게시하고 있습니다.', 'PENDING', NULL, NULL, '2026-01-24 18:15:32'),
 (60, 7, 'AUTHOR', 39, 'SPAM', '광고성 내용이 포함되어 있습니다.', 'PENDING', NULL, NULL, '2025-11-26 19:20:15');
 
+
+
 -- my_reading (200 rows)
+
 INSERT INTO `my_reading` (`id`, `member_id`, `book_id`, `reading_status`, `current_page`, `progress`, `recent_read_at`, `completed_at`, `reread_count`, `read_date`, `reading_time`, `created_at`, `updated_at`, `is_wishlist`) VALUES
 (1, 7, 119, 'COMPLETED', 7, 70, '2025-11-01 04:26:11', '2025-11-01 04:26:11', 0, '2025-11-01', 88, '2025-10-13 04:26:11', '2025-11-01 04:26:11', 0),
 (2, 2, 37, 'READING', 7, 100, '2026-01-20 22:13:24', NULL, 0, '2026-01-20', 57, '2025-12-29 22:13:24', '2026-01-20 22:13:24', 0),
@@ -4510,6 +4513,7 @@ INSERT INTO `my_reading` (`id`, `member_id`, `book_id`, `reading_status`, `curre
 (198, 42, 92, NULL, 1, 0, NULL, NULL, 0, NULL, 0, '2025-12-01 21:20:50', '2025-12-11 21:20:50', 1),
 (199, 14, 13, 'COMPLETED', 3, 50, '2026-05-08 21:40:49', '2026-05-08 21:40:49', 3, '2026-05-08', 93, '2026-04-24 21:40:49', '2026-05-08 21:40:49', 0),
 (200, 1, 46, 'READING', 6, 46, '2025-10-24 03:40:10', NULL, 0, '2025-10-24', 68, '2025-10-19 03:40:10', '2025-10-24 03:40:10', 0);
+
 
 -- book_review (100 rows)
 INSERT INTO `book_review` (`id`, `member_id`, `book_id`, `content`, `is_draft`, `ai_feedback_content`, `ai_feedback_created_at`, `created_at`, `updated_at`) VALUES

@@ -28,10 +28,10 @@ import com.kosta.sangsangseoga.domain.member.service.MemberService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
 import com.kosta.sangsangseoga.global.config.ApiErrorCodes;
 import com.kosta.sangsangseoga.global.security.AuthenticationHelper;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Member", description = "회원 정보/보호자 동의")
@@ -149,4 +149,6 @@ public class MemberController {
         GuardianConsentResponseDto response = memberService.withdrawGuardianConsent(consentId, memberId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
+    
+    
 }

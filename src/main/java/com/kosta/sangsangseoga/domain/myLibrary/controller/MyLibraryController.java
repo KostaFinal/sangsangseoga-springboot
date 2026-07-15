@@ -4,6 +4,7 @@ import java.util.List;
 
 import javax.validation.Valid;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.kosta.sangsangseoga.domain.myLibrary.dto.FinishedBookResponseDto;
@@ -24,6 +26,7 @@ import com.kosta.sangsangseoga.domain.myLibrary.dto.UpdateBookDescriptionRequest
 import com.kosta.sangsangseoga.domain.myLibrary.dto.UpdateBookStatusRequestDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.WishlistBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.service.MyLibraryService;
+import com.kosta.sangsangseoga.domain.subscription.dto.UpdateBookTagsRequestDto;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
@@ -123,11 +126,18 @@ public class MyLibraryController {
 	}
 	
 	@GetMapping("/my-books")
-	public ResponseEntity<ApiResponse<List<MyWrittenBookResponseDto>>> getMyWrittenBooks(
-	        Authentication authentication
+	public ResponseEntity<ApiResponse<Page<MyWrittenBookResponseDto>>> getMyWrittenBooks(
+	        Authentication authentication,
+	        @RequestParam(defaultValue = "1") int page,
+	        @RequestParam(defaultValue = "20") int size
 	) {
 	    Long memberId = getMemberId(authentication);
-	    return ResponseEntity.ok(ApiResponse.success(myLibraryService.getMyWrittenBooks(memberId)));
+
+	    return ResponseEntity.ok(
+	            ApiResponse.success(
+	                    myLibraryService.getMyWrittenBooks(memberId, page, size)
+	            )
+	    );
 	}
 	
 	@PatchMapping("/my-books/{bookId}/status")
@@ -151,6 +161,35 @@ public class MyLibraryController {
 	) {
 	    Long memberId = getMemberId(authentication);
 	    myLibraryService.updateMyWrittenBookDescription(memberId, bookId, requestDto);
+	    return ResponseEntity.ok(ApiResponse.success(null));
+	}
+	
+	@PatchMapping("/my-books/{bookId}/tags")
+	public ResponseEntity<ApiResponse<Void>> updateMyWrittenBookTags(
+	        Authentication authentication,
+	        @PathVariable Long bookId,
+	        @Valid @RequestBody UpdateBookTagsRequestDto requestDto
+	) {
+	    Long memberId = getMemberId(authentication);
+
+	    myLibraryService.updateMyWrittenBookTags(
+	            memberId,
+	            bookId,
+	            requestDto
+	    );
+
+	    return ResponseEntity.ok(ApiResponse.success(null));
+	}
+	
+	@DeleteMapping("/my-books/{bookId}")
+	public ResponseEntity<ApiResponse<Void>> deleteMyWrittenBook(
+	        Authentication authentication,
+	        @PathVariable Long bookId
+	) {
+	    Long memberId = getMemberId(authentication);
+
+	    myLibraryService.deleteMyWrittenBook(memberId, bookId);
+
 	    return ResponseEntity.ok(ApiResponse.success(null));
 	}
 }

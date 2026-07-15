@@ -8,15 +8,15 @@ import lombok.Data;
 @Data
 @Builder
 public class BookReviewResponseDto {
-	
+
 	private Long reviewId;
 	private Long bookId;
 	private String bookTitle;
-    private Long coverImageId;
+	private String coverImageUrl;
 	private String content;
 	private Boolean isDraft;
 	private String aiFeedbackContent;
-    private LocalDateTime aiFeedbackCreatedAt;
+	private LocalDateTime aiFeedbackCreatedAt;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 }
