@@ -368,6 +368,7 @@ public class AdminService {
 
         LinkedHashMap<String, double[]> buckets = new LinkedHashMap<>();
         LocalDateTime from;
+        LocalDateTime to;
 
         if (monthly) {
             if (year != null) {
@@ -375,12 +376,14 @@ public class AdminService {
                     buckets.put(monthlyBucketKey(YearMonth.of(year, m)), new double[4]);
                 }
                 from = YearMonth.of(year, 1).atDay(1).atStartOfDay();
+                to = YearMonth.of(year, 12).plusMonths(1).atDay(1).atStartOfDay();
             } else {
                 int bucketCount = months != null ? months : TREND_MONTHLY_MONTHS;
                 for (int i = bucketCount - 1; i >= 0; i--) {
                     buckets.put(monthlyBucketKey(YearMonth.now().minusMonths(i)), new double[4]);
                 }
                 from = YearMonth.now().minusMonths(bucketCount - 1L).atDay(1).atStartOfDay();
+                to = YearMonth.now().plusMonths(1).atDay(1).atStartOfDay();
             }
         } else {
             if (year != null && month != null) {
@@ -389,15 +392,17 @@ public class AdminService {
                     buckets.put(targetMonth.atDay(d).toString(), new double[4]);
                 }
                 from = targetMonth.atDay(1).atStartOfDay();
+                to = targetMonth.plusMonths(1).atDay(1).atStartOfDay();
             } else {
                 for (int i = TREND_DAILY_DAYS - 1; i >= 0; i--) {
                     buckets.put(LocalDate.now().minusDays(i).toString(), new double[4]);
                 }
                 from = LocalDate.now().minusDays(TREND_DAILY_DAYS - 1L).atStartOfDay();
+                to = LocalDate.now().plusDays(1).atStartOfDay();
             }
         }
 
-        for (AiGenerationUsage usage : aiGenerationUsageRepository.findAllWithMemberSince(from)) {
+        for (AiGenerationUsage usage : aiGenerationUsageRepository.findAllWithMemberBetween(from, to)) {
             LocalDate date = usage.getCreatedAt().toLocalDate();
             String key = monthly ? monthlyBucketKey(YearMonth.from(date)) : date.toString();
             double[] bucket = buckets.get(key);
