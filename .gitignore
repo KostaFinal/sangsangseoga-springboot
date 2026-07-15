@@ -8,6 +8,9 @@ build/
 ### QueryDSL generated sources ###
 src/main/generated/
 
+### 로컬 업로드 파일(프로필 사진 등) ###
+/uploads/
+
 ### Claude Code ###
 .claude/
 

@@ -1,5 +1,6 @@
 package com.kosta.sangsangseoga.domain.friendLibrary.service;
 
+import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
@@ -11,6 +12,7 @@ import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportTargetType;
 import com.kosta.sangsangseoga.domain.friendLibrary.exception.FriendLibraryErrorCode;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.CommentRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.ReportRepository;
+import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class ReportServiceImpl implements ReportService {
     private final MemberRepository memberRepository;
     private final BookRepository bookRepository;
     private final CommentRepository commentRepository;
+    private final NotificationService notificationService;
 
     /**
      * 신고 등록 (책/댓글/작가 통합)
@@ -61,6 +64,10 @@ public class ReportServiceImpl implements ReportService {
                 .status(ReportStatus.PENDING)
                 .build());
 
+        if (request.getTargetType() == ReportTargetType.BOOK) {
+            notifyBookAuthor(request.getTargetId());
+        }
+
         return ReportDto.builder()
                 .id(report.getId())
                 .targetType(report.getTargetType())
@@ -80,6 +87,16 @@ public class ReportServiceImpl implements ReportService {
             return List.of();
         }
         return reportRepository.findTargetIdsByReporterIdAndTargetType(reporterId, targetType);
+    }
+
+    /** 내 책이 신고당했음을 작가 본인에게 알린다. 대상 존재는 validateTarget에서 이미 확인했다. */
+    private void notifyBookAuthor(Long bookId) {
+        Book book = bookRepository.findById(bookId).orElse(null);
+        if (book == null) {
+            return;
+        }
+        notificationService.notify(book.getMember(),
+                String.format("회원님의 책 '%s'이(가) 신고되었습니다.", book.getTitle()));
     }
 
     /**
