@@ -44,6 +44,6 @@ public class BookPage extends BaseEntity {
     private String imageUrl;
 
     public enum ContentType {
-        PAGE, SCENE, CHAPTER, POEM
+        PAGE, SCENE, CHAPTER, POEM, ESSAY
     }
 }

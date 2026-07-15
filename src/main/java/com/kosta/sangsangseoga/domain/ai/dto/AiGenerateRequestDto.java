@@ -40,6 +40,7 @@ public class AiGenerateRequestDto {
                     "NORMALIZE_SETTING", "COLLECT_SETTING", "CREATE_SETTING_OPTIONS", "TRANSLATE_TEXT",
                     "CREATE_PAGE_PLAN", "WRITE_PAGE", "REWRITE_PAGE",
                     "CREATE_SCENE_PLAN", "WRITE_SCENE", "REWRITE_SCENE", "WRITE_SCENE_SEGMENT",
+                    "WRITE_POEM", "REWRITE_POEM", "WRITE_ESSAY", "REWRITE_ESSAY",
                     "CREATE_IMAGE_PROMPT", "CREATE_COVER_PROMPT"
             }
     )
