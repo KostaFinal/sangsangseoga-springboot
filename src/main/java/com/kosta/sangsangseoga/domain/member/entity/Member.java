@@ -64,7 +64,12 @@ public class Member extends BaseEntity {
     @Column(unique = true)
     private String nickname;
 
+    /**
+     * 소셜 로그인(구글 등)이 내려주는 프로필 이미지 URL은 서명 토큰이 붙어 300자를 넘기도 해서
+     * varchar(255) 기본값으로는 저장 중 "Data too long" 에러가 났다. 길이 제약 없는 컬럼으로 바꿈.
+     */
     @OptimisticLock(excluded = true)
+    @Lob
     private String profileImageUrl;
 
     @OptimisticLock(excluded = true)
