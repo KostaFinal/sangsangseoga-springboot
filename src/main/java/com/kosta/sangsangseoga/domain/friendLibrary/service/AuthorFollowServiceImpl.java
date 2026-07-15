@@ -97,7 +97,7 @@ public class AuthorFollowServiceImpl implements AuthorFollowService {
     public AuthorListResponseDto getMyFollowedAuthors(Long memberId, int page, int size) throws Exception {
 
     	
-    	 if (page < 1 || size < 1) {
+    	 if (page < 1 || size < 1 || size > AuthorFollowService.MAX_PAGE_SIZE) {
     	        throw new CustomException(CommonErrorCode.BAD_REQUEST);
     	    }
 

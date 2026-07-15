@@ -1,6 +1,8 @@
 package com.kosta.sangsangseoga.domain.myLibrary.service;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -38,8 +40,33 @@ public class BookReviewServiceImpl implements BookReviewService {
 	@Override
 	@Transactional(readOnly = true)
 	public List<BookReviewResponseDto> getReviews(Long memberId) {
-		return bookReviewRepository.findByMember_IdOrderByCreatedAtDesc(memberId).stream().map(this::toResponseDto)
-				.collect(Collectors.toList());
+	    List<BookReview> reviews =
+	            bookReviewRepository.findByMember_IdOrderByCreatedAtDesc(memberId);
+
+	    if (reviews.isEmpty()) {
+	        return Collections.emptyList();
+	    }
+
+	    List<Book> books = reviews.stream()
+	            .map(BookReview::getBook)
+	            .distinct()
+	            .collect(Collectors.toList());
+
+	    Map<Long, String> coverImageUrlMap = bookImageRepository
+	            .findByBookInAndImageTypeAndDeletedAtIsNull(
+	                    books,
+	                    BookImage.ImageType.COVER
+	            )
+	            .stream()
+	            .collect(Collectors.toMap(
+	                    image -> image.getBook().getId(),
+	                    BookImage::getFileUrl,
+	                    (existing, replacement) -> existing
+	            ));
+
+	    return reviews.stream()
+	            .map(review -> toResponseDto(review, coverImageUrlMap))
+	            .collect(Collectors.toList());
 	}
 
 	@Override
@@ -112,16 +139,48 @@ public class BookReviewServiceImpl implements BookReviewService {
 	}
 
 	private BookReviewResponseDto toResponseDto(BookReview review) {
-		Book book = review.getBook();
+	    Book book = review.getBook();
 
-		String coverImageUrl = bookImageRepository
-				.findByBookAndImageTypeAndDeletedAtIsNull(book, BookImage.ImageType.COVER).map(BookImage::getFileUrl)
-				.orElse(null);
+	    String coverImageUrl = bookImageRepository
+	            .findByBookAndImageTypeAndDeletedAtIsNull(
+	                    book,
+	                    BookImage.ImageType.COVER
+	            )
+	            .map(BookImage::getFileUrl)
+	            .orElse(null);
 
-		return BookReviewResponseDto.builder().reviewId(review.getId()).bookId(book.getId()).bookTitle(book.getTitle())
-				.coverImageUrl(coverImageUrl).content(review.getContent()).isDraft(review.getIsDraft())
-				.aiFeedbackContent(review.getAiFeedbackContent()).aiFeedbackCreatedAt(review.getAiFeedbackCreatedAt())
-				.createdAt(review.getCreatedAt()).updatedAt(review.getUpdatedAt()).build();
+	    return BookReviewResponseDto.builder()
+	            .reviewId(review.getId())
+	            .bookId(book.getId())
+	            .bookTitle(book.getTitle())
+	            .coverImageUrl(coverImageUrl)
+	            .content(review.getContent())
+	            .isDraft(review.getIsDraft())
+	            .aiFeedbackContent(review.getAiFeedbackContent())
+	            .aiFeedbackCreatedAt(review.getAiFeedbackCreatedAt())
+	            .createdAt(review.getCreatedAt())
+	            .updatedAt(review.getUpdatedAt())
+	            .build();
+	}
+	
+	private BookReviewResponseDto toResponseDto(
+	        BookReview review,
+	        Map<Long, String> coverImageUrlMap
+	) {
+	    Book book = review.getBook();
+
+	    return BookReviewResponseDto.builder()
+	            .reviewId(review.getId())
+	            .bookId(book.getId())
+	            .bookTitle(book.getTitle())
+	            .coverImageUrl(coverImageUrlMap.get(book.getId()))
+	            .content(review.getContent())
+	            .isDraft(review.getIsDraft())
+	            .aiFeedbackContent(review.getAiFeedbackContent())
+	            .aiFeedbackCreatedAt(review.getAiFeedbackCreatedAt())
+	            .createdAt(review.getCreatedAt())
+	            .updatedAt(review.getUpdatedAt())
+	            .build();
 	}
 
 	@Override

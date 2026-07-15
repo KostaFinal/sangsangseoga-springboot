@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
+import javax.validation.groups.Default;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,8 +14,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ReadingPlanRequestDto {
 
-    public interface OnCreate {}
-    public interface OnUpdate {}
+	public interface OnCreate extends Default {
+    }
+
+    public interface OnUpdate extends Default {
+    }
 
     @NotNull(
             message = "책 ID는 필수입니다.",

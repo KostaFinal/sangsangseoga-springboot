@@ -277,8 +277,11 @@ public class BookServiceImpl implements BookService {
     @Override
     @Transactional
     public BookDetailDto getBook(Long bookId, Long memberId) throws Exception {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+    	Book book = bookRepository
+    	        .findByIdAndStatusNot(bookId, BookStatus.DELETED)
+    	        .orElseThrow(() ->
+    	                new CustomException(CommonErrorCode.BOOK_NOT_FOUND)
+    	        );
 
         String coverImageUrl = bookImageRepository
                 .findByBookAndImageTypeAndDeletedAtIsNull(book, BookImage.ImageType.COVER)
@@ -330,8 +333,11 @@ public class BookServiceImpl implements BookService {
     @Override
     @Transactional
     public Integer increaseViewCount(Long bookId) throws Exception {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+    	Book book = bookRepository
+    	        .findByIdAndStatusNot(bookId, BookStatus.DELETED)
+    	        .orElseThrow(() ->
+    	                new CustomException(CommonErrorCode.BOOK_NOT_FOUND)
+    	        );
 
         book.setViewCount(book.getViewCount() + 1);
         book.setWeekViewCount(book.getWeekViewCount() + 1);
@@ -344,8 +350,11 @@ public class BookServiceImpl implements BookService {
      */
     @Override
     public BookContentsResponseDto getContents(Long bookId) throws Exception {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+    	Book book = bookRepository
+    	        .findByIdAndStatusNot(bookId, BookStatus.DELETED)
+    	        .orElseThrow(() ->
+    	                new CustomException(CommonErrorCode.BOOK_NOT_FOUND)
+    	        );
 
         List<BookPage> pages = bookPageRepository.findByBookOrderByPageNoAsc(book);
 
@@ -374,8 +383,11 @@ public class BookServiceImpl implements BookService {
      */
     @Override
     public BookRecommendResponseDto getRecommendations(Long bookId, int size) throws Exception {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+    	Book book = bookRepository
+    	        .findByIdAndStatusNot(bookId, BookStatus.DELETED)
+    	        .orElseThrow(() ->
+    	                new CustomException(CommonErrorCode.BOOK_NOT_FOUND)
+    	        );
 
         // 1. 협업 필터링으로 추천
         List<Book> recommended = myReadingRepository.findCollaborativeRecommendations(
@@ -431,13 +443,20 @@ public class BookServiceImpl implements BookService {
             throw new CustomException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        List<Book> myBooks = bookRepository.findByMember_IdAndStatus(memberId, BookStatus.PUBLISHED);
+        Page<Book> myBooksPage =
+                bookRepository.findByMember_IdOrderByCreatedAtDesc(
+                        memberId,
+                        PageRequest.of(0, 20)
+                );
 
         List<BookListItemDto> items = new ArrayList<>();
 
-        for (Book book : myBooks) {
+        for (Book book : myBooksPage.getContent()) {
             String coverImageUrl = bookImageRepository
-                    .findByBookAndImageTypeAndDeletedAtIsNull(book, BookImage.ImageType.COVER)
+                    .findByBookAndImageTypeAndDeletedAtIsNull(
+                            book,
+                            BookImage.ImageType.COVER
+                    )
                     .map(BookImage::getFileUrl)
                     .orElse(null);
 
@@ -446,7 +465,11 @@ public class BookServiceImpl implements BookService {
                     .authorId(book.getMember().getId())
                     .title(book.getTitle())
                     .author(book.getMember().getNickname())
-                    .bookType(book.getBookType() != null ? book.getBookType().name() : null)
+                    .bookType(
+                            book.getBookType() != null
+                                    ? book.getBookType().name()
+                                    : null
+                    )
                     .coverImageUrl(coverImageUrl)
                     .description(book.getDescription())
                     .viewCount(book.getViewCount())
@@ -458,9 +481,9 @@ public class BookServiceImpl implements BookService {
 
         return BookListResponseDto.builder()
                 .items(items)
-                .totalCount((long) items.size())
-                .page(1)
-                .hasNext(false)
+                .totalCount(myBooksPage.getTotalElements())
+                .page(myBooksPage.getNumber() + 1)
+                .hasNext(myBooksPage.hasNext())
                 .build();
     }
 }

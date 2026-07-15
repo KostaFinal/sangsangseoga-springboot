@@ -40,6 +40,11 @@ public class ReadingPlanServiceImpl implements ReadingPlanService {
     private final BookImageRepository bookImageRepository;
     
     private Map<Long, String> buildCoverImageMap(List<ReadingPlan> readingPlans) {
+    	
+    	if (readingPlans == null || readingPlans.isEmpty()) {
+            return Map.of();
+        }
+    	
         List<Book> books = readingPlans.stream()
                 .map(ReadingPlan::getBook)
                 .collect(Collectors.toList());

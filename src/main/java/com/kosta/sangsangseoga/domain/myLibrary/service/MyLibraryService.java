@@ -2,6 +2,8 @@ package com.kosta.sangsangseoga.domain.myLibrary.service;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+
 import com.kosta.sangsangseoga.domain.myLibrary.dto.FinishedBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.MyWrittenBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingBookResponseDto;
@@ -10,6 +12,7 @@ import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingStatsResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.UpdateBookDescriptionRequestDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.UpdateBookStatusRequestDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.WishlistBookResponseDto;
+import com.kosta.sangsangseoga.domain.subscription.dto.UpdateBookTagsRequestDto;
 
 public interface MyLibraryService {
 	
@@ -39,9 +42,21 @@ public interface MyLibraryService {
 	//독서 통계 조회
 	ReadingStatsResponseDto getReadingStats(Long memberId);
 	
-	List<MyWrittenBookResponseDto> getMyWrittenBooks(Long memberId);
+	Page<MyWrittenBookResponseDto> getMyWrittenBooks(
+	        Long memberId,
+	        int page,
+	        int size
+	);
 	
 	void updateMyWrittenBookStatus(Long memberId, Long bookId, UpdateBookStatusRequestDto requestDto);
 	
 	void updateMyWrittenBookDescription(Long memberId, Long bookId, UpdateBookDescriptionRequestDto requestDto);
+	
+	void updateMyWrittenBookTags(
+	        Long memberId,
+	        Long bookId,
+	        UpdateBookTagsRequestDto requestDto
+	);
+	
+	void deleteMyWrittenBook(Long memberId, Long bookId);
 }

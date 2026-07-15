@@ -75,7 +75,22 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 	);
 	
 	// 내가 작성한 모든 책 조회 - 공개/비공개 포함, 최신순
-	List<Book> findByMember_IdOrderByCreatedAtDesc(Long memberId);
+	Page<Book> findByMember_IdOrderByCreatedAtDesc(
+	        Long memberId,
+	        Pageable pageable
+	);
+	
+	// 내가 작성한 책 조회 - 삭제 상태 제외, 최신순
+	Page<Book> findByMember_IdAndStatusNotOrderByCreatedAtDesc(
+	        Long memberId,
+	        BookStatus status,
+	        Pageable pageable
+	);
+	
+	Optional<Book> findByIdAndStatusNot(
+	        Long bookId,
+	        BookStatus status
+	);
 	
 
 }
