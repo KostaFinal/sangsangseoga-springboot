@@ -34,7 +34,6 @@ import com.kosta.sangsangseoga.domain.member.entity.GuardianConsent;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.enums.GuardianConsentStatus;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
-import com.kosta.sangsangseoga.domain.member.enums.WithdrawalBookPolicy;
 import com.kosta.sangsangseoga.domain.member.exception.MemberErrorCode;
 import com.kosta.sangsangseoga.domain.member.repository.GuardianConsentRepository;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
@@ -258,7 +257,7 @@ public class MemberService {
     /**
      * 회원 탈퇴. 상태를 DELETED로 전환(하드 삭제 아님 - 개인정보 보관 정책은 별도 파기 배치가 담당),
      * Redis Refresh Token 삭제, 구독 즉시 해지, 좋아요/북마크/관심작가 삭제, 작성 댓글 익명화,
-     * 공개 도서 처리(비공개 전환/삭제)를 수행한다.
+     * 내가 쓴 공개 도서는 전부 비공개(HIDDEN) 전환한다.
      */
     public void withdraw(Long memberId, WithdrawRequestDto request) {
         Member member = memberRepository.findById(memberId)
@@ -286,29 +285,13 @@ public class MemberService {
         writtenComments.forEach(comment -> comment.setMember(null));
         commentRepository.saveAll(writtenComments);
 
-        applyBookPolicy(member, request.getBookPolicy());
+        hideMyBooks(member);
     }
 
-    private void applyBookPolicy(Member member, WithdrawalBookPolicy bookPolicy) {
+    private void hideMyBooks(Member member) {
         List<Book> books = bookRepository.findAllByMember(member);
-
-        if (bookPolicy == WithdrawalBookPolicy.DELETE) {
-            // NOTE: book_page/book_image/book_tag/book_review 엔티티가 아직 필드 없는 스켈레톤이라
-            // 이 테이블들의 book_id 참조 행을 먼저 지울 방법이 없다. 이 상태에서 실제 페이지·이미지
-            // 데이터가 쌓인 책을 delete()하면 FK 제약으로 실패한다.
-            // 위 엔티티들이 채워진 뒤 해당 리포지토리로 선삭제하는 로직을 추가해야 완전해진다.
-            for (Book book : books) {
-                commentRepository.deleteAllByBook(book);
-                bookLikeRepository.deleteAllByBook(book);
-                bookmarkRepository.deleteAllByBook(book);
-                myReadingRepository.deleteAllByBook_Id(book.getId());
-                readingMemoRepository.deleteAllByBook(book);
-            }
-            bookRepository.deleteAll(books);
-        } else {
-            books.forEach(book -> book.setStatus(BookStatus.HIDDEN));
-            bookRepository.saveAll(books);
-        }
+        books.forEach(book -> book.setStatus(BookStatus.HIDDEN));
+        bookRepository.saveAll(books);
     }
 
     /**
