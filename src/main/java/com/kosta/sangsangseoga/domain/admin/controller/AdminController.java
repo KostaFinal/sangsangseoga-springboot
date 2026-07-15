@@ -85,8 +85,9 @@ public class AdminController implements AdminApi {
     }
 
     @Override
-    public ResponseEntity<ApiResponse<List<AdminTokenTrendItemDto>>> getTokenTrends(String unit) {
-        return ResponseEntity.ok(ApiResponse.success(adminService.getTokenTrends(unit)));
+    public ResponseEntity<ApiResponse<List<AdminTokenTrendItemDto>>> getTokenTrends(
+            String unit, Integer year, Integer month, Integer months) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getTokenTrends(unit, year, month, months)));
     }
 
     @Override

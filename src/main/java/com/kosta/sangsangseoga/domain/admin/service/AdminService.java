@@ -353,25 +353,49 @@ public class AdminService {
     }
 
     /**
-     * unit=daily면 최근 7일, unit=monthly면 최근 5개월 구간을 프리미엄/일반 회원 x 텍스트/이미지로 집계한다.
+     * unit=daily는 일별, unit=monthly는 월별 구간을 프리미엄/일반 회원 x 텍스트/이미지로 집계한다.
      * 구간은 실제 사용 이력이 없어도 0으로 채워서 반환한다(그래프가 빈 구간에서 끊기지 않도록).
      * premiumTxt/freeTxt는 FastAPI가 실제 Gemini 토큰 수(result.usage)를 내려준 값을 만 토큰 단위로 환산한 것이다.
      * FastAPI가 usage를 안 내려준 옛 호출 이력은 요청/응답 JSON 문자 길이 근사치가 대신 들어가 있을 수 있다.
+     *
+     * - daily: year+month를 함께 주면 그 달의 1일~말일 전체, 생략하면 오늘 기준 최근 7일.
+     * - monthly: year를 주면 그 해의 1월~12월(year가 months보다 우선), year 없이 months만 주면 오늘 기준
+     *   최근 months개월, 둘 다 생략하면 최근 5개월.
      */
     @Transactional(readOnly = true)
-    public List<AdminTokenTrendItemDto> getTokenTrends(String unit) {
+    public List<AdminTokenTrendItemDto> getTokenTrends(String unit, Integer year, Integer month, Integer months) {
         boolean monthly = "monthly".equalsIgnoreCase(unit);
-        int bucketCount = monthly ? TREND_MONTHLY_MONTHS : TREND_DAILY_DAYS;
 
         LinkedHashMap<String, double[]> buckets = new LinkedHashMap<>();
-        for (int i = bucketCount - 1; i >= 0; i--) {
-            buckets.put(monthly ? monthlyBucketKey(YearMonth.now().minusMonths(i))
-                    : LocalDate.now().minusDays(i).toString(), new double[4]);
-        }
+        LocalDateTime from;
 
-        LocalDateTime from = monthly
-                ? YearMonth.now().minusMonths(bucketCount - 1L).atDay(1).atStartOfDay()
-                : LocalDate.now().minusDays(bucketCount - 1L).atStartOfDay();
+        if (monthly) {
+            if (year != null) {
+                for (int m = 1; m <= 12; m++) {
+                    buckets.put(monthlyBucketKey(YearMonth.of(year, m)), new double[4]);
+                }
+                from = YearMonth.of(year, 1).atDay(1).atStartOfDay();
+            } else {
+                int bucketCount = months != null ? months : TREND_MONTHLY_MONTHS;
+                for (int i = bucketCount - 1; i >= 0; i--) {
+                    buckets.put(monthlyBucketKey(YearMonth.now().minusMonths(i)), new double[4]);
+                }
+                from = YearMonth.now().minusMonths(bucketCount - 1L).atDay(1).atStartOfDay();
+            }
+        } else {
+            if (year != null && month != null) {
+                YearMonth targetMonth = YearMonth.of(year, month);
+                for (int d = 1; d <= targetMonth.lengthOfMonth(); d++) {
+                    buckets.put(targetMonth.atDay(d).toString(), new double[4]);
+                }
+                from = targetMonth.atDay(1).atStartOfDay();
+            } else {
+                for (int i = TREND_DAILY_DAYS - 1; i >= 0; i--) {
+                    buckets.put(LocalDate.now().minusDays(i).toString(), new double[4]);
+                }
+                from = LocalDate.now().minusDays(TREND_DAILY_DAYS - 1L).atStartOfDay();
+            }
+        }
 
         for (AiGenerationUsage usage : aiGenerationUsageRepository.findAllWithMemberSince(from)) {
             LocalDate date = usage.getCreatedAt().toLocalDate();
