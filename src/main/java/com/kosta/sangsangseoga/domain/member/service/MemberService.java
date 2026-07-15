@@ -49,7 +49,7 @@ import com.kosta.sangsangseoga.global.jwt.ActionTokenProvider;
 import com.kosta.sangsangseoga.global.jwt.RefreshTokenService;
 
 import com.kosta.sangsangseoga.global.mail.MailService;
-import com.kosta.sangsangseoga.global.infra.storage.LocalFileStorageService;
+import com.kosta.sangsangseoga.global.infra.storage.FileStorageService;
 
 
 import com.kosta.sangsangseoga.global.jwt.TokenBlacklistService;
@@ -87,7 +87,7 @@ public class MemberService {
     private final MyReadingRepository myReadingRepository;
     private final ReadingMemoRepository readingMemoRepository;
     private final MailService mailService;
-    private final LocalFileStorageService localFileStorageService;
+    private final FileStorageService fileStorageService;
 
     private static final Set<String> ALLOWED_IMAGE_CONTENT_TYPES =
             Set.of("image/jpeg", "image/png", "image/gif", "image/webp");
@@ -370,6 +370,7 @@ public class MemberService {
                 .memberId(member.getId())
                 .nickname(member.getNickname())
                 .profileImageUrl(member.getProfileImageUrl())
+                .introduction(member.getIntroduction())
                 .build();
     }
 
@@ -393,6 +394,7 @@ public class MemberService {
                 .memberId(member.getId())
                 .nickname(member.getNickname())
                 .profileImageUrl(member.getProfileImageUrl())
+                .introduction(member.getIntroduction())
                 .build();
     }
 
@@ -426,7 +428,7 @@ public class MemberService {
             throw new CustomException(MemberErrorCode.INVALID_IMAGE_FILE);
         }
 
-        String profileImageUrl = localFileStorageService.store(file, "profile-images");
+        String profileImageUrl = fileStorageService.store(file, "profile-images");
         return ProfileImageUploadResponseDto.builder()
                 .profileImageUrl(profileImageUrl)
                 .build();
