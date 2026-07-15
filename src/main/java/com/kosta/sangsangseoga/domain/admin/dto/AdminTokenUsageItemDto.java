@@ -17,7 +17,7 @@ public class AdminTokenUsageItemDto {
     @Schema(description = "구독 플랜", allowableValues = {"FREE", "PREMIUM"})
     private String plan;
 
-    @Schema(description = "누적 텍스트 생성 사용량(문자 수 근사치)")
+    @Schema(description = "누적 텍스트 생성 사용량(Gemini 실제 토큰 수. FastAPI가 값을 안 준 옛 호출은 문자 수 근사치일 수 있음)")
     private Long textUsage;
 
     @Schema(description = "누적 이미지 생성 장수")

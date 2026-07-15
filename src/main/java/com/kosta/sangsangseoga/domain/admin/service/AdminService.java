@@ -355,7 +355,8 @@ public class AdminService {
     /**
      * unit=daily면 최근 7일, unit=monthly면 최근 5개월 구간을 프리미엄/일반 회원 x 텍스트/이미지로 집계한다.
      * 구간은 실제 사용 이력이 없어도 0으로 채워서 반환한다(그래프가 빈 구간에서 끊기지 않도록).
-     * premiumTxt/freeTxt는 실제 토큰 수가 아니라 요청/응답 JSON 문자 길이의 근사치를 만 자 단위로 환산한 값이다.
+     * premiumTxt/freeTxt는 FastAPI가 실제 Gemini 토큰 수(result.usage)를 내려준 값을 만 토큰 단위로 환산한 것이다.
+     * FastAPI가 usage를 안 내려준 옛 호출 이력은 요청/응답 JSON 문자 길이 근사치가 대신 들어가 있을 수 있다.
      */
     @Transactional(readOnly = true)
     public List<AdminTokenTrendItemDto> getTokenTrends(String unit) {
@@ -463,7 +464,7 @@ public class AdminService {
     private AdminTokenTimelineItemDto toTokenTimelineItemDto(AiGenerationUsage usage) {
         boolean isText = usage.getCallType() == CallType.TEXT;
         String amount = isText
-                ? String.format("%,d 자", usage.getOutputTokenCount() != null ? usage.getOutputTokenCount() : 0)
+                ? String.format("%,d 토큰", usage.getOutputTokenCount() != null ? usage.getOutputTokenCount() : 0)
                 : String.format("%,d 장", usage.getImageCount() != null ? usage.getImageCount() : 0);
 
         return AdminTokenTimelineItemDto.builder()

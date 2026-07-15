@@ -82,8 +82,8 @@ public class AiService {
 	}
 
 	/**
-	 * Gemini 실제 토큰 수는 FastAPI 응답에 포함되지 않아 알 수 없다. 대신 요청/응답을 JSON으로
-	 * 직렬화한 문자 길이를 입출력 크기의 근사치로 저장한다(정확한 토큰 수가 아님에 유의).
+	 * FastAPI 응답의 result.usage(inputTokenCount/outputTokenCount)가 실제 Gemini 토큰 수다.
+	 * 없는 경우(구버전 FastAPI 등)에는 요청/응답을 JSON으로 직렬화한 문자 길이를 근사치로 대신 쓴다.
 	 */
 	private void recordUsage(Long memberId, AiGenerateRequestDto request,
 							  Map<String, Object> pythonRequestBody, Map<String, Object> fastApiResponse) {
@@ -91,13 +91,26 @@ public class AiService {
 				.orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
 		Book book = request.getBookId() != null ? bookRepository.findById(request.getBookId()).orElse(null) : null;
 
+		Map<String, Object> usage = asMap(fastApiResponse == null ? null : fastApiResponse.get("usage"));
+		Integer inputTokenCount = toInteger(usage.get("inputTokenCount"));
+		Integer outputTokenCount = toInteger(usage.get("outputTokenCount"));
+
 		aiGenerationUsageRepository.save(AiGenerationUsage.builder()
 				.member(member)
 				.book(book)
 				.callType(CallType.TEXT)
-				.inputTokenCount(jsonLength(pythonRequestBody))
-				.outputTokenCount(jsonLength(fastApiResponse))
+				.inputTokenCount(inputTokenCount != null ? inputTokenCount : jsonLength(pythonRequestBody))
+				.outputTokenCount(outputTokenCount != null ? outputTokenCount : jsonLength(fastApiResponse))
 				.build());
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> asMap(Object value) {
+		return value instanceof Map ? (Map<String, Object>) value : java.util.Collections.emptyMap();
+	}
+
+	private Integer toInteger(Object value) {
+		return value instanceof Number ? ((Number) value).intValue() : null;
 	}
 
 	private int jsonLength(Object value) {
