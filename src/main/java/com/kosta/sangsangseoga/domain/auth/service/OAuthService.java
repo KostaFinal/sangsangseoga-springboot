@@ -35,9 +35,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * 카카오/네이버 소셜 로그인. 이메일/비밀번호 로그인(AuthService)과 별개 서비스로 분리했다 -
- * 인가 URL 생성, 외부 제공자 토큰 교환, 신규 회원의 "생년월일을 나중에 받는" 2단계 가입처럼
- * 이메일 로그인에는 없는 흐름이 대부분이라 AuthService에 억지로 얹으면 오히려 읽기 어려워진다.
+ * 카카오/네이버 소셜 로그인. 인가 URL 생성, 토큰 교환, 2단계 가입처럼 이메일 로그인(AuthService)에는
+ * 없는 흐름이 대부분이라 별개 서비스로 분리했다.
  */
 @Service
 @RequiredArgsConstructor
@@ -64,9 +63,8 @@ public class OAuthService {
     }
 
     /**
-     * 로그인/가입 겸용 콜백. 이미 이 제공자로 가입된 회원이면 로그인 처리하고,
-     * 처음 보는 사용자면 제공자가 생년월일을 줬는지 여부로 가입을 바로 끝낼지(성인/미성년 분기)
-     * 아니면 complete-signup을 한 번 더 받을지(oauthSignupToken 발급) 갈린다.
+     * 로그인/가입 겸용 콜백. 기존 회원이면 로그인, 신규면 생년월일 제공 여부에 따라 가입을 바로
+     * 끝내거나(성인/미성년 분기) complete-signup을 한 번 더 받는다(oauthSignupToken 발급).
      */
     public OAuthCallbackResponseDto handleCallback(String providerName, OAuthCallbackRequestDto request) {
         AuthProvider provider = oAuthClientResolver.resolveProvider(providerName);

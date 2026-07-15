@@ -315,14 +315,10 @@ public class AdminService {
 	}
 
 	/**
-	 * unit=daily는 일별, unit=monthly는 월별 구간을 프리미엄/일반 회원 x 텍스트/이미지로 집계한다. 구간은 실제 사용
-	 * 이력이 없어도 0으로 채워서 반환한다(그래프가 빈 구간에서 끊기지 않도록). premiumTxt/freeTxt는 FastAPI가 실제
-	 * Gemini 토큰 수(result.usage)를 내려준 값을 만 토큰 단위로 환산한 것이다. FastAPI가 usage를 안 내려준 옛
-	 * 호출 이력은 요청/응답 JSON 문자 길이 근사치가 대신 들어가 있을 수 있다.
-	 *
-	 * - daily: year+month를 함께 주면 그 달의 1일~말일 전체, 생략하면 오늘 기준 최근 7일. - monthly: year를
-	 * 주면 그 해의 1월~12월(year가 months보다 우선), year 없이 months만 주면 오늘 기준 최근 months개월, 둘 다
-	 * 생략하면 최근 5개월.
+	 * 프리미엄/일반 회원 x 텍스트/이미지 사용량을 구간별로 집계한다(빈 구간은 0). premiumTxt/freeTxt는
+	 * FastAPI가 준 실제 Gemini 토큰 수를 만 토큰 단위로 환산한 값(옛 호출은 문자 길이 근사치일 수 있음).
+	 * daily는 year+month 지정 시 해당 월 전체(생략 시 최근 7일), monthly는 year 지정 시 해당 연도
+	 * 1~12월(year가 months보다 우선, 둘 다 생략 시 최근 5개월).
 	 */
 	@Transactional(readOnly = true)
 	public List<AdminTokenTrendItemDto> getTokenTrends(String unit, Integer year, Integer month, Integer months) {

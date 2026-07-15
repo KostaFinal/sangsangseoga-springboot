@@ -62,13 +62,10 @@ public class AuthService {
     private final MailService mailService;
 
     /**
-     * 회원가입. 이메일/비밀번호/닉네임/생년월일 형식은 SignupRequestDto의 Bean Validation(@Valid)이
-     * 컨트롤러 진입 시점에 검증한다. 여기서는 DB 조회가 필요한 중복 검증과 가입 처리를 담당한다.
-     * 생년월일로 연령대를 판정해 만 14세 미만은 보호자 동의 대기(PENDING) 상태로 가입 처리하고,
-     * 이 경우 토큰을 발급하지 않는다(로그인 시에도 동일하게 PENDING_GUARDIAN_CONSENT로 막히므로,
-     * 가입 시점에 토큰을 쥐어주면 보호자 동의 없이도 그 토큰으로 API를 호출할 수 있게 되어 게이트가
-     * 무력화된다). 그 외(만 14세 이상)는 즉시 활성(ACTIVE) 상태로 가입 처리하고 자동 로그인을 위해
-     * Access/Refresh Token을 함께 발급한다. 소셜 로그인 가입(OAuthService.signup)과 동일한 규칙이다.
+     * 회원가입. 형식 검증은 SignupRequestDto가 담당하고, 여기서는 DB 조회가 필요한 중복 검증과 가입을 처리한다.
+     * 만 14세 미만은 PENDING 상태로 가입하고 토큰을 발급하지 않는다 — 발급하면 보호자 동의 없이도 그 토큰으로
+     * API를 호출할 수 있어 게이트가 무력화된다. 그 외는 즉시 ACTIVE로 가입하고 Access/Refresh Token을 발급한다.
+     * 소셜 가입(OAuthService.signup)과 동일한 규칙이다.
      */
     public SignupResponseDto signup(SignupRequestDto request) {
         if (memberRepository.existsByEmail(request.getEmail())) {
@@ -215,10 +212,8 @@ public class AuthService {
     }
 
     /**
-     * 비밀번호 재설정 인증 메일 발송 요청. 소셜 로그인 계정은 실제로 아는 비밀번호가 없고
-     * (가입 시 무작위 값으로 채워짐 - OAuthService.signup 참고) 오직 소셜 로그인으로만 인증하므로,
-     * 여기서 비밀번호를 새로 설정할 수 있게 해주면 그 이후로 이메일/비밀번호 로그인까지 뚫려버린다.
-     * 그래서 LOCAL 계정만 허용한다.
+     * 비밀번호 재설정 메일 발송. 소셜 계정은 비밀번호가 무작위 값으로 채워져 있어(OAuthService.signup 참고)
+     * 여기서 재설정을 허용하면 이메일/비밀번호 로그인까지 뚫려버리므로 LOCAL 계정만 허용한다.
      */
     public void requestPasswordReset(PasswordResetRequestDto request) {
         Member member = memberRepository.findByEmail(request.getEmail())

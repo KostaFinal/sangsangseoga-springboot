@@ -23,10 +23,8 @@ public class SubscriptionScheduler {
     private final SubscriptionService subscriptionService;
 
     /**
-     * [매일 00:00 실행] 프리미엄 회원 만료 처리 및 일일 한도 재충전 배치
-     * - API 미호출 회원들을 위한 최종 안전망 역할을 합니다. (FREE 회원은 제외)
-     * * 1. 구독 만료 처리: 결제 주기 끝난 프리미엄 회원 자동갱신(Mock) 또는 FREE 전환
-     * 2. 일일 한도 충전: 프리미엄 회원의 텍스트/이미지 생성 한도 초기화
+     * [매일 00:00] 프리미엄 회원 구독 만료 처리(자동갱신 또는 FREE 전환) 및 일일 생성 한도 재충전.
+     * API 호출로 즉시 반영 안 된 회원들을 위한 안전망 역할이다(FREE 회원은 대상 아님).
      */
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
@@ -44,9 +42,8 @@ public class SubscriptionScheduler {
             try {
                 subscriptionService.reconcileIfExpired(member);
             } catch (Exception e) {
-                // 회원 한 명 처리 중 예외가 나도 나머지 회원 정리는 계속 진행한다.
-                // (단, Payment가 IDENTITY 전략이라 save() 시점에 즉시 INSERT되므로, DB 레벨 예외로
-                // 트랜잭션이 rollback-only로 마킹되는 경우까지는 이 try/catch로 막을 수 없다.)
+                // 한 회원 처리 중 예외가 나도 나머지는 계속 진행한다. 단, DB 레벨 예외로 트랜잭션이
+                // rollback-only로 마킹되는 경우(Payment가 IDENTITY라 save() 즉시 INSERT됨)까지는 못 막는다.
                 log.error("회원 id={} 구독 정리 중 오류 발생", member.getId(), e);
             }
         });

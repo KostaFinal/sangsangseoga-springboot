@@ -64,9 +64,8 @@ public class SubscriptionService {
     }
 
     /**
-     * 정기구독 시작(결제 승인 콜백 이후 단일 호출). 실제 PG 연동 전이라 paymentKey/orderId는
-     * 형태만 받아서 pgTransactionId로 남기고, 토스 서버 검증 없이 바로 SUCCESS 처리한다.
-     * 금액은 클라이언트 값을 신뢰하지 않고 서버가 planType 기준으로 다시 계산한다.
+     * 정기구독 시작. 실제 PG 연동 전이라 paymentKey는 형태만 받아 pgTransactionId로 남기고 검증 없이
+     * SUCCESS 처리한다. 금액은 클라이언트 값을 신뢰하지 않고 서버가 planType 기준으로 계산한다.
      */
     public SubscriptionMeResponseDto subscribe(Long memberId, SubscriptionCreateRequestDto request) {
         Member member = memberRepository.findById(memberId)
@@ -88,9 +87,8 @@ public class SubscriptionService {
     }
 
     /**
-     * 월간 -> 연간 즉시 전환(재결제, 남은 월간 기간은 소멸). 연간에서 월간으로의 다운그레이드는
-     * 이미 결제한 잔여 기간을 환불 없이 날리게 되어 불공평하므로 이 API로는 지원하지 않는다
-     * (해지 예약 후 만료를 기다렸다가 월간으로 재구독하는 기존 흐름을 이용해야 한다).
+     * 월간 -> 연간 즉시 전환(재결제, 남은 월간 기간 소멸). 연간 -> 월간 다운그레이드는 잔여 기간을
+     * 환불 없이 날리게 되어 지원하지 않는다(해지 예약 후 만료 대기 후 재구독해야 함).
      */
     public SubscriptionMeResponseDto changePlan(Long memberId, SubscriptionCreateRequestDto request) {
         Member member = memberRepository.findById(memberId)
@@ -176,10 +174,8 @@ public class SubscriptionService {
     }
 
     /**
-     * subscriptionEndAt이 이미 지났는데 자정 배치(SubscriptionScheduler)가 아직 처리하지 않은 회원을
-     * 그 자리에서 즉시 정리한다. 상태 필드(subscriptionPlan/autoRenew)와 실제 만료일이라는 두 진실
-     * 소스가 배치 주기 사이에 어긋나는 걸 막기 위해, 구독을 조회/변경하는 모든 진입점에서 먼저 호출한다.
-     * 배치와 정확히 같은 규칙(자동갱신 또는 다운그레이드)을 쓴다 — SubscriptionScheduler도 이 메서드를 그대로 쓴다.
+     * subscriptionEndAt이 지났는데 자정 배치가 아직 처리 안 한 회원을 즉시 정리한다. 배치와 같은 규칙을
+     * 쓰며(SubscriptionScheduler도 이 메서드를 그대로 호출), 구독 조회/변경 진입점마다 먼저 호출한다.
      */
     public void reconcileIfExpired(Member member) {
         if (!member.getSubscriptionPlan().isPremium()) {

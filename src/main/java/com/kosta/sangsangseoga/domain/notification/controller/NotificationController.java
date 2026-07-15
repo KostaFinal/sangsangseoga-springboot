@@ -1,6 +1,7 @@
 package com.kosta.sangsangseoga.domain.notification.controller;
 
 import com.kosta.sangsangseoga.domain.notification.dto.NotificationListResponseDto;
+import com.kosta.sangsangseoga.domain.notification.realtime.NotificationSseRegistry;
 import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
 import com.kosta.sangsangseoga.global.config.ApiErrorCodes;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Tag(name = "Notification", description = "내 알림 조회/읽음 처리")
 @RestController
@@ -27,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class NotificationController {
 
     private final NotificationService notificationService;
+    private final NotificationSseRegistry sseRegistry;
 
     @Operation(summary = "내 알림 목록 조회", description = "로그인 회원의 알림을 최신순으로 페이지네이션 조회한다.")
     @ApiErrorCodes({})
@@ -66,5 +70,14 @@ public class NotificationController {
         Long memberId = AuthenticationHelper.resolveMemberId(authentication);
         notificationService.deleteAll(memberId);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @Operation(summary = "실시간 알림 구독(SSE)", description = "연결을 유지하면 새 알림이 생길 때마다 event: notification으로 push된다. "
+            + "EventSource는 커스텀 헤더를 못 보내므로 이 엔드포인트만 예외적으로 ?token= 쿼리 파라미터 인증을 허용한다.")
+    @ApiErrorCodes({})
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamNotifications(Authentication authentication) {
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
+        return sseRegistry.register(memberId);
     }
 }

@@ -5,14 +5,18 @@ import com.kosta.sangsangseoga.domain.notification.dto.NotificationDto;
 import com.kosta.sangsangseoga.domain.notification.dto.NotificationListResponseDto;
 import com.kosta.sangsangseoga.domain.notification.entity.Notification;
 import com.kosta.sangsangseoga.domain.notification.exception.NotificationErrorCode;
+import com.kosta.sangsangseoga.domain.notification.realtime.NotificationStreamPublisher;
 import com.kosta.sangsangseoga.domain.notification.repository.NotificationRepository;
+import com.kosta.sangsangseoga.global.event.AfterCommitTask;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,6 +26,8 @@ import java.util.stream.Collectors;
 public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final NotificationStreamPublisher notificationStreamPublisher;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -65,10 +71,18 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void notify(Member member, String content) {
-        notificationRepository.save(Notification.builder()
+        Notification notification = notificationRepository.save(Notification.builder()
                 .member(member)
                 .content(content)
                 .build());
+
+        // Redis 발행은 롤백이 안 되므로, 이 트랜잭션(신고 처리 등 호출부 트랜잭션)이 실제로 커밋된
+        // 뒤에만 실시간 이벤트를 내보낸다. 롤백되면 알림 자체가 없던 일이 되므로 발행도 하지 않는다.
+        Long notificationId = notification.getId();
+        Long memberId = member.getId();
+        LocalDateTime createdAt = notification.getCreatedAt();
+        eventPublisher.publishEvent(new AfterCommitTask(this, () ->
+                notificationStreamPublisher.publish(notificationId, memberId, content, createdAt)));
     }
 
     private NotificationDto toDto(Notification notification) {

@@ -23,6 +23,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final String HEADER_AUTHORIZATION = "Authorization";
     private static final String TOKEN_PREFIX = "Bearer ";
+    private static final String SSE_NOTIFICATION_STREAM_PATH = "/api/notifications/stream";
 
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenBlacklistService tokenBlacklistService;
@@ -56,6 +57,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String header = request.getHeader(HEADER_AUTHORIZATION);
         if (header != null && header.startsWith(TOKEN_PREFIX)) {
             return header.substring(TOKEN_PREFIX.length());
+        }
+        // EventSource는 커스텀 헤더를 못 보내므로, 알림 실시간 구독 엔드포인트만 예외적으로 쿼리 파라미터를 허용한다.
+        if (SSE_NOTIFICATION_STREAM_PATH.equals(request.getRequestURI())) {
+            return request.getParameter("token");
         }
         return null;
     }
