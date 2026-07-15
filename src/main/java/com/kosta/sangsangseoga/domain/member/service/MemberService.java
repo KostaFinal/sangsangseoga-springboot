@@ -23,7 +23,10 @@ import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentDecisionRequestD
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentPendingResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentResponseDto;
+import com.kosta.sangsangseoga.domain.auth.exception.AuthErrorCode;
 import com.kosta.sangsangseoga.domain.member.dto.MemberMeResponseDto;
+import com.kosta.sangsangseoga.domain.member.dto.MemberUpdateRequestDto;
+import com.kosta.sangsangseoga.domain.member.dto.NicknameCheckResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.ProfileImageUploadResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.ViewerPreferenceDto;
 import com.kosta.sangsangseoga.domain.member.dto.WithdrawRequestDto;
@@ -367,6 +370,47 @@ public class MemberService {
                 .memberId(member.getId())
                 .nickname(member.getNickname())
                 .profileImageUrl(member.getProfileImageUrl())
+                .build();
+    }
+
+    /**
+     * 회원정보(닉네임/프로필 이미지/소개) 수정. 요청에서 null인 필드는 그대로 유지한다.
+     * 닉네임을 바꾸는 경우에만, 그리고 기존 닉네임과 실제로 다를 때만 중복 검사를 한다.
+     */
+    public MemberMeResponseDto updateMyInfo(Long memberId, MemberUpdateRequestDto request) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        String newNickname = request.getNickname();
+        if (newNickname != null && !newNickname.equals(member.getNickname())
+                && memberRepository.existsByNickname(newNickname)) {
+            throw new CustomException(AuthErrorCode.DUPLICATE_NICKNAME);
+        }
+
+        member.updateProfile(newNickname, request.getProfileImageUrl(), request.getIntroduction());
+
+        return MemberMeResponseDto.builder()
+                .memberId(member.getId())
+                .nickname(member.getNickname())
+                .profileImageUrl(member.getProfileImageUrl())
+                .build();
+    }
+
+    /**
+     * 닉네임 사용 가능 여부 확인. 비로그인 호출도 허용한다(memberId=null).
+     * 로그인 상태에서 자기 자신이 이미 쓰고 있는 닉네임을 그대로 검사하면 available=true를 돌려준다.
+     */
+    @Transactional(readOnly = true)
+    public NicknameCheckResponseDto checkNicknameAvailable(String nickname, Long memberId) {
+        boolean isOwnNickname = false;
+        if (memberId != null) {
+            Member member = memberRepository.findById(memberId).orElse(null);
+            isOwnNickname = member != null && nickname.equals(member.getNickname());
+        }
+
+        boolean available = isOwnNickname || !memberRepository.existsByNickname(nickname);
+        return NicknameCheckResponseDto.builder()
+                .available(available)
                 .build();
     }
 

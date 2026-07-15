@@ -261,6 +261,22 @@ public class Member extends BaseEntity {
     }
 
     /**
+     * 회원정보 수정(닉네임/프로필 이미지/소개). null인 필드는 건드리지 않는다.
+     * 닉네임 중복 검사는 호출하는 서비스에서 먼저 확인해야 한다.
+     */
+    public void updateProfile(String nickname, String profileImageUrl, String introduction) {
+        if (nickname != null) {
+            this.nickname = nickname;
+        }
+        if (profileImageUrl != null) {
+            this.profileImageUrl = profileImageUrl;
+        }
+        if (introduction != null) {
+            this.introduction = introduction;
+        }
+    }
+
+    /**
      * 뷰어 글자 크기/페이지 전환 방식 환경설정 저장
      */
     public void updateViewerPreference(ViewerFontSize viewerFontSize, ViewerViewType viewerViewType) {
