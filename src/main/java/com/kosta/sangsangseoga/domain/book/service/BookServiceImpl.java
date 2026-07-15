@@ -32,11 +32,14 @@ import com.kosta.sangsangseoga.domain.book.repository.BookImageRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookPageRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookTagRepository;
+import com.kosta.sangsangseoga.domain.friendLibrary.entity.AuthorFollow;
+import com.kosta.sangsangseoga.domain.friendLibrary.repository.AuthorFollowRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookLikeRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookmarkRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.MyReadingRepository;
+import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.domain.subscription.service.UsageService;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
@@ -58,6 +61,8 @@ public class BookServiceImpl implements BookService {
     private final MyReadingRepository myReadingRepository;
     private final UsageService usageService;
     private final BookTagRepository bookTagRepository;
+    private final AuthorFollowRepository authorFollowRepository;
+    private final NotificationService notificationService;
 
     private static final List<String> VALID_SORTS = Arrays.asList("latest", "popular", "likes");
 
@@ -178,12 +183,24 @@ public class BookServiceImpl implements BookService {
             usageService.markFreeTrialUsed(memberId);
         }
 
+        notifyFollowersOfNewBook(member, book);
+
         return BookPublishResponseDto.builder()
                 .bookId(book.getId())
                 .title(book.getTitle())
                 .status(book.getStatus().name())
                 .pageCount(book.getPageCount())
                 .build();
+    }
+
+    /** 이 작가를 팔로우하는 회원들에게 신규 도서 등록을 알린다. */
+    private void notifyFollowersOfNewBook(Member author, Book book) {
+        List<AuthorFollow> follows = authorFollowRepository.findByAuthor_Id(author.getId());
+        String content = String.format("회원님이 팔로우하는 '%s'님이 새 책 '%s'을(를) 등록했습니다.",
+                author.getNickname(), book.getTitle());
+        for (AuthorFollow follow : follows) {
+            notificationService.notify(follow.getFollower(), content);
+        }
     }
 
     // book.bookType에 따른 book_page.content_type 매핑 (동화=PAGE, 소설=CHAPTER, 시=POEM, 에세이=ESSAY, 나머지=PAGE)
