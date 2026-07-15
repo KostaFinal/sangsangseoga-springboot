@@ -8,11 +8,13 @@ import com.kosta.sangsangseoga.domain.ai.service.AiImageService;
 import com.kosta.sangsangseoga.domain.ai.service.AiService;
 import com.kosta.sangsangseoga.domain.ai.service.AiStreamService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
+import com.kosta.sangsangseoga.global.security.AuthenticationHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,8 +44,9 @@ public class AiController {
     )
     @PostMapping("/generate")
     public ResponseEntity<ApiResponse<AiGenerateResponseDto>> generate(
-            @RequestBody AiGenerateRequestDto request) {
-        AiGenerateResponseDto result = aiService.generate(request);
+            Authentication authentication, @RequestBody AiGenerateRequestDto request) {
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
+        AiGenerateResponseDto result = aiService.generate(request, memberId);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
@@ -75,8 +78,9 @@ public class AiController {
     )
     @PostMapping("/generate-image")
     public ResponseEntity<ApiResponse<AiGenerateImageResponseDto>> generateImage(
-           @Valid @RequestBody AiGenerateImageRequestDto request) {
-        AiGenerateImageResponseDto result = aiImageService.generateImage(request);
+           Authentication authentication, @Valid @RequestBody AiGenerateImageRequestDto request) {
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
+        AiGenerateImageResponseDto result = aiImageService.generateImage(request, memberId);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 }

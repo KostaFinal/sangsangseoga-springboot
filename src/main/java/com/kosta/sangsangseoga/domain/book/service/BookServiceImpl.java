@@ -121,20 +121,55 @@ public class BookServiceImpl implements BookService {
 
         if (request.getPages() != null) {
             BookPage.ContentType contentType = contentTypeFor(bookType);
-            for (BookPublishRequestDto.PageRequest pageRequest : request.getPages()) {
-                BookPage page = bookPageRepository.save(BookPage.builder()
-                        .book(book)
-                        .pageNo(pageRequest.getPageNo())
-                        .title(pageRequest.getTitle())
-                        .contentType(contentType)
-                        .contentTextKo(pageRequest.getContentTextKo())
-                        .contentTextEn(pageRequest.getContentTextEn())
-                        .imageUrl(pageRequest.getImageUrl())
-                        .build());
 
-                if (pageRequest.getImageUrl() != null && !pageRequest.getImageUrl().isBlank()) {
-                    bookImageRepository.save(
-                            buildBookImage(book, page.getId(), BookImage.ImageType.PAGE, pageRequest.getImageUrl()));
+            if (bookType == BookType.FAIRY_TALE) {
+                // 동화 편집기는 한 페이지에 이미지+텍스트를 같이 보내는데, 뷰어가 book_page 한 행을
+                // 한 쪽 면(이미지 전용 또는 텍스트 전용)으로 취급하므로 행 2개(이미지 → 텍스트)로 쪼개 저장한다.
+                // pageNo는 "몇 번째 논리 페이지인지"가 아니라 "화면에 보여줄 순서(행 일련번호)"로 다시 매긴다.
+                // (이미지가 아직 없어도 자리를 차지하도록 이미지 행을 먼저 만들어 순서가 밀리지 않게 한다.)
+                int displaySeq = 1;
+                for (BookPublishRequestDto.PageRequest pageRequest : request.getPages()) {
+                    BookPage imagePage = bookPageRepository.save(BookPage.builder()
+                            .book(book)
+                            .pageNo(displaySeq++)
+                            .title(pageRequest.getTitle())
+                            .contentType(contentType)
+                            .contentTextKo(null)
+                            .contentTextEn(null)
+                            .imageUrl(pageRequest.getImageUrl())
+                            .build());
+
+                    if (pageRequest.getImageUrl() != null && !pageRequest.getImageUrl().isBlank()) {
+                        bookImageRepository.save(
+                                buildBookImage(book, imagePage.getId(), BookImage.ImageType.PAGE, pageRequest.getImageUrl()));
+                    }
+
+                    bookPageRepository.save(BookPage.builder()
+                            .book(book)
+                            .pageNo(displaySeq++)
+                            .title(pageRequest.getTitle())
+                            .contentType(contentType)
+                            .contentTextKo(pageRequest.getContentTextKo())
+                            .contentTextEn(pageRequest.getContentTextEn())
+                            .imageUrl(null)
+                            .build());
+                }
+            } else {
+                for (BookPublishRequestDto.PageRequest pageRequest : request.getPages()) {
+                    BookPage page = bookPageRepository.save(BookPage.builder()
+                            .book(book)
+                            .pageNo(pageRequest.getPageNo())
+                            .title(pageRequest.getTitle())
+                            .contentType(contentType)
+                            .contentTextKo(pageRequest.getContentTextKo())
+                            .contentTextEn(pageRequest.getContentTextEn())
+                            .imageUrl(pageRequest.getImageUrl())
+                            .build());
+
+                    if (pageRequest.getImageUrl() != null && !pageRequest.getImageUrl().isBlank()) {
+                        bookImageRepository.save(
+                                buildBookImage(book, page.getId(), BookImage.ImageType.PAGE, pageRequest.getImageUrl()));
+                    }
                 }
             }
         }
@@ -151,7 +186,7 @@ public class BookServiceImpl implements BookService {
                 .build();
     }
 
-    // book.bookType에 따른 book_page.content_type 매핑 (동화=PAGE, 소설=CHAPTER, 시=POEM, 나머지=PAGE)
+    // book.bookType에 따른 book_page.content_type 매핑 (동화=PAGE, 소설=CHAPTER, 시=POEM, 에세이=ESSAY, 나머지=PAGE)
     private BookPage.ContentType contentTypeFor(BookType bookType) {
         switch (bookType) {
             case FAIRY_TALE:
@@ -160,6 +195,8 @@ public class BookServiceImpl implements BookService {
                 return BookPage.ContentType.CHAPTER;
             case POEM:
                 return BookPage.ContentType.POEM;
+            case ESSAY:
+                return BookPage.ContentType.ESSAY;
             default:
                 return BookPage.ContentType.PAGE;
         }
