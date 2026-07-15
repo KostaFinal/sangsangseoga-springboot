@@ -10,6 +10,7 @@ import com.kosta.sangsangseoga.domain.friendLibrary.entity.Comment;
 import com.kosta.sangsangseoga.domain.friendLibrary.exception.FriendLibraryErrorCode;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.CommentRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.service.CommentService;
+import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class CommentServiceImpl implements CommentService {
     private final CommentRepository commentRepository;
     private final MemberRepository memberRepository;
     private final BookRepository bookRepository;
+    private final NotificationService notificationService;
 
     /**
      * 댓글 목록 조회 (cursor 기반 무한스크롤)
@@ -107,7 +109,12 @@ public class CommentServiceImpl implements CommentService {
  
         // book의 댓글 수 증가
         book.setCommentCount(book.getCommentCount() + 1);
- 
+
+        if (!book.getMember().getId().equals(memberId)) {
+            notificationService.notify(book.getMember(),
+                    String.format("%s님이 회원님의 책 '%s'에 댓글을 남겼습니다.", member.getNickname(), book.getTitle()));
+        }
+
         return CommentDto.builder()
                 .id(comment.getId())
                 .bookId(bookId)
@@ -147,7 +154,12 @@ public class CommentServiceImpl implements CommentService {
  
         // book의 댓글 수 증가
         parentComment.getBook().setCommentCount(parentComment.getBook().getCommentCount() + 1);
- 
+
+        if (parentComment.getMember() != null && !parentComment.getMember().getId().equals(memberId)) {
+            notificationService.notify(parentComment.getMember(),
+                    String.format("%s님이 회원님의 댓글에 답글을 남겼습니다.", member.getNickname()));
+        }
+
         return CommentDto.builder()
                 .id(reply.getId())
                 .bookId(parentComment.getBook().getId())
