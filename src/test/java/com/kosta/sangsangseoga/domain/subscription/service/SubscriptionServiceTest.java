@@ -2,6 +2,7 @@ package com.kosta.sangsangseoga.domain.subscription.service;
 
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
+import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.domain.subscription.SubscriptionPolicy;
 import com.kosta.sangsangseoga.domain.subscription.entity.Payment;
 import com.kosta.sangsangseoga.domain.subscription.enums.PaymentStatus;
@@ -28,6 +29,8 @@ class SubscriptionServiceTest {
     private MemberRepository memberRepository;
     @Mock
     private PaymentRepository paymentRepository;
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private SubscriptionService subscriptionService;

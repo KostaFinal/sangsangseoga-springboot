@@ -11,6 +11,7 @@ import com.kosta.sangsangseoga.domain.subscription.enums.PaymentStatus;
 import com.kosta.sangsangseoga.domain.subscription.enums.PlanType;
 import com.kosta.sangsangseoga.domain.subscription.exception.SubscriptionErrorCode;
 import com.kosta.sangsangseoga.domain.subscription.repository.PaymentRepository;
+import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class SubscriptionService {
 
     private final MemberRepository memberRepository;
     private final PaymentRepository paymentRepository;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public List<SubscriptionPlanDto> getPlans() {
@@ -201,8 +203,10 @@ public class SubscriptionService {
             LocalDateTime endAt = startAt.plusDays(SubscriptionPolicy.periodDaysOf(planType));
             member.renewPremiumSubscription(startAt, endAt,
                     SubscriptionPolicy.PREMIUM_DAILY_TEXT_LIMIT, SubscriptionPolicy.PREMIUM_DAILY_IMAGE_LIMIT);
+            notificationService.notify(member, "구독이 자동 갱신되었습니다.");
         } else {
             member.downgradeToFree();
+            notificationService.notify(member, "구독 기간이 만료되어 FREE 요금제로 전환되었습니다.");
         }
     }
 
