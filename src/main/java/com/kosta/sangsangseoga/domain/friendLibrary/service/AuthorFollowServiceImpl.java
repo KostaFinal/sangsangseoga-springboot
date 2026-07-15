@@ -19,6 +19,7 @@ import com.kosta.sangsangseoga.domain.friendLibrary.exception.FriendLibraryError
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.AuthorFollowRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
+import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 
@@ -32,6 +33,7 @@ public class AuthorFollowServiceImpl implements AuthorFollowService {
     private final AuthorFollowRepository authorFollowRepository;
     private final MemberRepository memberRepository;
     private final BookRepository bookRepository;
+    private final NotificationService notificationService;
 
     /**
      * 팔로우
@@ -61,6 +63,9 @@ public class AuthorFollowServiceImpl implements AuthorFollowService {
                 .follower(follower)
                 .author(author)
                 .build());
+
+        notificationService.notify(author,
+                String.format("%s님이 회원님을 팔로우하기 시작했습니다.", follower.getNickname()));
 
         // 팔로우 후 총 팔로워 수 집계
         Long followerCount = authorFollowRepository.countByAuthor(author);
