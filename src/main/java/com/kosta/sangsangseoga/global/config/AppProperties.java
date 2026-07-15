@@ -13,4 +13,5 @@ public class AppProperties {
 
     private String frontendUrl;
     private String mailFrom;
+    private String uploadDir;
 }
