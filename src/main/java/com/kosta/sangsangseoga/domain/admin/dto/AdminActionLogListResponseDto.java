@@ -8,12 +8,12 @@ import java.util.List;
 
 @Getter
 @Builder
-public class AdminReportListResponseDto {
+public class AdminActionLogListResponseDto {
 
-    @Schema(description = "조회 조건(status)에 해당하는 신고 목록(최신순)")
-    private List<AdminReportListItemDto> items;
+    @Schema(description = "관리자 처리 이력 목록(최신순)")
+    private List<AdminActionLogListItemDto> items;
 
-    @Schema(description = "조회 조건에 해당하는 전체 신고 건수")
+    @Schema(description = "조회 조건(actionType)에 해당하는 전체 이력 건수")
     private Long totalCount;
 
     @Schema(description = "현재 페이지(0부터 시작)")
