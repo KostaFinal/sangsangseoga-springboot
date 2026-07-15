@@ -43,6 +43,17 @@ fastapi:
 app:
   upload-dir: ${UPLOAD_DIR:./uploads}
 
+  # 업로드 파일 저장 방식. local(기본값)/s3. s3로 바꾸면 S3FileStorageService가 활성화된다.
+  storage:
+    type: ${STORAGE_TYPE:local}
+
+  # storage.type=s3일 때만 사용됨. 자격증명은 여기 넣지 않고(로컬은 ~/.aws/credentials 또는
+  # 환경변수, EC2는 인스턴스에 붙인 IAM Role) DefaultCredentialsProvider가 알아서 찾는다.
+  s3:
+    bucket: ${S3_BUCKET:}
+    region: ${S3_REGION:ap-northeast-2}
+    public-base-url: ${S3_PUBLIC_BASE_URL:}   # CloudFront 등 실제 서빙 도메인. 비워두면 S3 버킷 기본 URL 사용
+
 oauth:
   kakao:
     client-id: ${KAKAO_CLIENT_ID:}
