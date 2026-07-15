@@ -38,6 +38,7 @@ import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.domain.member.exception.MemberErrorCode;
 import com.kosta.sangsangseoga.domain.member.repository.GuardianConsentRepository;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
+import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.MyReadingRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.ReadingMemoRepository;
 import com.kosta.sangsangseoga.global.event.AfterCommitTask;
@@ -88,6 +89,7 @@ public class MemberService {
     private final ReadingMemoRepository readingMemoRepository;
     private final MailService mailService;
     private final FileStorageService fileStorageService;
+    private final NotificationService notificationService;
 
     private static final Set<String> ALLOWED_IMAGE_CONTENT_TYPES =
             Set.of("image/jpeg", "image/png", "image/gif", "image/webp");
@@ -217,6 +219,7 @@ public class MemberService {
                 tokenBlacklistService.invalidateTokensIssuedBefore(memberId, Instant.now());
                 refreshTokenService.delete(memberId);
             }));
+            notificationService.notify(consent.getMember(), "보호자가 동의를 철회하여 계정 이용이 다시 제한되었습니다.");
         }
 
         return toResponseDto(consent);
@@ -250,8 +253,10 @@ public class MemberService {
             if (consent.getMember().getStatus() == MemberStatus.PENDING) {
                 consent.getMember().activate();
             }
+            notificationService.notify(consent.getMember(), "보호자 동의가 승인되어 계정이 정상적으로 이용 가능합니다.");
         } else {
             consent.reject();
+            notificationService.notify(consent.getMember(), "보호자가 동의를 거절했습니다. 자세한 사항은 보호자에게 문의해 주세요.");
         }
     }
 
