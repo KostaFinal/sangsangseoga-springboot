@@ -17,6 +17,6 @@ public class AdminTokenTimelineItemDto {
     @Schema(description = "사용량 종류", allowableValues = {"text", "image"})
     private String usage;
 
-    @Schema(description = "표시용 사용량 문자열. text면 \"1,840 자\", image면 \"4 장\" 형식")
+    @Schema(description = "표시용 사용량 문자열. text면 \"1,840 토큰\", image면 \"4 장\" 형식")
     private String amount;
 }
