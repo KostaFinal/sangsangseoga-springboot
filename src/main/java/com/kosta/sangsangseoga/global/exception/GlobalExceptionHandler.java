@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import javax.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -39,6 +40,22 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining(", "));
         log.warn("입력값 검증 실패: {}", message);
+        return ResponseEntity
+                .status(CommonErrorCode.BAD_REQUEST.getStatus())
+                .body(ApiResponse.error(CommonErrorCode.BAD_REQUEST.name(), message));
+    }
+
+    /**
+     * @Validated + @RequestParam/@PathVariable 레벨 Bean Validation(예: nickname-check의 @NotBlank) 실패 처리.
+     * @Valid(MethodArgumentNotValidException)와 달리 컨트롤러 클래스에 @Validated가 붙어 있어야
+     * 이 경로로 들어온다. 처리하지 않으면 500으로 떨어진다.
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleConstraintViolationException(ConstraintViolationException e) {
+        String message = e.getConstraintViolations().stream()
+                .map(violation -> violation.getMessage())
+                .collect(Collectors.joining(", "));
+        log.warn("파라미터 검증 실패: {}", message);
         return ResponseEntity
                 .status(CommonErrorCode.BAD_REQUEST.getStatus())
                 .body(ApiResponse.error(CommonErrorCode.BAD_REQUEST.name(), message));

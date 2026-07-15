@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -372,6 +373,15 @@ public class MemberService {
         }
 
         member.updateProfile(newNickname, request.getProfileImageUrl(), request.getIntroduction());
+
+        // 존재 여부 검사와 실제 저장 사이에 동시에 같은 닉네임으로 바꾸는 요청이 끼어들 수 있어서,
+        // DB 유니크 제약 위반도 같은 DUPLICATE_NICKNAME 응답으로 변환한다. 저장을 이 시점에 강제로
+        // flush해야 예외가 여기서 잡히고, 트랜잭션 커밋 시점까지 미뤄져 500으로 새는 걸 막을 수 있다.
+        try {
+            memberRepository.saveAndFlush(member);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(AuthErrorCode.DUPLICATE_NICKNAME);
+        }
 
         return MemberMeResponseDto.builder()
                 .memberId(member.getId())

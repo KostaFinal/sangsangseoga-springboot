@@ -15,6 +15,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.validation.annotation.Validated;
+
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
 
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentApproveRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentDecisionRequestDto;
@@ -40,6 +44,7 @@ import lombok.RequiredArgsConstructor;
 @Tag(name = "Member", description = "회원 정보/보호자 동의")
 @RestController
 @RequiredArgsConstructor
+@Validated
 public class MemberController {
     // /api/members/me, /api/members/exists, /api/members/password/reset-request, /api/guardian-consents
     // /api/members/me/viewer-preference
@@ -61,7 +66,7 @@ public class MemberController {
     @GetMapping("/api/members/nickname-check")
     public ResponseEntity<ApiResponse<NicknameCheckResponseDto>> checkNicknameAvailable(
             Authentication authentication,
-            @RequestParam String nickname) {
+            @RequestParam @NotBlank String nickname) {
         Long memberId = (authentication != null && authentication.getPrincipal() instanceof Long)
                 ? (Long) authentication.getPrincipal() : null;
         return ResponseEntity.ok(ApiResponse.success(memberService.checkNicknameAvailable(nickname, memberId)));
@@ -72,7 +77,7 @@ public class MemberController {
     @PutMapping("/api/members/me")
     public ResponseEntity<ApiResponse<MemberMeResponseDto>> updateMyInfo(
             Authentication authentication,
-            @RequestBody MemberUpdateRequestDto request) {
+            @Valid @RequestBody MemberUpdateRequestDto request) {
         Long memberId = AuthenticationHelper.resolveMemberId(authentication);
         return ResponseEntity.ok(ApiResponse.success(memberService.updateMyInfo(memberId, request)));
     }
