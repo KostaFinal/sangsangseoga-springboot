@@ -10,10 +10,10 @@ import java.util.List;
 @AllArgsConstructor
 public class BookPublishRequestDto {
 
-    private String bookType;          // "FAIRY_TALE" | "NOVEL"
+    private String bookType;          // "FAIRY_TALE" | "NOVEL" | "POEM" | "ESSAY"
     private String authorAgeGroup;    // "PRESCHOOL" | "LOWER_ELEMENTARY" | "UPPER_ELEMENTARY" | "TEEN" | "ADULT"
     private String readerAgeGroup;    // "PRESCHOOL" | "LOWER_ELEMENTARY" | "UPPER_ELEMENTARY" | "TEEN" | "ADULT"
-    private String creationMode;      // "FREE" | "MIXED" | "CHOICE" | "ANSWER"
+    private String creationMode;      // "FREE" | "MIXED" | "CHOICE" | "ANSWER" | "GUIDED"
     private String title;
     private String description;       // 책 소개 (선택)
     private String confirmedSettings; // 설정 정보를 JSON 문자열로 직렬화해서 저장

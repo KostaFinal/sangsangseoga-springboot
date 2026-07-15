@@ -39,8 +39,9 @@ public class AiGenerateRequestDto {
             allowableValues = {
                     "NORMALIZE_SETTING", "COLLECT_SETTING", "CREATE_SETTING_OPTIONS", "TRANSLATE_TEXT",
                     "CREATE_PAGE_PLAN", "WRITE_PAGE", "REWRITE_PAGE",
-                    "CREATE_SCENE_PLAN", "WRITE_SCENE", "REWRITE_SCENE", "WRITE_SCENE_SEGMENT",
-                    "CREATE_IMAGE_PROMPT", "CREATE_COVER_PROMPT"
+                    "CREATE_SCENE_PLAN", "WRITE_SCENE", "REWRITE_SCENE",
+                    "WRITE_POEM", "REWRITE_POEM", "WRITE_ESSAY", "REWRITE_ESSAY",
+                    "CREATE_IMAGE_PROMPT", "CREATE_COVER_PROMPT", "TRANSLATE_TEXT"
             }
     )
     @JsonAlias("taskType") // Python 스키마(taskType)로 직접 테스트하는 Postman 요청도 허용

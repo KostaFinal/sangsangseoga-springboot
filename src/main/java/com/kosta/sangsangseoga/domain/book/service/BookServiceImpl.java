@@ -151,7 +151,7 @@ public class BookServiceImpl implements BookService {
                 .build();
     }
 
-    // book.bookType에 따른 book_page.content_type 매핑 (동화=PAGE, 소설=CHAPTER, 시=POEM, 나머지=PAGE)
+    // book.bookType에 따른 book_page.content_type 매핑 (동화=PAGE, 소설=CHAPTER, 시=POEM, 에세이=ESSAY, 나머지=PAGE)
     private BookPage.ContentType contentTypeFor(BookType bookType) {
         switch (bookType) {
             case FAIRY_TALE:
@@ -160,6 +160,8 @@ public class BookServiceImpl implements BookService {
                 return BookPage.ContentType.CHAPTER;
             case POEM:
                 return BookPage.ContentType.POEM;
+            case ESSAY:
+                return BookPage.ContentType.ESSAY;
             default:
                 return BookPage.ContentType.PAGE;
         }
