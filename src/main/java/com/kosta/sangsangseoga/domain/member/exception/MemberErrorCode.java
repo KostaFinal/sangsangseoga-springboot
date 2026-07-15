@@ -11,6 +11,10 @@ public enum MemberErrorCode implements ErrorCode {
     WRONG_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호가 일치하지 않습니다."),
     ALREADY_DELETED_MEMBER(HttpStatus.NOT_FOUND, "이미 탈퇴 처리가 완료된 회원입니다."),
 
+    // ===== Profile Image =====
+    EMPTY_FILE(HttpStatus.BAD_REQUEST, "업로드할 파일이 비어 있습니다."),
+    INVALID_IMAGE_FILE(HttpStatus.BAD_REQUEST, "이미지 파일(jpg/png/gif/webp)만 업로드할 수 있습니다."),
+
     // ===== GuardianConsent =====
     ALREADY_APPROVED_MEMBER(HttpStatus.BAD_REQUEST, "이미 보호자 동의 완료가 처리된 계정입니다."),
     GUARDIAN_CONSENT_NOT_FOUND(HttpStatus.NOT_FOUND, "동의 요청 정보를 찾을 수 없습니다."),

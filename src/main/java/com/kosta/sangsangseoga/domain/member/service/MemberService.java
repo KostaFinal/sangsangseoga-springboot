@@ -24,6 +24,7 @@ import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentPendingResponseD
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.MemberMeResponseDto;
+import com.kosta.sangsangseoga.domain.member.dto.ProfileImageUploadResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.ViewerPreferenceDto;
 import com.kosta.sangsangseoga.domain.member.dto.WithdrawRequestDto;
 import com.kosta.sangsangseoga.domain.member.entity.GuardianConsent;
@@ -45,9 +46,12 @@ import com.kosta.sangsangseoga.global.jwt.ActionTokenProvider;
 import com.kosta.sangsangseoga.global.jwt.RefreshTokenService;
 import com.kosta.sangsangseoga.global.jwt.TokenBlacklistService;
 import com.kosta.sangsangseoga.global.mail.MailService;
+import com.kosta.sangsangseoga.global.infra.storage.LocalFileStorageService;
 
 import java.time.Instant;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -72,6 +76,10 @@ public class MemberService {
     private final MyReadingRepository myReadingRepository;
     private final ReadingMemoRepository readingMemoRepository;
     private final MailService mailService;
+    private final LocalFileStorageService localFileStorageService;
+
+    private static final Set<String> ALLOWED_IMAGE_CONTENT_TYPES =
+            Set.of("image/jpeg", "image/png", "image/gif", "image/webp");
 
     /**
      * 법정대리인 가입 동의 요청 생성.
@@ -351,6 +359,24 @@ public class MemberService {
                 .memberId(member.getId())
                 .nickname(member.getNickname())
                 .profileImageUrl(member.getProfileImageUrl())
+                .build();
+    }
+
+    /**
+     * 프로필 사진 업로드. 회원 엔티티(profileImageUrl)에는 저장하지 않고 업로드된 URL만 돌려준다.
+     * 실제 프로필 반영은 클라이언트가 이 URL로 별도 회원정보 수정 API를 호출해서 저장하는 흐름이다.
+     */
+    public ProfileImageUploadResponseDto uploadProfileImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new CustomException(MemberErrorCode.EMPTY_FILE);
+        }
+        if (!ALLOWED_IMAGE_CONTENT_TYPES.contains(file.getContentType())) {
+            throw new CustomException(MemberErrorCode.INVALID_IMAGE_FILE);
+        }
+
+        String profileImageUrl = localFileStorageService.store(file, "profile-images");
+        return ProfileImageUploadResponseDto.builder()
+                .profileImageUrl(profileImageUrl)
                 .build();
     }
 }
