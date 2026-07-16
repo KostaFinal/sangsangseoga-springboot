@@ -8,6 +8,7 @@ import com.kosta.sangsangseoga.domain.friendLibrary.dto.BookLikeDto;
 import com.kosta.sangsangseoga.domain.friendLibrary.entity.BookLike;
 import com.kosta.sangsangseoga.domain.friendLibrary.exception.FriendLibraryErrorCode;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookLikeRepository;
+import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class BookLikeServiceImpl implements BookLikeService {
     private final BookLikeRepository bookLikeRepository;
     private final MemberRepository memberRepository;
     private final BookRepository bookRepository;
+    private final NotificationService notificationService;
 
     /**
      * 좋아요 추가
@@ -49,6 +51,11 @@ public class BookLikeServiceImpl implements BookLikeService {
         // 좋아요 수 증가 후 현재 값 반환
         book.setLikeCount(book.getLikeCount() + 1);
         book.setWeekLikeCount(book.getWeekLikeCount() + 1);
+
+        if (!book.getMember().getId().equals(memberId)) {
+            notificationService.notify(book.getMember(),
+                    String.format("%s님이 회원님의 책 '%s'을(를) 좋아합니다.", member.getNickname(), book.getTitle()));
+        }
 
         return BookLikeDto.builder()
                 .bookId(bookId)

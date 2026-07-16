@@ -38,6 +38,7 @@ import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.domain.member.exception.MemberErrorCode;
 import com.kosta.sangsangseoga.domain.member.repository.GuardianConsentRepository;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
+import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.MyReadingRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.ReadingMemoRepository;
 import com.kosta.sangsangseoga.global.event.AfterCommitTask;
@@ -88,6 +89,7 @@ public class MemberService {
     private final ReadingMemoRepository readingMemoRepository;
     private final MailService mailService;
     private final FileStorageService fileStorageService;
+    private final NotificationService notificationService;
 
     private static final Set<String> ALLOWED_IMAGE_CONTENT_TYPES =
             Set.of("image/jpeg", "image/png", "image/gif", "image/webp");
@@ -217,6 +219,7 @@ public class MemberService {
                 tokenBlacklistService.invalidateTokensIssuedBefore(memberId, Instant.now());
                 refreshTokenService.delete(memberId);
             }));
+            notificationService.notify(consent.getMember(), "보호자가 동의를 철회하여 계정 이용이 다시 제한되었습니다.");
         }
 
         return toResponseDto(consent);
@@ -247,18 +250,22 @@ public class MemberService {
     private void applyDecision(GuardianConsent consent, GuardianConsentStatus status, Member guardian) {
         if (status == GuardianConsentStatus.APPROVED) {
             consent.approve(guardian);
-            if (consent.getMember().getStatus() == MemberStatus.PENDING) {
+            boolean activated = consent.getMember().getStatus() == MemberStatus.PENDING;
+            if (activated) {
                 consent.getMember().activate();
             }
+            notificationService.notify(consent.getMember(), activated
+                    ? "보호자 동의가 승인되어 계정이 정상적으로 이용 가능합니다."
+                    : "보호자 동의가 승인되었습니다.");
         } else {
             consent.reject();
+            notificationService.notify(consent.getMember(), "보호자가 동의를 거절했습니다. 자세한 사항은 보호자에게 문의해 주세요.");
         }
     }
 
     /**
-     * 회원 탈퇴. 상태를 DELETED로 전환(하드 삭제 아님 - 개인정보 보관 정책은 별도 파기 배치가 담당),
-     * Redis Refresh Token 삭제, 구독 즉시 해지, 좋아요/북마크/관심작가 삭제, 작성 댓글 익명화,
-     * 내가 쓴 공개 도서는 전부 비공개(HIDDEN) 전환한다.
+     * 회원 탈퇴. 상태만 DELETED로 바꾸는 소프트 삭제이며(별도 파기 배치는 없음), 세션 무효화,
+     * 구독 즉시 해지, 좋아요/북마크/관심작가 삭제, 작성 댓글 익명화, 내가 쓴 책 비공개 전환을 함께 한다.
      */
     public void withdraw(Long memberId, WithdrawRequestDto request) {
         Member member = memberRepository.findById(memberId)
@@ -374,9 +381,8 @@ public class MemberService {
 
         member.updateProfile(newNickname, request.getProfileImageUrl(), request.getIntroduction());
 
-        // 존재 여부 검사와 실제 저장 사이에 동시에 같은 닉네임으로 바꾸는 요청이 끼어들 수 있어서,
-        // DB 유니크 제약 위반도 같은 DUPLICATE_NICKNAME 응답으로 변환한다. 저장을 이 시점에 강제로
-        // flush해야 예외가 여기서 잡히고, 트랜잭션 커밋 시점까지 미뤄져 500으로 새는 걸 막을 수 있다.
+        // 중복확인-저장 사이 동시 요청 대비: DB 유니크 제약 위반도 DUPLICATE_NICKNAME으로 변환한다.
+        // 커밋 시점까지 미루면 500으로 새므로 여기서 강제로 flush해서 예외를 잡는다.
         try {
             memberRepository.saveAndFlush(member);
         } catch (DataIntegrityViolationException e) {

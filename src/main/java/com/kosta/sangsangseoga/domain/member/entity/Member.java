@@ -40,11 +40,9 @@ public class Member extends BaseEntity {
     private Long id;
 
     /**
-     * 낙관적 락. 구독 시작/전환/해지/재개/자동갱신, 상태 변경(정지/탈퇴/복원), 무료체험 소진처럼
-     * 같은 회원 row를 동시에 읽고 쓸 수 있는 흐름(API 중복 호출, 배치와 API 동시 실행,
-     * 관리자 처리와 회원 요청 동시 발생 등)에서 마지막에 커밋되는 쪽만 반영되고 나머지는
-     * ObjectOptimisticLockingFailureException으로 실패하도록 막아준다.
-     * 동시 수정 충돌에 안전한 프로필/뷰어 설정 등은 @OptimisticLock(excluded = true)로 제외했다.
+     * 낙관적 락. 구독/상태 변경처럼 같은 회원 row를 동시에 읽고 쓸 수 있는 흐름에서 나중에 커밋되는
+     * 쪽만 ObjectOptimisticLockingFailureException으로 막는다. 프로필/뷰어 설정 등 동시 수정 충돌에
+     * 안전한 필드는 @OptimisticLock(excluded = true)로 제외했다.
      */
     @Version
     private Long version;
@@ -64,10 +62,6 @@ public class Member extends BaseEntity {
     @Column(unique = true)
     private String nickname;
 
-    /**
-     * 소셜 로그인(구글 등)이 내려주는 프로필 이미지 URL은 서명 토큰이 붙어 300자를 넘기도 해서
-     * varchar(255) 기본값으로는 저장 중 "Data too long" 에러가 났다. 길이 제약 없는 컬럼으로 바꿈.
-     */
     @OptimisticLock(excluded = true)
     @Lob
     private String profileImageUrl;
