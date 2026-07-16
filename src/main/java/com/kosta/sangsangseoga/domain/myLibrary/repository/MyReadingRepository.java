@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.book.enums.BookStatus;
 import com.kosta.sangsangseoga.domain.myLibrary.entity.MyReading;
 import com.kosta.sangsangseoga.domain.myLibrary.enums.ReadingStatus;
 
@@ -77,4 +78,12 @@ public interface MyReadingRepository extends JpaRepository<MyReading, Long> {
     
     // 목록 반환
     List<MyReading> findByMember_IdAndRereadCountGreaterThan(Long memberId, Integer rereadCount);
+    
+ // 삭제되지 않은 읽는 중 책 목록
+    @EntityGraph(attributePaths = "book")
+    List<MyReading> findByMember_IdAndReadingStatusAndBook_StatusNotOrderByRecentReadAtDesc(
+            Long memberId,
+            ReadingStatus readingStatus,
+            BookStatus bookStatus
+    );
 }

@@ -119,7 +119,11 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	@Transactional(readOnly = true)
 	public List<ReadingBookResponseDto> getReadingList(Long memberId) {
 		List<MyReading> myReadings = myReadingRepository
-				.findByMember_IdAndReadingStatusOrderByRecentReadAtDesc(memberId, ReadingStatus.READING);
+		        .findByMember_IdAndReadingStatusAndBook_StatusNotOrderByRecentReadAtDesc(
+		                memberId,
+		                ReadingStatus.READING,
+		                BookStatus.DELETED
+		        );
 
 		List<Book> books = myReadings.stream().map(MyReading::getBook).collect(Collectors.toList());
 
