@@ -28,15 +28,17 @@ flowchart LR
 - **알림 발행용 Redis 커넥션 분리**: 스트림 리스너는 `XREAD`를 2초 poll timeout으로 블로킹하며 계속 반복한다. 앱의 기본 Redis 커넥션(토큰 블랙리스트 등과 공유)과 같은 커넥션을 쓰면 안 되므로 `NotificationStreamRedisConfig`에서 전용 `LettuceConnectionFactory`를 따로 둔다.
 - **트랜잭션 커밋 후 발행**: Redis 발행은 롤백이 안 된다. 신고 처리 같은 트랜잭션이 롤백되면 알림 자체가 없던 일이 되어야 하므로, `AfterCommitTask` 이벤트로 커밋 이후에만 Redis에 발행한다(DB row는 트랜잭션 안에서 정상적으로 같이 롤백된다).
 - **SSE 연결 직후 더미 이벤트 전송**: 진짜 알림이 오기 전까지 아무것도 안 보내면 Tomcat이 응답 헤더 자체를 flush하지 않아 클라이언트가 연결 성공 여부를 알 수 없다. `NotificationSseRegistry.register()`에서 연결 직후 `:connected` 코멘트 이벤트를 바로 보내 헤더를 강제로 내보낸다.
+- **SSE 인증은 JWT 대신 1회용 티켓**: 처음엔 `?token=`으로 AccessToken을 그대로 받았는데, 로그/리퍼러/브라우저 히스토리로 새는 위험이 있다. 그래서 `POST /api/notifications/stream-ticket`(헤더 인증)으로 TTL 30초짜리 1회용 티켓만 발급하고, SSE 연결은 그 티켓만 `?ticket=`으로 받아 `getAndDelete`로 한 번 쓰면 바로 무효화한다.
 
 ## SSE 엔드포인트
 
-```
-GET /api/notifications/stream
+```http
+POST /api/notifications/stream-ticket   (Authorization 헤더로 정상 인증, 1회용 티켓 발급)
+GET /api/notifications/stream?ticket=발급받은값
 ```
 
 - 이벤트명 `notification`, payload는 `GET /api/notifications` 응답 아이템과 동일한 shape(`id`, `text`, `createdAt`, `read`).
-- 브라우저 `EventSource`는 커스텀 헤더를 못 보내므로, **이 경로에 한해서만** `Authorization` 헤더 대신 `?token=` 쿼리 파라미터로 인증한다(`JwtAuthFilter.resolveToken`에서 경로를 명시적으로 예외 처리).
+- 브라우저 `EventSource`는 커스텀 헤더를 못 보낸다. 그렇다고 수명이 긴 JWT를 쿼리 파라미터에 그대로 실으면 로그/리퍼러/브라우저 히스토리로 새어나갈 수 있어서, `POST /api/notifications/stream-ticket`으로 짧은 TTL(30초)의 1회용 티켓만 먼저 발급받고 그 값만 `?ticket=`으로 넘긴다(`SseTicketService`, Redis에 저장 후 `getAndDelete`로 1회성 소비). 일반 JWT는 이 경로에서도 쿼리 파라미터로 받지 않는다(`JwtAuthFilter`가 SSE 경로는 티켓 전용으로 분기 처리).
 - 회원별 연결은 `NotificationSseRegistry`가 서버 인스턴스 로컬 메모리(`Map<Long, List<SseEmitter>>`)로 들고 있다. 탭마다 별도 연결이 붙고(`CopyOnWriteArrayList`), 타임아웃은 30분(무한 아님) — `EventSource`가 만료 시 알아서 재연결하게 하기 위함.
 
 ## 알림이 발생하는 지점 전체 목록
@@ -65,6 +67,7 @@ GET /api/notifications/stream
 - `domain/notification/realtime/NotificationStreamListener.java` — Consumer Group 없는 `XREAD` 구독, 로컬 레지스트리로 push
 - `domain/notification/service/NotificationServiceImpl.java` — DB 저장 + 커밋 후 Redis 발행(`notify()`)
 - `domain/notification/controller/NotificationController.java` — REST API + SSE 구독 엔드포인트
-- `global/config/NotificationStreamRedisConfig.java` — 스트림 리스너 전용 Redis 커넥션
-- `global/jwt/JwtAuthFilter.java` — SSE 경로 전용 `?token=` 인증 예외
+- `global/config/NotificationStreamRedisConfig.java` — 스트림 리스너 전용 Redis 커넥션(RedisProperties 재사용)
+- `global/jwt/SseTicketService.java` — SSE 연결용 1회용 티켓 발급/소비(Redis, TTL 30초)
+- `global/jwt/JwtAuthFilter.java` — SSE 경로 전용 티켓 인증 분기
 - `global/event/AfterCommitTask.java` — 트랜잭션 커밋 후 실행 이벤트(Redis 발행에 재사용)

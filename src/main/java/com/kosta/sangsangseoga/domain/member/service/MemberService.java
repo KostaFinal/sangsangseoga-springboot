@@ -250,10 +250,13 @@ public class MemberService {
     private void applyDecision(GuardianConsent consent, GuardianConsentStatus status, Member guardian) {
         if (status == GuardianConsentStatus.APPROVED) {
             consent.approve(guardian);
-            if (consent.getMember().getStatus() == MemberStatus.PENDING) {
+            boolean activated = consent.getMember().getStatus() == MemberStatus.PENDING;
+            if (activated) {
                 consent.getMember().activate();
             }
-            notificationService.notify(consent.getMember(), "보호자 동의가 승인되어 계정이 정상적으로 이용 가능합니다.");
+            notificationService.notify(consent.getMember(), activated
+                    ? "보호자 동의가 승인되어 계정이 정상적으로 이용 가능합니다."
+                    : "보호자 동의가 승인되었습니다.");
         } else {
             consent.reject();
             notificationService.notify(consent.getMember(), "보호자가 동의를 거절했습니다. 자세한 사항은 보호자에게 문의해 주세요.");

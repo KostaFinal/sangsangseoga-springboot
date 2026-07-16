@@ -68,7 +68,8 @@ public class NotificationStreamListener implements StreamListener<String, MapRec
                     .build();
             sseRegistry.sendTo(memberId, "notification", payload);
         } catch (Exception e) {
-            log.warn("알림 스트림 메시지 처리 실패: {}", fields, e);
+            // 알림 내용(사용자 생성 콘텐츠)은 로그에 남기지 않고, 어떤 레코드가 실패했는지 식별할 ID만 남긴다.
+            log.warn("알림 스트림 메시지 처리 실패: recordId={}, error={}", message.getId(), e.toString());
         }
     }
 }

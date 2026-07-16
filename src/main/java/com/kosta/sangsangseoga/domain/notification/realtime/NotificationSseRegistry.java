@@ -54,14 +54,15 @@ public class NotificationSseRegistry {
         }
     }
 
+    /**
+     * 맵 항목 삭제 여부 판단(비었는지 체크)과 실제 삭제를 computeIfPresent 하나로 묶어 원자적으로 처리한다.
+     * 분리되어 있으면 "비어서 삭제하려는 시점"과 "동시에 register()가 새 emitter를 추가하는 시점"이 겹칠 때
+     * 방금 등록된 emitter까지 통째로 유실될 수 있다.
+     */
     private void remove(Long memberId, SseEmitter emitter) {
-        List<SseEmitter> emitters = emittersByMemberId.get(memberId);
-        if (emitters == null) {
-            return;
-        }
-        emitters.remove(emitter);
-        if (emitters.isEmpty()) {
-            emittersByMemberId.remove(memberId);
-        }
+        emittersByMemberId.computeIfPresent(memberId, (id, emitters) -> {
+            emitters.remove(emitter);
+            return emitters.isEmpty() ? null : emitters;
+        });
     }
 }

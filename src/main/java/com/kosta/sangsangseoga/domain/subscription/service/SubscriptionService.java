@@ -16,6 +16,7 @@ import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -208,6 +209,21 @@ public class SubscriptionService {
             member.downgradeToFree();
             notificationService.notify(member, "구독 기간이 만료되어 FREE 요금제로 전환되었습니다.");
         }
+    }
+
+    /**
+     * 배치(SubscriptionScheduler)가 여러 회원을 순회 처리할 때 쓴다. 회원마다 독립된 트랜잭션으로
+     * 격리해서, 한 명 처리 중 DB 예외가 나도 다른 회원들의 처리/최종 커밋에 영향을 주지 않게 한다.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void reconcileIfExpired(Long memberId) {
+        memberRepository.findById(memberId).ifPresent(this::reconcileIfExpired);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void resetDailyUsage(Long memberId) {
+        memberRepository.findById(memberId).ifPresent(member -> member.resetDailyUsage(
+                SubscriptionPolicy.PREMIUM_DAILY_TEXT_LIMIT, SubscriptionPolicy.PREMIUM_DAILY_IMAGE_LIMIT));
     }
 
     private SubscriptionMeResponseDto toMeResponseDto(Member member) {

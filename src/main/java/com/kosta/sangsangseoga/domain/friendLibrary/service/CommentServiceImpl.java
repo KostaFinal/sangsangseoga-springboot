@@ -110,7 +110,12 @@ public class CommentServiceImpl implements CommentService {
         // book의 댓글 수 증가
         book.setCommentCount(book.getCommentCount() + 1);
 
-        if (!book.getMember().getId().equals(memberId)) {
+        if (replyTo != null) {
+            if (replyTo.getMember() != null && !replyTo.getMember().getId().equals(memberId)) {
+                notificationService.notify(replyTo.getMember(),
+                        String.format("%s님이 회원님의 댓글에 답글을 남겼습니다.", member.getNickname()));
+            }
+        } else if (!book.getMember().getId().equals(memberId)) {
             notificationService.notify(book.getMember(),
                     String.format("%s님이 회원님의 책 '%s'에 댓글을 남겼습니다.", member.getNickname(), book.getTitle()));
         }
