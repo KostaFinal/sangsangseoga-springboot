@@ -73,6 +73,8 @@ public class AdminService {
 	private static final int TREND_DAILY_DAYS = 7;
 	private static final int TREND_MONTHLY_MONTHS = 5;
 	private static final DateTimeFormatter TIMELINE_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm");
+	/** getTokenUsages에서 endDate만 주어졌을 때 startDate 기본값으로 쓰는 서비스 시작 이전 임의 시점. */
+	private static final LocalDate TOKEN_USAGE_EARLIEST_DATE = LocalDate.of(2000, 1, 1);
 
 	private final ReportRepository reportRepository;
 	private final AdminActionLogRepository adminActionLogRepository;
@@ -392,14 +394,25 @@ public class AdminService {
 
 	/**
 	 * 회원별 AI 사용량 누적 랭킹. 어뷰징 판정 로직이 아직 없어 status는 항상 NORMAL로 고정한다.
+	 * startDate/endDate를 둘 다 생략하면 전체 누적 기간을 조회한다(기존 동작과 동일). 하나만 주면
+	 * 반대쪽은 각각 서비스 시작 이전(TOKEN_USAGE_EARLIEST_DATE)/오늘로 채운다.
 	 */
 	@Transactional(readOnly = true)
-	public List<AdminTokenUsageItemDto> getTokenUsages() {
+	public List<AdminTokenUsageItemDto> getTokenUsages(LocalDate startDate, LocalDate endDate) {
 		Map<Long, Member> members = new LinkedHashMap<>();
 		Map<Long, Long> textUsageByMember = new LinkedHashMap<>();
 		Map<Long, Long> imgUsageByMember = new LinkedHashMap<>();
 
-		for (AiGenerationUsage usage : aiGenerationUsageRepository.findAllWithMember()) {
+		List<AiGenerationUsage> usages;
+		if (startDate == null && endDate == null) {
+			usages = aiGenerationUsageRepository.findAllWithMember();
+		} else {
+			LocalDateTime from = (startDate != null ? startDate : TOKEN_USAGE_EARLIEST_DATE).atStartOfDay();
+			LocalDateTime to = (endDate != null ? endDate : LocalDate.now()).plusDays(1).atStartOfDay();
+			usages = aiGenerationUsageRepository.findAllWithMemberBetween(from, to);
+		}
+
+		for (AiGenerationUsage usage : usages) {
 			Member member = usage.getMember();
 			members.putIfAbsent(member.getId(), member);
 			if (usage.getCallType() == CallType.TEXT) {
