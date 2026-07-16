@@ -165,23 +165,13 @@ public class BookServiceImpl implements BookService {
                             .book(book)
                             .pageNo(pageRequest.getPageNo())
                             .title(pageRequest.getTitle())
+                            .titleEn(pageRequest.getTitleEn())
                             .contentType(contentType)
                             .contentTextKo(pageRequest.getContentTextKo())
                             .contentTextEn(pageRequest.getContentTextEn())
+                            .contentFontSizeEn(pageRequest.getContentFontSizeEn())
                             .imageUrl(pageRequest.getImageUrl())
                             .build());
-            for (BookPublishRequestDto.PageRequest pageRequest : request.getPages()) {
-                BookPage page = bookPageRepository.save(BookPage.builder()
-                        .book(book)
-                        .pageNo(pageRequest.getPageNo())
-                        .title(pageRequest.getTitle())
-                        .titleEn(pageRequest.getTitleEn())
-                        .contentType(contentType)
-                        .contentTextKo(pageRequest.getContentTextKo())
-                        .contentTextEn(pageRequest.getContentTextEn())
-                        .contentFontSizeEn(pageRequest.getContentFontSizeEn())
-                        .imageUrl(pageRequest.getImageUrl())
-                        .build());
 
                     if (pageRequest.getImageUrl() != null && !pageRequest.getImageUrl().isBlank()) {
                         bookImageRepository.save(
