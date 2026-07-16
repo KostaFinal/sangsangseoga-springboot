@@ -85,7 +85,8 @@ public class AdminService {
 
 	@Transactional(readOnly = true)
 	public AdminReportListResponseDto getReports(ReportStatus status, Pageable pageable) {
-		Page<Report> reports = reportRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
+		ReportStatus targetStatus = status != null ? status : ReportStatus.PENDING;
+		Page<Report> reports = reportRepository.findByStatusOrderByCreatedAtDesc(targetStatus, pageable);
 		List<Report> content = reports.getContent();
 
 		Map<Long, String> authorNicknames = resolveAuthorNicknames(content);

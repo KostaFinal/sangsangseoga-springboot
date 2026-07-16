@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +24,10 @@ import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentDecisionRequestD
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentPendingResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentResponseDto;
+import com.kosta.sangsangseoga.domain.auth.exception.AuthErrorCode;
 import com.kosta.sangsangseoga.domain.member.dto.MemberMeResponseDto;
+import com.kosta.sangsangseoga.domain.member.dto.MemberUpdateRequestDto;
+import com.kosta.sangsangseoga.domain.member.dto.NicknameCheckResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.ProfileImageUploadResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.ViewerPreferenceDto;
 import com.kosta.sangsangseoga.domain.member.dto.WithdrawRequestDto;
@@ -31,7 +35,6 @@ import com.kosta.sangsangseoga.domain.member.entity.GuardianConsent;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.enums.GuardianConsentStatus;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
-import com.kosta.sangsangseoga.domain.member.enums.WithdrawalBookPolicy;
 import com.kosta.sangsangseoga.domain.member.exception.MemberErrorCode;
 import com.kosta.sangsangseoga.domain.member.repository.GuardianConsentRepository;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
@@ -46,7 +49,7 @@ import com.kosta.sangsangseoga.global.jwt.ActionTokenProvider;
 import com.kosta.sangsangseoga.global.jwt.RefreshTokenService;
 
 import com.kosta.sangsangseoga.global.mail.MailService;
-import com.kosta.sangsangseoga.global.infra.storage.LocalFileStorageService;
+import com.kosta.sangsangseoga.global.infra.storage.FileStorageService;
 
 
 import com.kosta.sangsangseoga.global.jwt.TokenBlacklistService;
@@ -84,7 +87,7 @@ public class MemberService {
     private final MyReadingRepository myReadingRepository;
     private final ReadingMemoRepository readingMemoRepository;
     private final MailService mailService;
-    private final LocalFileStorageService localFileStorageService;
+    private final FileStorageService fileStorageService;
 
     private static final Set<String> ALLOWED_IMAGE_CONTENT_TYPES =
             Set.of("image/jpeg", "image/png", "image/gif", "image/webp");
@@ -255,7 +258,7 @@ public class MemberService {
     /**
      * 회원 탈퇴. 상태를 DELETED로 전환(하드 삭제 아님 - 개인정보 보관 정책은 별도 파기 배치가 담당),
      * Redis Refresh Token 삭제, 구독 즉시 해지, 좋아요/북마크/관심작가 삭제, 작성 댓글 익명화,
-     * 공개 도서 처리(비공개 전환/삭제)를 수행한다.
+     * 내가 쓴 공개 도서는 전부 비공개(HIDDEN) 전환한다.
      */
     public void withdraw(Long memberId, WithdrawRequestDto request) {
         Member member = memberRepository.findById(memberId)
@@ -283,29 +286,13 @@ public class MemberService {
         writtenComments.forEach(comment -> comment.setMember(null));
         commentRepository.saveAll(writtenComments);
 
-        applyBookPolicy(member, request.getBookPolicy());
+        hideMyBooks(member);
     }
 
-    private void applyBookPolicy(Member member, WithdrawalBookPolicy bookPolicy) {
+    private void hideMyBooks(Member member) {
         List<Book> books = bookRepository.findAllByMember(member);
-
-        if (bookPolicy == WithdrawalBookPolicy.DELETE) {
-            // NOTE: book_page/book_image/book_tag/book_review 엔티티가 아직 필드 없는 스켈레톤이라
-            // 이 테이블들의 book_id 참조 행을 먼저 지울 방법이 없다. 이 상태에서 실제 페이지·이미지
-            // 데이터가 쌓인 책을 delete()하면 FK 제약으로 실패한다.
-            // 위 엔티티들이 채워진 뒤 해당 리포지토리로 선삭제하는 로직을 추가해야 완전해진다.
-            for (Book book : books) {
-                commentRepository.deleteAllByBook(book);
-                bookLikeRepository.deleteAllByBook(book);
-                bookmarkRepository.deleteAllByBook(book);
-                myReadingRepository.deleteAllByBook_Id(book.getId());
-                readingMemoRepository.deleteAllByBook(book);
-            }
-            bookRepository.deleteAll(books);
-        } else {
-            books.forEach(book -> book.setStatus(BookStatus.HIDDEN));
-            bookRepository.saveAll(books);
-        }
+        books.forEach(book -> book.setStatus(BookStatus.HIDDEN));
+        bookRepository.saveAll(books);
     }
 
     /**
@@ -367,6 +354,58 @@ public class MemberService {
                 .memberId(member.getId())
                 .nickname(member.getNickname())
                 .profileImageUrl(member.getProfileImageUrl())
+                .introduction(member.getIntroduction())
+                .build();
+    }
+
+    /**
+     * 회원정보(닉네임/프로필 이미지/소개) 수정. 요청에서 null인 필드는 그대로 유지한다.
+     * 닉네임을 바꾸는 경우에만, 그리고 기존 닉네임과 실제로 다를 때만 중복 검사를 한다.
+     */
+    public MemberMeResponseDto updateMyInfo(Long memberId, MemberUpdateRequestDto request) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        String newNickname = request.getNickname();
+        if (newNickname != null && !newNickname.equals(member.getNickname())
+                && memberRepository.existsByNickname(newNickname)) {
+            throw new CustomException(AuthErrorCode.DUPLICATE_NICKNAME);
+        }
+
+        member.updateProfile(newNickname, request.getProfileImageUrl(), request.getIntroduction());
+
+        // 존재 여부 검사와 실제 저장 사이에 동시에 같은 닉네임으로 바꾸는 요청이 끼어들 수 있어서,
+        // DB 유니크 제약 위반도 같은 DUPLICATE_NICKNAME 응답으로 변환한다. 저장을 이 시점에 강제로
+        // flush해야 예외가 여기서 잡히고, 트랜잭션 커밋 시점까지 미뤄져 500으로 새는 걸 막을 수 있다.
+        try {
+            memberRepository.saveAndFlush(member);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(AuthErrorCode.DUPLICATE_NICKNAME);
+        }
+
+        return MemberMeResponseDto.builder()
+                .memberId(member.getId())
+                .nickname(member.getNickname())
+                .profileImageUrl(member.getProfileImageUrl())
+                .introduction(member.getIntroduction())
+                .build();
+    }
+
+    /**
+     * 닉네임 사용 가능 여부 확인. 비로그인 호출도 허용한다(memberId=null).
+     * 로그인 상태에서 자기 자신이 이미 쓰고 있는 닉네임을 그대로 검사하면 available=true를 돌려준다.
+     */
+    @Transactional(readOnly = true)
+    public NicknameCheckResponseDto checkNicknameAvailable(String nickname, Long memberId) {
+        boolean isOwnNickname = false;
+        if (memberId != null) {
+            Member member = memberRepository.findById(memberId).orElse(null);
+            isOwnNickname = member != null && nickname.equals(member.getNickname());
+        }
+
+        boolean available = isOwnNickname || !memberRepository.existsByNickname(nickname);
+        return NicknameCheckResponseDto.builder()
+                .available(available)
                 .build();
     }
 
@@ -382,7 +421,7 @@ public class MemberService {
             throw new CustomException(MemberErrorCode.INVALID_IMAGE_FILE);
         }
 
-        String profileImageUrl = localFileStorageService.store(file, "profile-images");
+        String profileImageUrl = fileStorageService.store(file, "profile-images");
         return ProfileImageUploadResponseDto.builder()
                 .profileImageUrl(profileImageUrl)
                 .build();

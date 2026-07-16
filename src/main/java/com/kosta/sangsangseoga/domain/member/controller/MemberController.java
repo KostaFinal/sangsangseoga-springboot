@@ -10,10 +10,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.validation.annotation.Validated;
+
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
 
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentApproveRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentDecisionRequestDto;
@@ -21,6 +26,8 @@ import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentPendingResponseD
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.MemberMeResponseDto;
+import com.kosta.sangsangseoga.domain.member.dto.MemberUpdateRequestDto;
+import com.kosta.sangsangseoga.domain.member.dto.NicknameCheckResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.ProfileImageUploadResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.ViewerPreferenceDto;
 import com.kosta.sangsangseoga.domain.member.dto.WithdrawRequestDto;
@@ -37,6 +44,7 @@ import lombok.RequiredArgsConstructor;
 @Tag(name = "Member", description = "회원 정보/보호자 동의")
 @RestController
 @RequiredArgsConstructor
+@Validated
 public class MemberController {
     // /api/members/me, /api/members/exists, /api/members/password/reset-request, /api/guardian-consents
     // /api/members/me/viewer-preference
@@ -50,6 +58,28 @@ public class MemberController {
     public ResponseEntity<ApiResponse<MemberMeResponseDto>> getMyInfo(Authentication authentication) {
         Long memberId = AuthenticationHelper.resolveMemberId(authentication);
         return ResponseEntity.ok(ApiResponse.success(memberService.getMyInfo(memberId)));
+    }
+
+    @Operation(summary = "닉네임 중복 확인", description = "비로그인 호출도 허용한다. 로그인 상태에서 본인이 이미 쓰고 있는 닉네임을 그대로 검사하면 available=true를 반환한다.")
+    @ApiErrorCodes({})
+    @SecurityRequirements
+    @GetMapping("/api/members/nickname-check")
+    public ResponseEntity<ApiResponse<NicknameCheckResponseDto>> checkNicknameAvailable(
+            Authentication authentication,
+            @RequestParam @NotBlank String nickname) {
+        Long memberId = (authentication != null && authentication.getPrincipal() instanceof Long)
+                ? (Long) authentication.getPrincipal() : null;
+        return ResponseEntity.ok(ApiResponse.success(memberService.checkNicknameAvailable(nickname, memberId)));
+    }
+
+    @Operation(summary = "회원정보 수정", description = "닉네임/프로필 이미지 URL/소개를 수정한다. 요청에서 생략(null)한 필드는 그대로 유지된다.")
+    @ApiErrorCodes({"MEMBER_NOT_FOUND", "DUPLICATE_NICKNAME"})
+    @PutMapping("/api/members/me")
+    public ResponseEntity<ApiResponse<MemberMeResponseDto>> updateMyInfo(
+            Authentication authentication,
+            @Valid @RequestBody MemberUpdateRequestDto request) {
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
+        return ResponseEntity.ok(ApiResponse.success(memberService.updateMyInfo(memberId, request)));
     }
 
     @Operation(summary = "회원 탈퇴")

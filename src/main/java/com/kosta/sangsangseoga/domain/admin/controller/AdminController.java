@@ -44,8 +44,7 @@ public class AdminController implements AdminApi {
             ReportStatus status, int page, int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        ReportStatus targetStatus = status != null ? status : ReportStatus.PENDING;
-        return ResponseEntity.ok(ApiResponse.success(adminService.getReports(targetStatus, pageable)));
+        return ResponseEntity.ok(ApiResponse.success(adminService.getReports(status, pageable)));
     }
 
     @Override
