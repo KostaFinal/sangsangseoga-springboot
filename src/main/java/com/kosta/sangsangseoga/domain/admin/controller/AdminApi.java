@@ -4,7 +4,6 @@ import com.kosta.sangsangseoga.domain.admin.dto.AdminActionLogListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberStatusChangeRequestDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberStatusChangeResponseDto;
-import com.kosta.sangsangseoga.domain.admin.dto.AdminReportListItemDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessRequestDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessResponseDto;
@@ -48,7 +47,7 @@ public interface AdminApi {
      * PATCH /api/admin/reports/{reportId}
      * 신고 처리: 책 숨김/댓글 삭제/작가 정지/신고 기각.
      */
-    @Operation(summary = "신고 처리", description = "actionType에 따라 책 숨김/ 댓글 삭제/ 작가 정지/ 신고 기각을 수행한다.")
+    @Operation(summary = "신고 처리", description = "actionType에 따라 책 숨김/ 댓글 삭제/ 신고 기각을 수행한다.")
     @ApiErrorCodes({"REPORT_NOT_FOUND", "REPORT_ALREADY_PROCESSED",
             "ACTION_TARGET_TYPE_MISMATCH", "ACTION_TARGET_NOT_FOUND", "MEMBER_NOT_FOUND",
             "ALREADY_DELETED_MEMBER"})

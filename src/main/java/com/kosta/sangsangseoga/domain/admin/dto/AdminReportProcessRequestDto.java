@@ -13,10 +13,17 @@ import javax.validation.constraints.NotNull;
 @NoArgsConstructor
 public class AdminReportProcessRequestDto {
 
-    @Schema(description = "처리 방식. targetType과 일치해야 한다(BOOK_HIDE<->BOOK, COMMENT_DELETE<->COMMENT, "
-            + "AUTHOR_SUSPEND<->AUTHOR). REPORT_REJECT는 targetType과 무관하게 대상 조치 없이 신고만 기각한다.",
-            requiredMode = Schema.RequiredMode.REQUIRED,
-            allowableValues = {"BOOK_HIDE", "COMMENT_DELETE", "AUTHOR_SUSPEND", "REPORT_REJECT"})
+	@Schema(
+		    description =
+		        "처리 방식. BOOK_HIDE는 BOOK, COMMENT_DELETE는 COMMENT 신고에만 사용할 수 있다. "
+		        + "REPORT_REJECT는 대상 조치 없이 신고를 기각한다.",
+		    requiredMode = Schema.RequiredMode.REQUIRED,
+		    allowableValues = {
+		        "BOOK_HIDE",
+		        "COMMENT_DELETE",
+		        "REPORT_REJECT"
+		    }
+		)
     @NotNull(message = "actionType은 필수입니다.")
     private AdminActionType actionType;
 

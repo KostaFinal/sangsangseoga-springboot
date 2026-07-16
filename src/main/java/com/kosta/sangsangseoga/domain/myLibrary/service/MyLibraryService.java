@@ -3,8 +3,11 @@ package com.kosta.sangsangseoga.domain.myLibrary.service;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Slice;
 
+import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportStatus;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.FinishedBookResponseDto;
+import com.kosta.sangsangseoga.domain.myLibrary.dto.MyReportHistoryResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.MyWrittenBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingProgressRequestDto;
@@ -24,7 +27,11 @@ public interface MyLibraryService {
 	//읽고 싶은 책 삭제
 	void deleteWishlist(Long memberId, Long bookId);
 	
-	List<ReadingBookResponseDto> getReadingList(Long memberId);
+	Slice<ReadingBookResponseDto> getReadingList(
+	        Long memberId,
+	        int page,
+	        int size
+	);
 	
 	List<FinishedBookResponseDto> getFinishedList(Long memberId);
 	
@@ -59,4 +66,19 @@ public interface MyLibraryService {
 	);
 	
 	void deleteMyWrittenBook(Long memberId, Long bookId);
+	
+	// 내가 신고한 내역 조회
+	MyReportHistoryResponseDto getSubmittedReports(
+	        Long memberId,
+	        ReportStatus status,
+	        int page,
+	        int size
+	);
+
+	// 내가 신고당한 내역 조회
+	MyReportHistoryResponseDto getReceivedReports(
+	        Long memberId,
+	        int page,
+	        int size
+	);
 }

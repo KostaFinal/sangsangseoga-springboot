@@ -1,23 +1,26 @@
 package com.kosta.sangsangseoga.global.infra.storage;
 
-import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
-import com.kosta.sangsangseoga.global.exception.CustomException;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.util.UUID;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
+import com.kosta.sangsangseoga.global.exception.CustomException;
+
+import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import java.io.IOException;
-import java.util.UUID;
 
 /**
  * S3에 파일을 저장하고 접근 가능한 URL을 만들어준다. app.storage.type=s3일 때만 활성화된다.

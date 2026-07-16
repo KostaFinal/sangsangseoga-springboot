@@ -1,12 +1,14 @@
 package com.kosta.sangsangseoga.domain.myLibrary.repository;
 
-import com.kosta.sangsangseoga.domain.member.entity.Member;
-import com.kosta.sangsangseoga.domain.book.entity.Book;
-import com.kosta.sangsangseoga.domain.myLibrary.entity.ReadingMemo;
-
-import org.springframework.data.jpa.repository.JpaRepository;
- 
 import java.util.Optional;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.myLibrary.entity.ReadingMemo;
  
 public interface ReadingMemoRepository extends JpaRepository<ReadingMemo, Long> {
  
@@ -18,4 +20,10 @@ public interface ReadingMemoRepository extends JpaRepository<ReadingMemo, Long> 
 
     // 책 삭제 시 해당 책의 메모 전체 삭제
     void deleteAllByBook(Book book);
+    
+    Slice<ReadingMemo> findByMember_IdAndBook_IdOrderByPageNoAsc(
+            Long memberId,
+            Long bookId,
+            Pageable pageable
+    );
 }

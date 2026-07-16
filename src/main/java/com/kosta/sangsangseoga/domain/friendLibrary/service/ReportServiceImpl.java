@@ -1,8 +1,11 @@
 package com.kosta.sangsangseoga.domain.friendLibrary.service;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.kosta.sangsangseoga.domain.book.entity.Book;
-import com.kosta.sangsangseoga.domain.member.entity.Member;
-import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.dto.ReportDto;
 import com.kosta.sangsangseoga.domain.friendLibrary.dto.ReportRequestDto;
@@ -12,14 +15,13 @@ import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportTargetType;
 import com.kosta.sangsangseoga.domain.friendLibrary.exception.FriendLibraryErrorCode;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.CommentRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.ReportRepository;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -43,6 +45,7 @@ public class ReportServiceImpl implements ReportService {
         if (request.getTargetType() == null || request.getTargetId() == null || request.getReason() == null) {
             throw new CustomException(FriendLibraryErrorCode.MISSING_PARAMETER);
         }
+        
 
         Member reporter = memberRepository.findById(reporterId)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
@@ -115,10 +118,7 @@ public class ReportServiceImpl implements ReportService {
                 commentRepository.findByIdAndIsDeletedFalse(targetId)
                         .orElseThrow(() -> new CustomException(FriendLibraryErrorCode.TARGET_NOT_FOUND));
                 break;
-            case AUTHOR:
-                memberRepository.findById(targetId)
-                        .orElseThrow(() -> new CustomException(FriendLibraryErrorCode.TARGET_NOT_FOUND));
-                break;
+            
         }
     }
 }
