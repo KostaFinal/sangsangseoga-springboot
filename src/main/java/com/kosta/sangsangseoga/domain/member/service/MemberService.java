@@ -126,13 +126,15 @@ public class MemberService {
                 GUARDIAN_CONSENT_TOKEN_TTL_MILLIS
         );
 
-        mailService.sendGuardianConsentEmail(request.getGuardianEmail(), member.getNickname(), consent.getId(), token);
-
-        // 보호자가 이미 우리 서비스 회원이면 이메일과 별개로 앱 내 알림도 보낸다.
+        // 이메일 발송보다 먼저 실행한다. notify()가 예외를 던져 트랜잭션이 롤백되면 동의 요청 자체가
+        // 없던 일이 되는데, 이메일을 먼저 보내버리면 보호자가 존재하지 않는 요청을 가리키는 링크를
+        // 받게 된다. 이메일은 되돌릴 수 없는 외부 발송이라 반드시 트랜잭션 성공이 보장된 뒤에 보낸다.
         if (guardian != null) {
             notificationService.notify(guardian,
                     String.format("%s님이 보호자 동의를 요청했습니다.", member.getNickname()));
         }
+
+        mailService.sendGuardianConsentEmail(request.getGuardianEmail(), member.getNickname(), consent.getId(), token);
 
         return toResponseDto(consent);
     }
