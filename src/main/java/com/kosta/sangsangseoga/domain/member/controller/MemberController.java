@@ -46,9 +46,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Validated
 public class MemberController {
-    // /api/members/me, /api/members/exists, /api/members/password/reset-request, /api/guardian-consents
-    // /api/members/me/viewer-preference
-    // 서로 다른 최상위 경로라 클래스 레벨 매핑 없이 메서드별로 전체 경로를 지정합니다.
+    // /api/members/**와 /api/guardian-consents/**를 함께 다뤄서 클래스 레벨 매핑 없이 메서드별로 전체 경로를 지정합니다.
 
     private final MemberService memberService;
 

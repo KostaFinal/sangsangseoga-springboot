@@ -11,10 +11,12 @@ import com.kosta.sangsangseoga.domain.subscription.enums.PaymentStatus;
 import com.kosta.sangsangseoga.domain.subscription.enums.PlanType;
 import com.kosta.sangsangseoga.domain.subscription.exception.SubscriptionErrorCode;
 import com.kosta.sangsangseoga.domain.subscription.repository.PaymentRepository;
+import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -28,6 +30,7 @@ public class SubscriptionService {
 
     private final MemberRepository memberRepository;
     private final PaymentRepository paymentRepository;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public List<SubscriptionPlanDto> getPlans() {
@@ -64,9 +67,8 @@ public class SubscriptionService {
     }
 
     /**
-     * 정기구독 시작(결제 승인 콜백 이후 단일 호출). 실제 PG 연동 전이라 paymentKey/orderId는
-     * 형태만 받아서 pgTransactionId로 남기고, 토스 서버 검증 없이 바로 SUCCESS 처리한다.
-     * 금액은 클라이언트 값을 신뢰하지 않고 서버가 planType 기준으로 다시 계산한다.
+     * 정기구독 시작. 실제 PG 연동 전이라 paymentKey는 형태만 받아 pgTransactionId로 남기고 검증 없이
+     * SUCCESS 처리한다. 금액은 클라이언트 값을 신뢰하지 않고 서버가 planType 기준으로 계산한다.
      */
     public SubscriptionMeResponseDto subscribe(Long memberId, SubscriptionCreateRequestDto request) {
         Member member = memberRepository.findById(memberId)
@@ -88,9 +90,8 @@ public class SubscriptionService {
     }
 
     /**
-     * 월간 -> 연간 즉시 전환(재결제, 남은 월간 기간은 소멸). 연간에서 월간으로의 다운그레이드는
-     * 이미 결제한 잔여 기간을 환불 없이 날리게 되어 불공평하므로 이 API로는 지원하지 않는다
-     * (해지 예약 후 만료를 기다렸다가 월간으로 재구독하는 기존 흐름을 이용해야 한다).
+     * 월간 -> 연간 즉시 전환(재결제, 남은 월간 기간 소멸). 연간 -> 월간 다운그레이드는 잔여 기간을
+     * 환불 없이 날리게 되어 지원하지 않는다(해지 예약 후 만료 대기 후 재구독해야 함).
      */
     public SubscriptionMeResponseDto changePlan(Long memberId, SubscriptionCreateRequestDto request) {
         Member member = memberRepository.findById(memberId)
@@ -176,10 +177,8 @@ public class SubscriptionService {
     }
 
     /**
-     * subscriptionEndAt이 이미 지났는데 자정 배치(SubscriptionScheduler)가 아직 처리하지 않은 회원을
-     * 그 자리에서 즉시 정리한다. 상태 필드(subscriptionPlan/autoRenew)와 실제 만료일이라는 두 진실
-     * 소스가 배치 주기 사이에 어긋나는 걸 막기 위해, 구독을 조회/변경하는 모든 진입점에서 먼저 호출한다.
-     * 배치와 정확히 같은 규칙(자동갱신 또는 다운그레이드)을 쓴다 — SubscriptionScheduler도 이 메서드를 그대로 쓴다.
+     * subscriptionEndAt이 지났는데 자정 배치가 아직 처리 안 한 회원을 즉시 정리한다. 배치와 같은 규칙을
+     * 쓰며(SubscriptionScheduler도 이 메서드를 그대로 호출), 구독 조회/변경 진입점마다 먼저 호출한다.
      */
     public void reconcileIfExpired(Member member) {
         if (!member.getSubscriptionPlan().isPremium()) {
@@ -205,9 +204,26 @@ public class SubscriptionService {
             LocalDateTime endAt = startAt.plusDays(SubscriptionPolicy.periodDaysOf(planType));
             member.renewPremiumSubscription(startAt, endAt,
                     SubscriptionPolicy.PREMIUM_DAILY_TEXT_LIMIT, SubscriptionPolicy.PREMIUM_DAILY_IMAGE_LIMIT);
+            notificationService.notify(member, "구독이 자동 갱신되었습니다.");
         } else {
             member.downgradeToFree();
+            notificationService.notify(member, "구독 기간이 만료되어 FREE 요금제로 전환되었습니다.");
         }
+    }
+
+    /**
+     * 배치(SubscriptionScheduler)가 여러 회원을 순회 처리할 때 쓴다. 회원마다 독립된 트랜잭션으로
+     * 격리해서, 한 명 처리 중 DB 예외가 나도 다른 회원들의 처리/최종 커밋에 영향을 주지 않게 한다.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void reconcileIfExpired(Long memberId) {
+        memberRepository.findById(memberId).ifPresent(this::reconcileIfExpired);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void resetDailyUsage(Long memberId) {
+        memberRepository.findById(memberId).ifPresent(member -> member.resetDailyUsage(
+                SubscriptionPolicy.PREMIUM_DAILY_TEXT_LIMIT, SubscriptionPolicy.PREMIUM_DAILY_IMAGE_LIMIT));
     }
 
     private SubscriptionMeResponseDto toMeResponseDto(Member member) {

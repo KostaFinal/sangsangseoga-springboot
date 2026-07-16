@@ -22,4 +22,5 @@ public class BookListItemDto {
     private Integer likeCount;
     private Integer commentCount;
     private Boolean isLikedByMe;
+    private Boolean isBookmarkedByMe;
 }

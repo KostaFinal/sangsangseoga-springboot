@@ -2,6 +2,7 @@ package com.kosta.sangsangseoga.domain.subscription.service;
 
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
+import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.domain.subscription.SubscriptionPolicy;
 import com.kosta.sangsangseoga.domain.subscription.entity.Payment;
 import com.kosta.sangsangseoga.domain.subscription.enums.PaymentStatus;
@@ -13,13 +14,17 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SubscriptionServiceTest {
@@ -28,6 +33,8 @@ class SubscriptionServiceTest {
     private MemberRepository memberRepository;
     @Mock
     private PaymentRepository paymentRepository;
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private SubscriptionService subscriptionService;
@@ -43,6 +50,7 @@ class SubscriptionServiceTest {
         // then
         verify(paymentRepository, never()).save(any());
         assertThat(member.getSubscriptionPlan()).isEqualTo(PlanType.FREE);
+        verifyNoInteractions(notificationService);
     }
 
     @Test
@@ -58,6 +66,7 @@ class SubscriptionServiceTest {
         // then
         verify(paymentRepository, never()).save(any());
         assertThat(member.getSubscriptionPlan()).isEqualTo(PlanType.PREMIUM_MONTHLY);
+        verifyNoInteractions(notificationService);
     }
 
     @Test
@@ -88,6 +97,7 @@ class SubscriptionServiceTest {
         assertThat(member.getSubscriptionEndAt()).isAfter(LocalDateTime.now());
         assertThat(member.getDailyTextRemaining()).isEqualTo(SubscriptionPolicy.PREMIUM_DAILY_TEXT_LIMIT);
         assertThat(member.getDailyImageRemaining()).isEqualTo(SubscriptionPolicy.PREMIUM_DAILY_IMAGE_LIMIT);
+        verify(notificationService).notify(member, "구독이 자동 갱신되었습니다.");
     }
 
     @Test
@@ -107,5 +117,41 @@ class SubscriptionServiceTest {
         assertThat(member.getSubscriptionAutoRenew()).isFalse();
         assertThat(member.getDailyTextRemaining()).isZero();
         assertThat(member.getDailyImageRemaining()).isZero();
+        verify(notificationService).notify(member, "구독 기간이 만료되어 FREE 요금제로 전환되었습니다.");
+    }
+
+    @Test
+    void reconcileIfExpired_memberId_오버로드는_회원을_조회해서_동일한_정리_로직을_수행한다() {
+        // given
+        Member member = Member.builder().email("e@test.com").password("pw").build();
+        ReflectionTestUtils.setField(member, "id", 10L);
+        member.startPremiumSubscription(PlanType.PREMIUM_MONTHLY,
+            LocalDateTime.now().minusDays(31), LocalDateTime.now().minusDays(1), 0, 0);
+        member.reserveCancellation();
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+
+        // when
+        subscriptionService.reconcileIfExpired(10L);
+
+        // then
+        assertThat(member.getSubscriptionPlan()).isEqualTo(PlanType.FREE);
+        verify(notificationService).notify(member, "구독 기간이 만료되어 FREE 요금제로 전환되었습니다.");
+    }
+
+    @Test
+    void resetDailyUsage_memberId_오버로드는_회원의_일일_사용량을_재충전한다() {
+        // given
+        Member member = Member.builder().email("f@test.com").password("pw").build();
+        ReflectionTestUtils.setField(member, "id", 11L);
+        member.startPremiumSubscription(PlanType.PREMIUM_MONTHLY,
+            LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(29), 0, 0);
+        when(memberRepository.findById(11L)).thenReturn(Optional.of(member));
+
+        // when
+        subscriptionService.resetDailyUsage(11L);
+
+        // then
+        assertThat(member.getDailyTextRemaining()).isEqualTo(SubscriptionPolicy.PREMIUM_DAILY_TEXT_LIMIT);
+        assertThat(member.getDailyImageRemaining()).isEqualTo(SubscriptionPolicy.PREMIUM_DAILY_IMAGE_LIMIT);
     }
 }

@@ -19,8 +19,8 @@ public enum FriendLibraryErrorCode implements ErrorCode {
     LIKE_NOT_FOUND(HttpStatus.NOT_FOUND, "좋아요 정보를 찾을 수 없습니다."),
 
     // ===== Bookmark =====
-    BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 책갈피한 페이지입니다."),
-    BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "책갈피 정보를 찾을 수 없습니다."),
+    BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 북마크한 페이지입니다."),
+    BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "북마크 정보를 찾을 수 없습니다."),
 
     // ===== Comment =====
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),

@@ -19,9 +19,9 @@ public class AiGenerateImageResponseDto {
     @Schema(description = "결과 메시지")
     private String message;
 
-    @Schema(description = "생성된 이미지 URL. Replicate의 임시 delivery URL이다.")
+    @Schema(description = "생성된 이미지의 호스팅 URL. Gemini 이미지 생성은 URL을 주지 않아 항상 null이고 imageBase64를 대신 쓴다.")
     private String imageUrl;
 
-    @Schema(description = "이미지 base64 데이터. 현재 구현에서는 항상 null이며 imageUrl만 사용한다.")
+    @Schema(description = "이미지 data URI(예: data:image/png;base64,...). <img src>에 바로 쓸 수 있는 형태로 온다.")
     private String imageBase64;
 }

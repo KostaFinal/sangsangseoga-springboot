@@ -46,6 +46,7 @@ import com.kosta.sangsangseoga.domain.member.enums.MemberRole;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.domain.member.exception.MemberErrorCode;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
+import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.global.event.AfterCommitTask;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
@@ -82,6 +83,7 @@ public class AdminService {
 	private final TokenBlacklistService tokenBlacklistService;
 	private final ApplicationEventPublisher eventPublisher;
 	private final AiGenerationUsageRepository aiGenerationUsageRepository;
+	private final NotificationService notificationService;
 
 	@Transactional(readOnly = true)
 	public AdminReportListResponseDto getReports(ReportStatus status, Pageable pageable) {
@@ -155,6 +157,11 @@ public class AdminService {
 		adminActionLogRepository.save(AdminActionLog.builder().report(report).admin(admin).actionType(actionType)
 				.actionReason(request.getActionReason()).build());
 
+		notificationService.notify(report.getReporter(),
+				actionType == AdminActionType.REPORT_REJECT
+						? "회원님이 신고하신 내용이 검토 결과 반려되었습니다."
+						: "회원님이 신고하신 내용이 처리되었습니다.");
+
 		return AdminReportProcessResponseDto.builder().reportId(report.getId()).status(report.getStatus())
 				.actionType(actionType).processedAt(report.getProcessedAt()).build();
 	}
@@ -166,17 +173,27 @@ public class AdminService {
 			Book book = bookRepository.findById(report.getTargetId())
 					.orElseThrow(() -> new CustomException(AdminErrorCode.ACTION_TARGET_NOT_FOUND));
 			book.setStatus(BookStatus.HIDDEN);
+			notificationService.notify(book.getMember(),
+					String.format("신고 처리에 따라 회원님의 책 '%s'이(가) 숨김 처리되었습니다.", book.getTitle()));
 			break;
 		case COMMENT_DELETE:
 			requireTargetType(report, ReportTargetType.COMMENT);
 			Comment comment = commentRepository.findById(report.getTargetId())
 					.orElseThrow(() -> new CustomException(AdminErrorCode.ACTION_TARGET_NOT_FOUND));
 			comment.setIsDeleted(true);
+			if (comment.getMember() != null) {
+				notificationService.notify(comment.getMember(), "신고 처리에 따라 회원님의 댓글이 삭제되었습니다.");
+			}
 			break;
+
 		case REPORT_REJECT:
 			// 대상에는 아무 조치도 하지 않고 신고만 기각 처리한다.
 			break;
 		}
+	}
+
+	private String buildStatusChangeMessage(String statusText, String reason) {
+		return (reason == null || reason.isBlank()) ? statusText : statusText + " 사유: " + reason;
 	}
 
 	private void requireTargetType(Report report, ReportTargetType expected) {
@@ -238,15 +255,18 @@ public class AdminService {
 		switch (targetStatus) {
 		case ACTIVE:
 			member.activate();
+			notificationService.notify(member, "계정이 정상 상태로 복구되었습니다.");
 			break;
 		case SUSPENDED:
 			member.suspend();
 			invalidateSessionsAfterCommit(member.getId());
+			notificationService.notify(member, buildStatusChangeMessage("계정이 정지되었습니다.", request.getReason()));
 			break;
 		case DELETED:
 			member.cancelSubscriptionImmediately();
 			member.withdraw();
 			invalidateSessionsAfterCommit(member.getId());
+			notificationService.notify(member, buildStatusChangeMessage("계정이 탈퇴 처리되었습니다.", request.getReason()));
 			break;
 		}
 
@@ -287,14 +307,10 @@ public class AdminService {
 	}
 
 	/**
-	 * unit=daily는 일별, unit=monthly는 월별 구간을 프리미엄/일반 회원 x 텍스트/이미지로 집계한다. 구간은 실제 사용
-	 * 이력이 없어도 0으로 채워서 반환한다(그래프가 빈 구간에서 끊기지 않도록). premiumTxt/freeTxt는 FastAPI가 실제
-	 * Gemini 토큰 수(result.usage)를 내려준 값을 만 토큰 단위로 환산한 것이다. FastAPI가 usage를 안 내려준 옛
-	 * 호출 이력은 요청/응답 JSON 문자 길이 근사치가 대신 들어가 있을 수 있다.
-	 *
-	 * - daily: year+month를 함께 주면 그 달의 1일~말일 전체, 생략하면 오늘 기준 최근 7일. - monthly: year를
-	 * 주면 그 해의 1월~12월(year가 months보다 우선), year 없이 months만 주면 오늘 기준 최근 months개월, 둘 다
-	 * 생략하면 최근 5개월.
+	 * 프리미엄/일반 회원 x 텍스트/이미지 사용량을 구간별로 집계한다(빈 구간은 0). premiumTxt/freeTxt는
+	 * FastAPI가 준 실제 Gemini 토큰 수를 만 토큰 단위로 환산한 값(옛 호출은 문자 길이 근사치일 수 있음).
+	 * daily는 year+month 지정 시 해당 월 전체(생략 시 최근 7일), monthly는 year 지정 시 해당 연도
+	 * 1~12월(year가 months보다 우선, 둘 다 생략 시 최근 5개월).
 	 */
 	@Transactional(readOnly = true)
 	public List<AdminTokenTrendItemDto> getTokenTrends(String unit, Integer year, Integer month, Integer months) {
