@@ -4,6 +4,7 @@ import com.kosta.sangsangseoga.global.common.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -73,6 +74,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(CommonErrorCode.BAD_REQUEST.getStatus())
                 .body(ApiResponse.error(CommonErrorCode.BAD_REQUEST.name(), message));
+    }
+
+    /**
+     * 요청 본문을 JSON으로 파싱할 수 없는 경우 (잘못된 JSON 문법, 인코딩 깨짐으로 인한 잘못된 UTF-8
+     * 바이트 등). 처리하지 않으면 500으로 떨어져서 클라이언트 요청 자체의 문제인지 서버 오류인지
+     * 구분이 안 되므로, 400으로 변환해 클라이언트에게 요청 본문이 잘못됐음을 알려준다.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMessageNotReadableException(HttpMessageNotReadableException e) {
+        log.warn("요청 본문 파싱 실패: {}", e.getMessage());
+        return ResponseEntity
+                .status(CommonErrorCode.BAD_REQUEST.getStatus())
+                .body(ApiResponse.error(CommonErrorCode.BAD_REQUEST.name(), "요청 본문을 읽을 수 없습니다. JSON 형식과 인코딩(UTF-8)을 확인해 주세요."));
     }
 
     /**
