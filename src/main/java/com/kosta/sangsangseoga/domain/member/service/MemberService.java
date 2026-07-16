@@ -270,9 +270,10 @@ public class MemberService {
         } else {
             consent.reject();
             // 보호자가 거절하면 최초 가입 게이트를 통과하지 못한 것이다. 그대로 두면 회원이 PENDING에
-            // 영원히 갇혀 로그인도 재가입도 못 하게 되므로, 가입을 취소 처리(DELETED)한다.
+            // 영원히 갇혀 로그인도 재가입도 못 하게 되므로, 가입을 취소 처리(DELETED)하고 email/
+            // nickname/oauthProviderId를 풀어줘 같은 정보로 재가입할 수 있게 한다.
             if (consent.getMember().getStatus() == MemberStatus.PENDING) {
-                consent.getMember().withdraw();
+                consent.getMember().cancelPendingSignup();
             }
             notificationService.notify(consent.getMember(), "보호자가 동의를 거절해 가입이 취소되었습니다.");
         }
