@@ -269,7 +269,12 @@ public class MemberService {
                     : "보호자 동의가 승인되었습니다.");
         } else {
             consent.reject();
-            notificationService.notify(consent.getMember(), "보호자가 동의를 거절했습니다. 자세한 사항은 보호자에게 문의해 주세요.");
+            // 보호자가 거절하면 최초 가입 게이트를 통과하지 못한 것이다. 그대로 두면 회원이 PENDING에
+            // 영원히 갇혀 로그인도 재가입도 못 하게 되므로, 가입을 취소 처리(DELETED)한다.
+            if (consent.getMember().getStatus() == MemberStatus.PENDING) {
+                consent.getMember().withdraw();
+            }
+            notificationService.notify(consent.getMember(), "보호자가 동의를 거절해 가입이 취소되었습니다.");
         }
     }
 
