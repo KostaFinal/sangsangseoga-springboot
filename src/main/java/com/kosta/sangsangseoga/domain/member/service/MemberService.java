@@ -108,10 +108,12 @@ public class MemberService {
         LocalDateTime requestedAt = LocalDateTime.now();
         LocalDateTime expiresAt = requestedAt.plusDays(7);
 
+        Member guardian = memberRepository.findByEmail(request.getGuardianEmail()).orElse(null);
+
         GuardianConsent consent = GuardianConsent.builder()
                 .member(member)
                 .guardianEmail(request.getGuardianEmail())
-                .guardian(memberRepository.findByEmail(request.getGuardianEmail()).orElse(null))
+                .guardian(guardian)
                 .status(GuardianConsentStatus.REQUESTED)
                 .requestedAt(requestedAt)
                 .expiresAt(expiresAt)
@@ -123,6 +125,14 @@ public class MemberService {
                 consent.getId(),
                 GUARDIAN_CONSENT_TOKEN_TTL_MILLIS
         );
+
+        // 이메일 발송보다 먼저 실행한다. notify()가 예외를 던져 트랜잭션이 롤백되면 동의 요청 자체가
+        // 없던 일이 되는데, 이메일을 먼저 보내버리면 보호자가 존재하지 않는 요청을 가리키는 링크를
+        // 받게 된다. 이메일은 되돌릴 수 없는 외부 발송이라 반드시 트랜잭션 성공이 보장된 뒤에 보낸다.
+        if (guardian != null) {
+            notificationService.notify(guardian,
+                    String.format("%s님이 보호자 동의를 요청했습니다.", member.getNickname()));
+        }
 
         mailService.sendGuardianConsentEmail(request.getGuardianEmail(), member.getNickname(), consent.getId(), token);
 
@@ -259,7 +269,13 @@ public class MemberService {
                     : "보호자 동의가 승인되었습니다.");
         } else {
             consent.reject();
-            notificationService.notify(consent.getMember(), "보호자가 동의를 거절했습니다. 자세한 사항은 보호자에게 문의해 주세요.");
+            // 보호자가 거절하면 최초 가입 게이트를 통과하지 못한 것이다. 그대로 두면 회원이 PENDING에
+            // 영원히 갇혀 로그인도 재가입도 못 하게 되므로, 가입을 취소 처리(DELETED)하고 email/
+            // nickname/oauthProviderId를 풀어줘 같은 정보로 재가입할 수 있게 한다.
+            if (consent.getMember().getStatus() == MemberStatus.PENDING) {
+                consent.getMember().cancelPendingSignup();
+            }
+            notificationService.notify(consent.getMember(), "보호자가 동의를 거절해 가입이 취소되었습니다.");
         }
     }
 

@@ -169,6 +169,20 @@ public class Member extends BaseEntity {
     }
 
     /**
+     * 보호자 동의 거절로 최초 가입 게이트를 통과하지 못해 가입 자체가 취소될 때 호출한다. 일반 탈퇴
+     * (withdraw)와 달리 email/nickname/oauthProviderId에 실제 DB unique 제약이 걸려 있어서 상태만
+     * DELETED로 바꾸는 것으로는 같은 정보로 재가입할 수 없다. 로그인을 한 번도 못 해본 미완성 가입이라
+     * 원본 식별자를 보존할 실익이 없으므로, 값 자체를 풀어(mangle) 재가입이 가능하게 한다.
+     */
+    public void cancelPendingSignup() {
+        this.status = MemberStatus.DELETED;
+        this.withdrawnAt = LocalDateTime.now();
+        this.email = "cancelled-" + this.id + "-" + this.email;
+        this.nickname = null;
+        this.oauthProviderId = null;
+    }
+
+    /**
      * 탈퇴에 따른 구독 즉시 해지. 환불/잔여 기간 보상 없이 즉시 종료한다.
      * ERD에 해지 사유 컬럼이 없어 사유는 별도로 남기지 않는다.
      */
