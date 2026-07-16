@@ -239,6 +239,7 @@ public class AuthService {
      * 미리 유효성을 확인할 수 있도록 별도로 둔다. 실제 소비(consume)는 completePasswordReset에서만
      * 일어나므로, 이 메서드를 여러 번 호출해도 토큰이 무효화되지 않는다.
      */
+    @Transactional(readOnly = true)
     public void verifyPasswordResetToken(String token) {
         decodeAndValidatePasswordResetToken(token);
     }

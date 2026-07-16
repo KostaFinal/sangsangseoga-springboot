@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,11 +29,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
 
 @Tag(name = "Auth", description = "회원가입/로그인/토큰")
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Validated
 public class AuthController {
 
     private final AuthService authService;
@@ -88,7 +91,7 @@ public class AuthController {
     @ApiErrorCodes({"EXPIRED_RESET_TOKEN", "INVALID_RESET_TOKEN", "MEMBER_NOT_FOUND"})
     @SecurityRequirements
     @GetMapping("/password/reset/verify")
-    public ResponseEntity<ApiResponse<Void>> verifyPasswordResetToken(@RequestParam String token) {
+    public ResponseEntity<ApiResponse<Void>> verifyPasswordResetToken(@RequestParam @NotBlank String token) {
         authService.verifyPasswordResetToken(token);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
