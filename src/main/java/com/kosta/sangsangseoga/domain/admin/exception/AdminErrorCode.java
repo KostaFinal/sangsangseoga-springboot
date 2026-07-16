@@ -14,7 +14,10 @@ public enum AdminErrorCode implements ErrorCode {
 
     // ===== Member 관리 =====
     INVALID_TARGET_STATUS(HttpStatus.BAD_REQUEST, "변경할 수 없는 상태입니다. (ACTIVE/SUSPENDED/DELETED만 가능)"),
-    ADMIN_STATUS_CHANGE_NOT_ALLOWED(HttpStatus.FORBIDDEN, "관리자 계정의 상태는 이 API로 변경할 수 없습니다.");
+    ADMIN_STATUS_CHANGE_NOT_ALLOWED(HttpStatus.FORBIDDEN, "관리자 계정의 상태는 이 API로 변경할 수 없습니다."),
+
+    // ===== 통계 조회 =====
+    INVALID_DATE_RANGE(HttpStatus.BAD_REQUEST, "startDate는 endDate보다 늦을 수 없습니다.");
 
     private final HttpStatus status;
     private final String message;
