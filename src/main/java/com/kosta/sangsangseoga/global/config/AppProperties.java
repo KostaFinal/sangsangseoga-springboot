@@ -13,6 +13,8 @@ public class AppProperties {
 
     private String frontendUrl;
     private String mailFrom;
+    // 로컬 디스크에 저장하는 업로드 파일(프로필 사진 등)의 루트 경로 (LocalFileStorageService 참고).
+    private String uploadDir;
     private final Upload upload = new Upload();
 
     @Getter
