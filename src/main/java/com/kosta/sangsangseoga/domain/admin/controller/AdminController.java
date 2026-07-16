@@ -23,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestMapping;
+import java.time.LocalDate;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -90,8 +91,8 @@ public class AdminController implements AdminApi {
     }
 
     @Override
-    public ResponseEntity<ApiResponse<List<AdminTokenUsageItemDto>>> getTokenUsages() {
-        return ResponseEntity.ok(ApiResponse.success(adminService.getTokenUsages()));
+    public ResponseEntity<ApiResponse<List<AdminTokenUsageItemDto>>> getTokenUsages(LocalDate startDate, LocalDate endDate) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getTokenUsages(startDate, endDate)));
     }
 
     @Override

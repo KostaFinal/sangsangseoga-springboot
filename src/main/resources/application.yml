@@ -107,6 +107,8 @@ spring:
 logging:
   level:
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  file:
+    name: logs/app.log
 
 jwt:
   secret-key: ${JWT_SECRET_KEY:defaultSecretKeySecretKeySecretKeySecretKeySecretKey}
@@ -114,6 +116,11 @@ jwt:
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
   mail-from: ${MAIL_FROM:no-reply@sangsangseoga.local}
+  upload:
+    # 상대 경로면 서버 프로세스 작업 디렉터리(프로젝트 루트) 기준. src/main/resources/static이 아니라
+    # 프로젝트 외부 경로를 쓴다 - jar 빌드에 포함되는 경로는 재배포/재빌드 때마다 초기화되기 때문.
+    image-dir: ${AI_IMAGE_DIR:./uploads/ai-images}
+    image-url: /uploads/ai-images
 
 ---
 # ===================================================================
@@ -164,3 +171,6 @@ jwt:
 app:
   frontend-url: ${FRONTEND_URL}   # 기본값 없음 (운영 프론트 도메인 필수 주입)
   mail-from: ${MAIL_FROM}         # 기본값 없음 (발신 메일 주소 필수 주입)
+  upload:
+    image-dir: ${AI_IMAGE_DIR:./uploads/ai-images}
+    image-url: /uploads/ai-images
