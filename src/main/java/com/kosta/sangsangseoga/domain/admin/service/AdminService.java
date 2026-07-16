@@ -399,6 +399,10 @@ public class AdminService {
 	 */
 	@Transactional(readOnly = true)
 	public List<AdminTokenUsageItemDto> getTokenUsages(LocalDate startDate, LocalDate endDate) {
+		if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+			throw new CustomException(AdminErrorCode.INVALID_DATE_RANGE);
+		}
+
 		Map<Long, Member> members = new LinkedHashMap<>();
 		Map<Long, Long> textUsageByMember = new LinkedHashMap<>();
 		Map<Long, Long> imgUsageByMember = new LinkedHashMap<>();

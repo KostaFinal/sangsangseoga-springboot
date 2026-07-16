@@ -122,7 +122,7 @@ public interface AdminApi {
     @Operation(summary = "회원별 AI 사용량 조회", description = "회원별 누적 텍스트/이미지 생성 사용량을 많은 순으로 조회한다. "
             + "startDate/endDate를 생략하면 전체 누적 기간을 조회한다. 하나만 주면 반대쪽은 각각 서비스 시작 이전/오늘로 "
             + "채워진다(예: endDate만 주면 그날까지 전체 누적). 어뷰징 판정 로직이 아직 없어 status는 항상 NORMAL로 내려온다.")
-    @ApiErrorCodes({}) // 인증(401) / 인가(403) 실패 외 도메인 에러 없음
+    @ApiErrorCodes({"INVALID_DATE_RANGE"})
     @GetMapping("/token/usages")
     ResponseEntity<ApiResponse<List<AdminTokenUsageItemDto>>> getTokenUsages(
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
