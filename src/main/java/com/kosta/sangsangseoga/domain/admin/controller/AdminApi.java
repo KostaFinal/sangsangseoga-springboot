@@ -4,7 +4,6 @@ import com.kosta.sangsangseoga.domain.admin.dto.AdminActionLogListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberStatusChangeRequestDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminMemberStatusChangeResponseDto;
-import com.kosta.sangsangseoga.domain.admin.dto.AdminReportListItemDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportListResponseDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessRequestDto;
 import com.kosta.sangsangseoga.domain.admin.dto.AdminReportProcessResponseDto;
@@ -48,7 +47,7 @@ public interface AdminApi {
      * PATCH /api/admin/reports/{reportId}
      * 신고 처리: 책 숨김/댓글 삭제/작가 정지/신고 기각.
      */
-    @Operation(summary = "신고 처리", description = "actionType에 따라 책 숨김/ 댓글 삭제/ 작가 정지/ 신고 기각을 수행한다.")
+    @Operation(summary = "신고 처리", description = "actionType에 따라 책 숨김/ 댓글 삭제/ 신고 기각을 수행한다.")
     @ApiErrorCodes({"REPORT_NOT_FOUND", "REPORT_ALREADY_PROCESSED",
             "ACTION_TARGET_TYPE_MISMATCH", "ACTION_TARGET_NOT_FOUND", "MEMBER_NOT_FOUND",
             "ALREADY_DELETED_MEMBER"})
@@ -101,12 +100,18 @@ public interface AdminApi {
      * GET /api/admin/token/trends
      * AI 사용량 트렌드(그래프용 시계열) 조회.
      */
-    @Operation(summary = "AI 사용량 트렌드 조회", description = "unit=daily면 최근 7일, unit=monthly면 최근 5개월의 프리미엄/일반 회원 "
-            + "텍스트·이미지 사용량을 시계열로 조회한다. 실사용 이력이 없는 구간도 0으로 채워서 반환한다.")
+    @Operation(summary = "AI 사용량 트렌드 조회", description = "unit=daily면 일별, unit=monthly면 월별 프리미엄/일반 회원 텍스트·이미지 사용량을 "
+            + "시계열로 조회한다. 실사용 이력이 없는 구간도 0으로 채워서 반환한다.\n"
+            + "- unit=daily: year+month를 함께 주면 그 달의 1일~말일 전체를 반환한다. 생략하면 오늘 기준 최근 7일.\n"
+            + "- unit=monthly: year를 주면 그 해의 1월~12월을 반환한다(year와 months는 함께 쓰지 않으며, year가 우선). "
+            + "year 없이 months만 주면 오늘 기준 최근 months개월. 둘 다 생략하면 최근 5개월.")
     @ApiErrorCodes({}) // 인증(401) / 인가(403) 실패 외 도메인 에러 없음
     @GetMapping("/token/trends")
     ResponseEntity<ApiResponse<List<AdminTokenTrendItemDto>>> getTokenTrends(
-        @RequestParam(defaultValue = "daily") @Pattern(regexp = "daily|monthly") String unit);
+        @RequestParam(defaultValue = "daily") @Pattern(regexp = "daily|monthly") String unit,
+        @RequestParam(required = false) Integer year,
+        @RequestParam(required = false) @Min(1) @Max(12) Integer month,
+        @RequestParam(required = false) @Min(1) @Max(60) Integer months);
 
     /**
      * GET /api/admin/token/usages

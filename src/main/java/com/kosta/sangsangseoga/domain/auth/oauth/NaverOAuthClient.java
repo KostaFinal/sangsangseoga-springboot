@@ -20,10 +20,8 @@ import java.util.UUID;
 /**
  * 네이버 로그인 연동. https://developers.naver.com/docs/login/api/api.md
  *
- * 주의: 네이버는 인가 URL에 CSRF 방지용 state 값을 요구한다. 다만 이 프로젝트의 콜백 계약(POST
- * /api/auth/oauth/{provider}/callback body: {code, redirectUri})이 state를 되돌려주지 않으므로,
- * 매 요청 시 state를 새로 생성만 하고 서버 쪽에서 세션/캐시에 저장해 검증하지는 않는다.
- * (state 왕복 검증이 필요해지면 콜백 계약에 state 필드 추가가 선행되어야 한다.)
+ * 주의: 콜백 계약(code, redirectUri만 전달)이 state를 되돌려주지 않아, CSRF 방지용 state는
+ * 매번 새로 생성만 하고 검증하지는 않는다(왕복 검증하려면 콜백 계약에 state 필드 추가 필요).
  */
 @Slf4j
 @Component
@@ -64,11 +62,8 @@ public class NaverOAuthClient implements OAuthClient {
     }
 
     /**
-     * NAVER_CLIENT_ID/SECRET이 설정 안 된 상태로 두면, 이 메서드가 없을 경우 빈 값인 채로
-     * 네이버 서버까지 요청이 나가서 네이버 쪽 에러 메시지로만 원인을 알 수 있다. 여기서 먼저 걸러서
-     * "설정이 안 됐다"는 걸 바로 알 수 있게 한다. 서버 기동 자체는 막지 않는다 - 소셜 로그인은
-     * 선택적 기능이라 이거 하나 때문에 로컬 개발/다른 기능 테스트가 막히면 안 된다.
-     * 네이버는 카카오와 달리 client_secret이 항상 필수라 같이 확인한다.
+     * NAVER_CLIENT_ID/SECRET 미설정 시 빈 값으로 네이버 서버까지 요청이 나가 원인 파악이 어려워지므로
+     * 여기서 먼저 걸러낸다(서버 기동은 막지 않음). 네이버는 카카오와 달리 client_secret이 항상 필수다.
      */
     private void requireConfigured() {
         if (properties.getClientId() == null || properties.getClientId().isBlank()

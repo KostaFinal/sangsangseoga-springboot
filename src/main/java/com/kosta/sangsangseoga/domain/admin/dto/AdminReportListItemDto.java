@@ -22,9 +22,6 @@ public class AdminReportListItemDto {
     @Schema(description = "신고 대상 ID. targetType에 따라 의미가 다르다.")
     private Long targetId;
 
-    @Schema(description = "targetType=AUTHOR일 때만 채워짐. 작가 프로필 이동에 필요한 닉네임. 대상 회원이 이미 삭제됐으면 null.", nullable = true)
-    private String targetNickname;
-
     @Schema(description = "targetType=COMMENT일 때만 채워짐. 댓글이 달린 원본 도서 ID(이동용). 대상 댓글이 이미 삭제됐으면 null.", nullable = true)
     private Long targetParentBookId;
 

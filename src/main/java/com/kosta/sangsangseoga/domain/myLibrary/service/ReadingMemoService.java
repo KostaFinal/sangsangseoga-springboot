@@ -1,5 +1,8 @@
 package com.kosta.sangsangseoga.domain.myLibrary.service;
 import java.math.BigDecimal;
+
+import org.springframework.data.domain.Slice;
+
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingMemoDto;
  
 public interface ReadingMemoService {
@@ -15,4 +18,11 @@ public interface ReadingMemoService {
  
     // 메모 삭제 - 204 응답
     void deleteMemo(Long memberId, Long bookId, Integer pageNo) throws Exception;
+    
+    Slice<ReadingMemoDto> getMemosByBook(
+            Long memberId,
+            Long bookId,
+            int page,
+            int size
+    ) throws Exception;
 }

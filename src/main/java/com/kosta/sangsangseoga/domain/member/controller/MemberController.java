@@ -10,8 +10,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.validation.annotation.Validated;
+
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
 
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentApproveRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentDecisionRequestDto;
@@ -19,25 +26,27 @@ import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentPendingResponseD
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.MemberMeResponseDto;
+import com.kosta.sangsangseoga.domain.member.dto.MemberUpdateRequestDto;
+import com.kosta.sangsangseoga.domain.member.dto.NicknameCheckResponseDto;
+import com.kosta.sangsangseoga.domain.member.dto.ProfileImageUploadResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.ViewerPreferenceDto;
 import com.kosta.sangsangseoga.domain.member.dto.WithdrawRequestDto;
 import com.kosta.sangsangseoga.domain.member.service.MemberService;
 import com.kosta.sangsangseoga.global.common.ApiResponse;
 import com.kosta.sangsangseoga.global.config.ApiErrorCodes;
 import com.kosta.sangsangseoga.global.security.AuthenticationHelper;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Member", description = "회원 정보/보호자 동의")
 @RestController
 @RequiredArgsConstructor
+@Validated
 public class MemberController {
-    // /api/members/me, /api/members/exists, /api/members/password/reset-request, /api/guardian-consents
-    // /api/members/me/viewer-preference
-    // 서로 다른 최상위 경로라 클래스 레벨 매핑 없이 메서드별로 전체 경로를 지정합니다.
+    // /api/members/**와 /api/guardian-consents/**를 함께 다뤄서 클래스 레벨 매핑 없이 메서드별로 전체 경로를 지정합니다.
 
     private final MemberService memberService;
 
@@ -49,6 +58,28 @@ public class MemberController {
         return ResponseEntity.ok(ApiResponse.success(memberService.getMyInfo(memberId)));
     }
 
+    @Operation(summary = "닉네임 중복 확인", description = "비로그인 호출도 허용한다. 로그인 상태에서 본인이 이미 쓰고 있는 닉네임을 그대로 검사하면 available=true를 반환한다.")
+    @ApiErrorCodes({})
+    @SecurityRequirements
+    @GetMapping("/api/members/nickname-check")
+    public ResponseEntity<ApiResponse<NicknameCheckResponseDto>> checkNicknameAvailable(
+            Authentication authentication,
+            @RequestParam @NotBlank String nickname) {
+        Long memberId = (authentication != null && authentication.getPrincipal() instanceof Long)
+                ? (Long) authentication.getPrincipal() : null;
+        return ResponseEntity.ok(ApiResponse.success(memberService.checkNicknameAvailable(nickname, memberId)));
+    }
+
+    @Operation(summary = "회원정보 수정", description = "닉네임/프로필 이미지 URL/소개를 수정한다. 요청에서 생략(null)한 필드는 그대로 유지된다.")
+    @ApiErrorCodes({"MEMBER_NOT_FOUND", "DUPLICATE_NICKNAME"})
+    @PutMapping("/api/members/me")
+    public ResponseEntity<ApiResponse<MemberMeResponseDto>> updateMyInfo(
+            Authentication authentication,
+            @Valid @RequestBody MemberUpdateRequestDto request) {
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
+        return ResponseEntity.ok(ApiResponse.success(memberService.updateMyInfo(memberId, request)));
+    }
+
     @Operation(summary = "회원 탈퇴")
     @ApiErrorCodes({"MEMBER_NOT_FOUND", "ALREADY_DELETED_MEMBER", "WRONG_PASSWORD"})
     @DeleteMapping("/api/members/me")
@@ -57,6 +88,17 @@ public class MemberController {
         Long memberId = AuthenticationHelper.resolveMemberId(authentication);
         memberService.withdraw(memberId, request);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @Operation(summary = "프로필 사진 업로드", description = "multipart/form-data로 이미지 파일을 업로드하면 저장 후 접근 가능한 URL을 반환한다. "
+            + "이 URL을 실제 프로필에 반영하려면 별도로 회원정보 수정 API를 호출해서 profileImageUrl에 저장해야 한다.")
+    @ApiErrorCodes({"EMPTY_FILE", "INVALID_IMAGE_FILE"})
+    @PostMapping("/api/members/me/profile-image")
+    public ResponseEntity<ApiResponse<ProfileImageUploadResponseDto>> uploadProfileImage(
+            Authentication authentication,
+            @RequestParam("file") MultipartFile file) {
+        AuthenticationHelper.resolveMemberId(authentication);
+        return ResponseEntity.ok(ApiResponse.success(memberService.uploadProfileImage(file)));
     }
 
     @Operation(summary = "뷰어 설정 조회")
@@ -135,4 +177,6 @@ public class MemberController {
         GuardianConsentResponseDto response = memberService.withdrawGuardianConsent(consentId, memberId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
+    
+    
 }

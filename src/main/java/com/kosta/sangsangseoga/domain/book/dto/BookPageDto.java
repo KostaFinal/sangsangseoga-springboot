@@ -19,5 +19,6 @@ public class BookPageDto {
     private BookPage.ContentType contentType;
     private String contentTextKo;
     private String contentTextEn;
+    private Integer contentFontSizeEn;
     private String imageUrl;
 }

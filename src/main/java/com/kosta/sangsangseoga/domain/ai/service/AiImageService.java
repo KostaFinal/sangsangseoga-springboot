@@ -71,8 +71,8 @@ public class AiImageService {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("X-Request-ID", requestId);
 
-            log.debug("Python 이미지 생성 요청 URL: {}", url);
-            log.debug("Python 이미지 생성 요청 Body: {}", request);
+            log.debug("Python 이미지 생성 요청: requestId={} imageType={} url={} reqLen={}",
+                    requestId, request.getImageType(), url, reqLen);
 
             logHikariStatus("beforePythonCall", requestId);
 
@@ -84,14 +84,17 @@ public class AiImageService {
                 pythonCallMs = elapsedMs(t1);
                 httpStatus = result.getStatusCodeValue();
                 response = result.getBody();
-                log.debug("Python 이미지 생성 응답 Body: {}", response);
+                log.debug("Python 이미지 생성 응답: requestId={} httpStatus={} resLen={}",
+                        requestId, httpStatus, jsonLength(response));
             } catch (HttpClientErrorException e) {
                 // Python이 400을 반환하는 경우(imageType=PAGE인데 pageNo 누락, 지원하지 않는 style 등)는
                 // 요청 자체의 문제이므로 그대로 BAD_REQUEST로 전달한다.
                 pythonCallMs = elapsedMs(t1);
                 httpStatus = e.getStatusCode().value();
                 errorType = e.getClass().getSimpleName();
-                log.warn("Python 이미지 생성 요청이 거부되었습니다: {}", e.getResponseBodyAsString());
+                String rejectedBody = e.getResponseBodyAsString();
+                log.warn("Python 이미지 생성 요청이 거부되었습니다: requestId={} httpStatus={} bodyLen={}",
+                        requestId, httpStatus, rejectedBody == null ? 0 : rejectedBody.length());
                 throw new CustomException(CommonErrorCode.BAD_REQUEST);
             } catch (RestClientException e) {
                 pythonCallMs = elapsedMs(t1);
@@ -114,18 +117,27 @@ public class AiImageService {
                 }
 
                 long tSave = System.nanoTime();
-                String localRelativeUrl = aiImageStorageService.downloadAndStore(replicateUrl, request.getImageType());
+                AiImageStorageService.StoredImage storedImage =
+                        aiImageStorageService.downloadAndStore(replicateUrl, request.getImageType());
                 long saveMs = elapsedMs(tSave);
                 log.info("[AI-PERF] requestId={} imageSaveMs={}", requestId, saveMs);
 
                 String localAbsoluteUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-                        .path(localRelativeUrl)
+                        .path(storedImage.getRelativeUrl())
                         .toUriString();
                 response.setImageUrl(localAbsoluteUrl);
                 response.setMessage("이미지 생성 및 로컬 저장 완료");
 
                 long t2 = System.nanoTime();
-                recordUsage(memberId);
+                try {
+                    recordUsage(memberId);
+                } catch (RuntimeException e) {
+                    // 파일 저장은 이미 끝났는데 사용량 기록이 실패해 요청 전체가 실패로 되돌아가면,
+                    // 그 파일은 DB 어디에도 참조되지 않는 고아 파일로 디스크에 영원히 남는다.
+                    // 원래 예외는 그대로 던지되, 방금 저장한 파일은 여기서 지워 정리한다.
+                    aiImageStorageService.deleteQuietly(storedImage);
+                    throw e;
+                }
                 usageRecordMs = elapsedMs(t2);
                 logHikariStatus("afterUsageRecord", requestId);
             }

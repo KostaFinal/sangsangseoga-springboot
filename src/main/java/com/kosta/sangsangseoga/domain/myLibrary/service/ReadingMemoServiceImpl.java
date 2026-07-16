@@ -1,20 +1,24 @@
 package com.kosta.sangsangseoga.domain.myLibrary.service;
 
-import com.kosta.sangsangseoga.domain.member.entity.Member;
-import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
+import java.math.BigDecimal;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingMemoDto;
 import com.kosta.sangsangseoga.domain.myLibrary.entity.ReadingMemo;
 import com.kosta.sangsangseoga.domain.myLibrary.exception.ReadingErrorCode;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.ReadingMemoRepository;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -139,5 +143,44 @@ public class ReadingMemoServiceImpl implements ReadingMemoService {
                 .orElseThrow(() -> new CustomException(ReadingErrorCode.MEMO_NOT_FOUND));
 
         readingMemoRepository.delete(memo);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public Slice<ReadingMemoDto> getMemosByBook(
+            Long memberId,
+            Long bookId,
+            int page,
+            int size
+    ) throws Exception {
+
+        memberRepository.findById(memberId)
+                .orElseThrow(() ->
+                        new CustomException(CommonErrorCode.MEMBER_NOT_FOUND)
+                );
+
+        bookRepository.findById(bookId)
+                .orElseThrow(() ->
+                        new CustomException(CommonErrorCode.BOOK_NOT_FOUND)
+                );
+
+        return readingMemoRepository
+                .findByMember_IdAndBook_IdOrderByPageNoAsc(
+                        memberId,
+                        bookId,
+                        PageRequest.of(page - 1, size)
+                )
+                .map(memo ->
+                        ReadingMemoDto.builder()
+                                .id(memo.getId())
+                                .bookId(bookId)
+                                .pageNo(memo.getPageNo())
+                                .content(memo.getContent())
+                                .posX(memo.getPosX())
+                                .posY(memo.getPosY())
+                                .createdAt(memo.getCreatedAt())
+                                .updatedAt(memo.getUpdatedAt())
+                                .build()
+                );
     }
 }

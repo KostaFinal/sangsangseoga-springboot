@@ -9,4 +9,6 @@ import java.util.List;
 public interface BookTagRepository extends JpaRepository<BookTag, Long> {
 
     List<BookTag> findByBook(Book book);
+    
+    void deleteByBook(Book book);
 }

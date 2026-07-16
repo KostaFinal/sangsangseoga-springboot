@@ -60,10 +60,8 @@ public class KakaoOAuthClient implements OAuthClient {
     }
 
     /**
-     * KAKAO_CLIENT_ID가 설정 안 된 상태로 두면, 이 메서드가 없을 경우 client_id가 빈 값인 채로
-     * 카카오 서버까지 요청이 나가서 카카오 쪽 에러 메시지로만 원인을 알 수 있다. 여기서 먼저 걸러서
-     * "설정이 안 됐다"는 걸 바로 알 수 있게 한다. 서버 기동 자체는 막지 않는다 - 소셜 로그인은
-     * 선택적 기능이라 이거 하나 때문에 로컬 개발/다른 기능 테스트가 막히면 안 된다.
+     * KAKAO_CLIENT_ID 미설정 시 빈 값으로 카카오 서버까지 요청이 나가 원인 파악이 어려워지므로 여기서
+     * 먼저 걸러낸다. 소셜 로그인은 선택 기능이라 서버 기동 자체는 막지 않는다.
      */
     private void requireConfigured() {
         if (properties.getClientId() == null || properties.getClientId().isBlank()) {

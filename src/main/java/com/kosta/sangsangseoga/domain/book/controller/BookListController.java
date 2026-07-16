@@ -41,10 +41,11 @@ public class BookListController {
             @RequestParam(required = false) String bookType,
             @RequestParam(required = false, defaultValue = "latest") String sort,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long authorId,
             @RequestParam(required = false, defaultValue = "1") int page,
             @RequestParam(required = false, defaultValue = "12") int size,
             @AuthenticationPrincipal Long memberId) throws Exception {
-        BookListResponseDto result = bookService.getBooks(bookType, sort, keyword, page, size, memberId);
+        BookListResponseDto result = bookService.getBooks(bookType, sort, keyword, authorId, page, size, memberId);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
     

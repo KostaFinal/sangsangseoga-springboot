@@ -20,17 +20,20 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 	// 회원 탈퇴 시 처리 대상인 본인 소유 책 목록 조회
 	List<Book> findAllByMember(Member member);
 
-	// bookType/키워드 필터 + 페이징
+	// bookType/키워드/작가 필터 + 페이징
 	@Query("SELECT b FROM Book b WHERE b.status = 'PUBLISHED'" + " AND (:bookType IS NULL OR b.bookType = :bookType)"
-			+ " AND (:keyword IS NULL OR b.title LIKE %:keyword% OR b.member.nickname LIKE %:keyword%)")
-	Page<Book> findBooks(@Param("bookType") BookType bookType, @Param("keyword") String keyword, Pageable pageable);
+			+ " AND (:keyword IS NULL OR b.title LIKE %:keyword% OR b.member.nickname LIKE %:keyword%)"
+			+ " AND (:authorId IS NULL OR b.member.id = :authorId)")
+	Page<Book> findBooks(@Param("bookType") BookType bookType, @Param("keyword") String keyword,
+			@Param("authorId") Long authorId, Pageable pageable);
 
 	// popular 정렬 (조회수×1 + 좋아요×3)
 	@Query("SELECT b FROM Book b WHERE b.status = 'PUBLISHED'" + " AND (:bookType IS NULL OR b.bookType = :bookType)"
 			+ " AND (:keyword IS NULL OR b.title LIKE %:keyword% OR b.member.nickname LIKE %:keyword%)"
+			+ " AND (:authorId IS NULL OR b.member.id = :authorId)"
 			+ " ORDER BY (b.viewCount * 1 + b.likeCount * 3) DESC")
 	Page<Book> findBooksByPopular(@Param("bookType") BookType bookType, @Param("keyword") String keyword,
-			Pageable pageable);
+			@Param("authorId") Long authorId, Pageable pageable);
 
 	// 같은 bookType에서 해당 책 제외, 좋아요 순 상위 N개 (추천용)
 	@Query("SELECT b FROM Book b WHERE b.status = 'PUBLISHED' AND b.bookType = :bookType AND b.id != :excludeId ORDER BY b.likeCount DESC")
@@ -57,10 +60,40 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 	// 내가 작성한 공개 책 목록 조회
 	List<Book> findByMember_IdAndStatus(Long memberId, BookStatus status);
 
-    // 작가(회원)의 공개된 작품 수 (작가 검색/프로필용)
-    long countByMemberAndStatus(Member member, BookStatus status);
+	// 작가(회원)의 공개된 작품 수 (작가 검색/프로필용)
+	long countByMemberAndStatus(Member member, BookStatus status);
 
-    // 작가(회원)의 대표작품 - 좋아요 가장 많은 공개 작품 1건 (작가 검색/프로필용)
-    Optional<Book> findTopByMemberAndStatusOrderByLikeCountDesc(Member member, BookStatus status);
+	// 작가(회원)의 대표작품 - 좋아요 가장 많은 공개 작품 1건 (작가 검색/프로필용)
+	Optional<Book> findTopByMemberAndStatusOrderByLikeCountDesc(Member member, BookStatus status);
+
+	// 여러 작가의 공개 작품 수를 작가별로 집계
+	@Query("SELECT b.member.id, COUNT(b) "
+	        + "FROM Book b "
+	        + "WHERE b.member.id IN :authorIds "
+	        + "AND b.status = :status "
+	        + "GROUP BY b.member.id")
+	List<Object[]> countPublishedBooksByAuthorIds(
+	        @Param("authorIds") List<Long> authorIds,
+	        @Param("status") BookStatus status
+	);
+	
+	// 내가 작성한 모든 책 조회 - 공개/비공개 포함, 최신순
+	Page<Book> findByMember_IdOrderByCreatedAtDesc(
+	        Long memberId,
+	        Pageable pageable
+	);
+	
+	// 내가 작성한 책 조회 - 삭제 상태 제외, 최신순
+	Page<Book> findByMember_IdAndStatusNotOrderByCreatedAtDesc(
+	        Long memberId,
+	        BookStatus status,
+	        Pageable pageable
+	);
+	
+	Optional<Book> findByIdAndStatusNot(
+	        Long bookId,
+	        BookStatus status
+	);
+	
 
 }

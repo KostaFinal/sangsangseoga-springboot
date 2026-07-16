@@ -29,7 +29,8 @@ public class AuthorFollowController {
      * GET /api/authors/follows/me
      * 내가 팔로우한 관심 작가 목록 조회 - 200
      */
-    @GetMapping("/me/follows")
+
+    @GetMapping("/follows/me")
     public ResponseEntity<ApiResponse<AuthorListResponseDto>> getMyFollowedAuthors(
             @AuthenticationPrincipal Long memberId,
             @RequestParam(defaultValue = "1") int page,

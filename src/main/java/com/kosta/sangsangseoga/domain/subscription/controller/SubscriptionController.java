@@ -26,8 +26,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 public class SubscriptionController {
-    // GET /api/subscription-plans, GET·POST /api/subscriptions, POST /api/subscriptions/cancel
-    // 서로 다른 최상위 경로라 클래스 레벨 매핑 없이 메서드별로 전체 경로를 지정합니다.
+    // /api/subscription-plans와 /api/subscriptions/**를 함께 다뤄서 클래스 레벨 매핑 없이 메서드별로 전체 경로를 지정합니다.
 
     private final SubscriptionService subscriptionService;
 

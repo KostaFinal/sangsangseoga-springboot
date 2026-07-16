@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 @Builder
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "bookmark", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_bookmark_member_book_page", columnNames = {"member_id", "book_id", "page_no"})
+        @UniqueConstraint(name = "uk_bookmark_member_book", columnNames = {"member_id", "book_id"})
 })
 public class Bookmark {
 
@@ -35,6 +35,7 @@ public class Bookmark {
     @JoinColumn(name = "book_id", nullable = false)
     private Book book;
 
+    // 책 한 권당 북마크는 하나뿐 - 이 북마크가 가리키는 페이지 (재북마크 시 이 값만 갱신됨)
     @Column(name = "page_no", nullable = false)
     private Integer pageNo;
 

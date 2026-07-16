@@ -1,4 +1,4 @@
-SET NAMES utf8mb4;
+﻿SET NAMES utf8mb4;
 -- SangSangSeoGa 더미 데이터 (자동 생성)
 SET FOREIGN_KEY_CHECKS=0;
 
@@ -3586,7 +3586,7 @@ INSERT INTO `book_like` (`id`, `member_id`, `book_id`, `created_at`) VALUES
 (399, 27, 42, '2026-04-25 14:51:05'),
 (400, 14, 42, '2026-03-06 02:47:42');
 
--- bookmark (200 rows)
+-- bookmark (198 rows)
 INSERT INTO `bookmark` (`id`, `member_id`, `book_id`, `page_no`, `created_at`) VALUES
 (1, 49, 25, 3, '2026-01-24 18:36:55'),
 (2, 45, 139, 9, '2025-07-21 15:51:52'),
@@ -3646,11 +3646,9 @@ INSERT INTO `bookmark` (`id`, `member_id`, `book_id`, `page_no`, `created_at`) V
 (56, 14, 111, 13, '2025-10-25 21:11:34'),
 (57, 19, 136, 3, '2025-09-12 04:24:23'),
 (58, 38, 104, 4, '2026-01-07 19:40:51'),
-(59, 16, 69, 4, '2026-04-20 18:48:18'),
 (60, 42, 66, 10, '2026-06-19 22:38:05'),
 (61, 8, 1, 7, '2025-10-24 20:49:52'),
 (62, 45, 65, 3, '2025-10-19 13:56:22'),
-(63, 8, 149, 8, '2025-09-09 06:16:44'),
 (64, 15, 11, 4, '2025-07-04 13:16:42'),
 (65, 44, 19, 7, '2025-09-09 15:51:04'),
 (66, 18, 56, 2, '2025-05-31 13:47:01'),
@@ -4308,7 +4306,10 @@ INSERT INTO `report` (`id`, `member_id`, `target_type`, `target_id`, `reason`, `
 (59, 47, 'COMMENT', 55, 'SPAM', '반복적으로 스팸성 댓글을 게시하고 있습니다.', 'PENDING', NULL, NULL, '2026-01-24 18:15:32'),
 (60, 7, 'AUTHOR', 39, 'SPAM', '광고성 내용이 포함되어 있습니다.', 'PENDING', NULL, NULL, '2025-11-26 19:20:15');
 
+
+
 -- my_reading (200 rows)
+
 INSERT INTO `my_reading` (`id`, `member_id`, `book_id`, `reading_status`, `current_page`, `progress`, `recent_read_at`, `completed_at`, `reread_count`, `read_date`, `reading_time`, `created_at`, `updated_at`, `is_wishlist`) VALUES
 (1, 7, 119, 'COMPLETED', 7, 70, '2025-11-01 04:26:11', '2025-11-01 04:26:11', 0, '2025-11-01', 88, '2025-10-13 04:26:11', '2025-11-01 04:26:11', 0),
 (2, 2, 37, 'READING', 7, 100, '2026-01-20 22:13:24', NULL, 0, '2026-01-20', 57, '2025-12-29 22:13:24', '2026-01-20 22:13:24', 0),
@@ -4510,6 +4511,7 @@ INSERT INTO `my_reading` (`id`, `member_id`, `book_id`, `reading_status`, `curre
 (198, 42, 92, NULL, 1, 0, NULL, NULL, 0, NULL, 0, '2025-12-01 21:20:50', '2025-12-11 21:20:50', 1),
 (199, 14, 13, 'COMPLETED', 3, 50, '2026-05-08 21:40:49', '2026-05-08 21:40:49', 3, '2026-05-08', 93, '2026-04-24 21:40:49', '2026-05-08 21:40:49', 0),
 (200, 1, 46, 'READING', 6, 46, '2025-10-24 03:40:10', NULL, 0, '2025-10-24', 68, '2025-10-19 03:40:10', '2025-10-24 03:40:10', 0);
+
 
 -- book_review (100 rows)
 INSERT INTO `book_review` (`id`, `member_id`, `book_id`, `content`, `is_draft`, `ai_feedback_content`, `ai_feedback_created_at`, `created_at`, `updated_at`) VALUES

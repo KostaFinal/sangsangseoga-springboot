@@ -7,10 +7,8 @@ import com.kosta.sangsangseoga.global.exception.CustomException;
 import java.util.List;
 
 /**
- * 플랜별 요금·한도 정책. DB에 플랜 테이블을 따로 두지 않고 정적 값으로 관리한다.
- * Gemini 2.5 Flash 단가(입력 $0.30/1M, 출력 $2.50/1M) 및 이미지 생성 단가(장당 약 $0.02~0.039)
- * 기준으로 월 요금 대비 AI 원가가 약 40% 선에 오도록 산정한 값이다. 연간 요금은 월 요금의
- * 10개월치(약 2개월 무료 혜택)로 산정했다.
+ * 플랜별 요금·한도 정책. DB 테이블 없이 정적 값으로 관리한다. Gemini/이미지 생성 원가 기준으로
+ * 월 요금 대비 AI 원가가 약 40%가 되도록 산정했고, 연간 요금은 월 요금의 10개월치(2개월 무료)다.
  */
 public final class SubscriptionPolicy {
 

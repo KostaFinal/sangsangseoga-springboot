@@ -53,8 +53,8 @@ public class AiStreamService {
 		String url = fastApiBaseUrl + "/api/ai/generate/stream";
 		String taskType = request.getStage();
 
-		log.debug("Python AI 스트리밍 요청 URL: {}", url);
-		log.debug("Python AI 스트리밍 요청 Body: {}", pythonRequestBody);
+		log.debug("Python AI 스트리밍 요청: requestId={} taskType={} url={} reqLen={}",
+				requestId, taskType, url, jsonLength(pythonRequestBody));
 
 		SseEmitter emitter = new SseEmitter(60_000L);
 		emitter.onTimeout(emitter::complete);
@@ -92,10 +92,11 @@ public class AiStreamService {
 			httpStatus = response.statusCode();
 
 			if (httpStatus != 200) {
-				// 정상 SSE가 아닌 경우(Python이 4xx/5xx를 반환) 원인 진단을 위해 원문을 임시로 남긴다.
-				String rawBody = new String(response.body().readAllBytes(), StandardCharsets.UTF_8);
-				log.warn("[AI-PERF] requestId={} Python 스트리밍 응답이 200이 아님(httpStatus={}): {}",
-						requestId, httpStatus, rawBody);
+				// 정상 SSE가 아닌 경우(Python이 4xx/5xx를 반환) 원문 대신 길이만 남긴다 - 에러 바디에
+				// 요청 프롬프트/생성 결과가 그대로 echo되는 경우가 있어 원문은 로그에 남기지 않는다.
+				int bodyLen = response.body().readAllBytes().length;
+				log.warn("[AI-PERF] requestId={} Python 스트리밍 응답이 200이 아님(httpStatus={}, bodyLen={})",
+						requestId, httpStatus, bodyLen);
 				errorType = "PythonNon200Response";
 				emitter.send(SseEmitter.event().name("error").data("{\"message\":\"AI 서버 응답 오류\"}"));
 				emitter.complete();
@@ -152,6 +153,14 @@ public class AiStreamService {
 
 	private long elapsedMs(long startNs) {
 		return (System.nanoTime() - startNs) / 1_000_000;
+	}
+
+	private int jsonLength(Object value) {
+		try {
+			return objectMapper.writeValueAsString(value).length();
+		} catch (Exception e) {
+			return 0;
+		}
 	}
 
 	@PreDestroy

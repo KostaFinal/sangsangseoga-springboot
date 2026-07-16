@@ -3,6 +3,8 @@ package com.kosta.sangsangseoga.domain.ai.service;
 import com.kosta.sangsangseoga.global.config.AppProperties;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpMethod;
@@ -37,7 +39,15 @@ public class AiImageStorageService {
     private final AppProperties appProperties;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public String downloadAndStore(String remoteUrl, String imageType) {
+    @Getter
+    @AllArgsConstructor
+    public static class StoredImage {
+        // 실패 시 정리(deleteQuietly)할 수 있도록 실제 파일 경로를 들고 있는다.
+        private final Path file;
+        private final String relativeUrl;
+    }
+
+    public StoredImage downloadAndStore(String remoteUrl, String imageType) {
         ResponseEntity<byte[]> response;
         try {
             response = restTemplate.exchange(remoteUrl, HttpMethod.GET, null, byte[].class);
@@ -82,7 +92,19 @@ public class AiImageStorageService {
 
         log.info("Replicate 이미지 로컬 저장 완료: remoteUrl={}, file={}, size={}", remoteUrl, targetFile, body.length);
 
-        return appProperties.getUpload().getImageUrl() + "/" + subDir + "/" + fileName;
+        String relativeUrl = appProperties.getUpload().getImageUrl() + "/" + subDir + "/" + fileName;
+        return new StoredImage(targetFile, relativeUrl);
+    }
+
+    /**
+     * 다운로드+저장 자체는 성공했지만 이후 단계(예: 사용량 기록)가 실패해 요청 전체를 되돌려야 할 때,
+     * 호출부(AiImageService)가 보상 삭제를 하기 위해 쓰는 공개 메서드다.
+     */
+    public void deleteQuietly(StoredImage storedImage) {
+        if (storedImage == null) {
+            return;
+        }
+        deleteQuietly(storedImage.getFile());
     }
 
     private void deleteQuietly(Path path) {

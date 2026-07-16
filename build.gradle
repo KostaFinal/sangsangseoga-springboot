@@ -46,6 +46,10 @@ dependencies {
 	// Swagger (springdoc-openapi) - Spring Boot 2.7 호환 버전
 	implementation 'org.springdoc:springdoc-openapi-ui:1.7.0'
 
+	// 프로필 이미지 등 업로드 파일을 나중에 S3로 옮길 때 쓰는 클라이언트.
+	// app.storage.type=s3로 바꾸기 전까지는 관련 빈이 생성되지 않아 자격증명 없이도 기동에 문제없다.
+	implementation 'software.amazon.awssdk:s3:2.25.60'
+
     // Swagger 에러코드 어노테이션 검증 테스트용 (런타임엔 포함 안 됨)
     testImplementation 'org.reflections:reflections:0.10.2'
 }

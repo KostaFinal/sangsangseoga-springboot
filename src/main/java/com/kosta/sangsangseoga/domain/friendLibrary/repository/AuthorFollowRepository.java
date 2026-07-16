@@ -1,5 +1,6 @@
 package com.kosta.sangsangseoga.domain.friendLibrary.repository;
- 
+
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -25,4 +26,8 @@ public interface AuthorFollowRepository extends JpaRepository<AuthorFollow, Long
     
     @EntityGraph(attributePaths = "author")
     Page<AuthorFollow> findByFollower_IdOrderByCreatedAtDesc(Long followerId, Pageable pageable);
+
+    // 작가의 신규 도서 등록 알림 발송 대상(팔로워) 조회
+    @EntityGraph(attributePaths = "follower")
+    List<AuthorFollow> findByAuthor_Id(Long authorId);
 }

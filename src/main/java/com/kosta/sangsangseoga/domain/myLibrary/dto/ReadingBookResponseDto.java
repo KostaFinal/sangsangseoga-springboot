@@ -1,5 +1,7 @@
 package com.kosta.sangsangseoga.domain.myLibrary.dto;
 
+import java.time.LocalDateTime;
+
 import lombok.Builder;
 import lombok.Data;
 
@@ -17,4 +19,5 @@ public class ReadingBookResponseDto {
 	private Integer pageCount;
 	private String bookType;
 	private String readingStatus;
+	private LocalDateTime recentReadAt;
 }

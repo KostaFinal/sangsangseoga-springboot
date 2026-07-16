@@ -4,14 +4,17 @@ import com.kosta.sangsangseoga.global.common.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import javax.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -45,6 +48,22 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * @Validated + @RequestParam/@PathVariable 레벨 Bean Validation(예: nickname-check의 @NotBlank) 실패 처리.
+     * @Valid(MethodArgumentNotValidException)와 달리 컨트롤러 클래스에 @Validated가 붙어 있어야
+     * 이 경로로 들어온다. 처리하지 않으면 500으로 떨어진다.
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleConstraintViolationException(ConstraintViolationException e) {
+        String message = e.getConstraintViolations().stream()
+                .map(violation -> violation.getMessage())
+                .collect(Collectors.joining(", "));
+        log.warn("파라미터 검증 실패: {}", message);
+        return ResponseEntity
+                .status(CommonErrorCode.BAD_REQUEST.getStatus())
+                .body(ApiResponse.error(CommonErrorCode.BAD_REQUEST.name(), message));
+    }
+
+    /**
      * 쿼리 파라미터/경로 변수 타입 불일치 처리 (예: enum 쿼리 파라미터에 정의되지 않은 값 전달).
      * 처리하지 않으면 500(INTERNAL_SERVER_ERROR)으로 떨어져서 클라이언트 입력 오류인지 서버 오류인지
      * 구분이 안 되므로, 400으로 변환해 클라이언트에게 잘못된 요청임을 알려준다.
@@ -56,6 +75,32 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(CommonErrorCode.BAD_REQUEST.getStatus())
                 .body(ApiResponse.error(CommonErrorCode.BAD_REQUEST.name(), message));
+    }
+
+    /**
+     * 필수 쿼리 파라미터가 아예 빠진 경우(예: ?token= 자체가 없음). 처리하지 않으면 500으로 떨어져서
+     * 클라이언트 요청 누락인지 서버 오류인지 구분이 안 되므로 400으로 변환한다.
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingParameterException(MissingServletRequestParameterException e) {
+        log.warn("필수 파라미터 누락: {}", e.getParameterName());
+        return ResponseEntity
+                .status(CommonErrorCode.BAD_REQUEST.getStatus())
+                .body(ApiResponse.error(CommonErrorCode.BAD_REQUEST.name(),
+                        String.format("필수 파라미터 '%s'가 누락되었습니다.", e.getParameterName())));
+    }
+
+    /**
+     * 요청 본문을 JSON으로 파싱할 수 없는 경우 (잘못된 JSON 문법, 인코딩 깨짐으로 인한 잘못된 UTF-8
+     * 바이트 등). 처리하지 않으면 500으로 떨어져서 클라이언트 요청 자체의 문제인지 서버 오류인지
+     * 구분이 안 되므로, 400으로 변환해 클라이언트에게 요청 본문이 잘못됐음을 알려준다.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMessageNotReadableException(HttpMessageNotReadableException e) {
+        log.warn("요청 본문 파싱 실패: {}", e.getMessage());
+        return ResponseEntity
+                .status(CommonErrorCode.BAD_REQUEST.getStatus())
+                .body(ApiResponse.error(CommonErrorCode.BAD_REQUEST.name(), "요청 본문을 읽을 수 없습니다. JSON 형식과 인코딩(UTF-8)을 확인해 주세요."));
     }
 
     /**

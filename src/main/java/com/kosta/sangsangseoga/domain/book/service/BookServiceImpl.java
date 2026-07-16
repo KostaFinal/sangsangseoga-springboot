@@ -32,11 +32,14 @@ import com.kosta.sangsangseoga.domain.book.repository.BookImageRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookPageRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.book.repository.BookTagRepository;
+import com.kosta.sangsangseoga.domain.friendLibrary.entity.AuthorFollow;
+import com.kosta.sangsangseoga.domain.friendLibrary.repository.AuthorFollowRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookLikeRepository;
 import com.kosta.sangsangseoga.domain.friendLibrary.repository.BookmarkRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.MyReadingRepository;
+import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.domain.subscription.service.UsageService;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
@@ -58,6 +61,8 @@ public class BookServiceImpl implements BookService {
     private final MyReadingRepository myReadingRepository;
     private final UsageService usageService;
     private final BookTagRepository bookTagRepository;
+    private final AuthorFollowRepository authorFollowRepository;
+    private final NotificationService notificationService;
 
     private static final List<String> VALID_SORTS = Arrays.asList("latest", "popular", "likes");
 
@@ -181,12 +186,24 @@ public class BookServiceImpl implements BookService {
             usageService.markFreeTrialUsed(memberId);
         }
 
+        notifyFollowersOfNewBook(member, book);
+
         return BookPublishResponseDto.builder()
                 .bookId(book.getId())
                 .title(book.getTitle())
                 .status(book.getStatus().name())
                 .pageCount(book.getPageCount())
                 .build();
+    }
+
+    /** 이 작가를 팔로우하는 회원들에게 신규 도서 등록을 알린다. */
+    private void notifyFollowersOfNewBook(Member author, Book book) {
+        List<AuthorFollow> follows = authorFollowRepository.findByAuthor_Id(author.getId());
+        String content = String.format("회원님이 팔로우하는 '%s'님이 새 책 '%s'을(를) 등록했습니다.",
+                author.getNickname(), book.getTitle());
+        for (AuthorFollow follow : follows) {
+            notificationService.notify(follow.getFollower(), content);
+        }
     }
 
     // book.bookType에 따른 book_page.content_type 매핑 (동화=PAGE, 소설=CHAPTER, 시=POEM, 에세이=ESSAY, 나머지=PAGE)
@@ -217,8 +234,14 @@ public class BookServiceImpl implements BookService {
                 .build();
     }
 
-    // Replicate 임시 delivery URL(예: .../out-0.webp)에서 file_name/file_extension을 뽑아낸다.
+    // 호스팅 URL(예: .../out-0.webp)에서는 file_name/file_extension을 경로에서 뽑아내고,
+    // Gemini의 data URI("data:image/png;base64,...")는 경로가 없어 mime 타입으로 대신 만든다.
     private String extractFileName(String url) {
+        if (url.startsWith("data:")) {
+            String extension = extractExtensionFromDataUri(url);
+            return extension != null ? "image." + extension : "image";
+        }
+
         String path = url.contains("?") ? url.substring(0, url.indexOf('?')) : url;
         int slashIdx = path.lastIndexOf('/');
         String name = slashIdx >= 0 ? path.substring(slashIdx + 1) : path;
@@ -228,6 +251,17 @@ public class BookServiceImpl implements BookService {
     private String extractExtension(String fileName) {
         int dotIdx = fileName.lastIndexOf('.');
         return dotIdx >= 0 ? fileName.substring(dotIdx + 1) : null;
+    }
+
+    // "data:image/png;base64,..." -> "png"
+    private String extractExtensionFromDataUri(String dataUri) {
+        int colonIdx = dataUri.indexOf(':');
+        int semicolonIdx = dataUri.indexOf(';');
+        if (colonIdx < 0 || semicolonIdx < 0 || semicolonIdx <= colonIdx) return null;
+
+        String mimeType = dataUri.substring(colonIdx + 1, semicolonIdx);
+        int slashIdx = mimeType.indexOf('/');
+        return slashIdx >= 0 ? mimeType.substring(slashIdx + 1) : null;
     }
 
     private <E extends Enum<E>> E parseEnum(Class<E> enumClass, String value) {
@@ -246,7 +280,7 @@ public class BookServiceImpl implements BookService {
      * - bookType 필터, 키워드 검색, 정렬, 페이징 지원
      */
     @Override
-    public BookListResponseDto getBooks(String bookType, String sort, String keyword, int page, int size, Long memberId) throws Exception {
+    public BookListResponseDto getBooks(String bookType, String sort, String keyword, Long authorId, int page, int size, Long memberId) throws Exception {
         if (sort != null && !VALID_SORTS.contains(sort)) {
             throw new CustomException(BookErrorCode.INVALID_SORT);
         }
@@ -273,8 +307,8 @@ public class BookServiceImpl implements BookService {
 
         PageRequest pageRequest = PageRequest.of(page - 1, size, sortCondition);
         Page<Book> bookPage = "popular".equals(sort)
-                ? bookRepository.findBooksByPopular(bookTypeEnum, keywordFilter, pageRequest)
-                : bookRepository.findBooks(bookTypeEnum, keywordFilter, pageRequest);
+                ? bookRepository.findBooksByPopular(bookTypeEnum, keywordFilter, authorId, pageRequest)
+                : bookRepository.findBooks(bookTypeEnum, keywordFilter, authorId, pageRequest);
 
         Member member = (memberId != null) ? memberRepository.findById(memberId).orElse(null) : null;
 
@@ -286,6 +320,7 @@ public class BookServiceImpl implements BookService {
                     .orElse(null);
 
             boolean isLikedByMe = member != null && bookLikeRepository.existsByMemberAndBook(member, book);
+            boolean isBookmarkedByMe = member != null && bookmarkRepository.existsByMemberAndBook(member, book);
 
             items.add(BookListItemDto.builder()
                     .id(book.getId())
@@ -299,6 +334,7 @@ public class BookServiceImpl implements BookService {
                     .likeCount(book.getLikeCount())
                     .commentCount(book.getCommentCount())
                     .isLikedByMe(isLikedByMe)
+                    .isBookmarkedByMe(isBookmarkedByMe)
                     .build());
         }
 
@@ -317,8 +353,11 @@ public class BookServiceImpl implements BookService {
     @Override
     @Transactional
     public BookDetailDto getBook(Long bookId, Long memberId) throws Exception {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+    	Book book = bookRepository
+    	        .findByIdAndStatusNot(bookId, BookStatus.DELETED)
+    	        .orElseThrow(() ->
+    	                new CustomException(CommonErrorCode.BOOK_NOT_FOUND)
+    	        );
 
         String coverImageUrl = bookImageRepository
                 .findByBookAndImageTypeAndDeletedAtIsNull(book, BookImage.ImageType.COVER)
@@ -356,6 +395,11 @@ public class BookServiceImpl implements BookService {
                 .isBookmarkedByMe(isBookmarkedByMe)
                 .tags(tags)
                 .createdAt(book.getCreatedAt())
+                .status(
+                	    book.getStatus() != null
+                	        ? book.getStatus().name()
+                	        : null
+                	)
                 .build();
     }
 
@@ -365,8 +409,11 @@ public class BookServiceImpl implements BookService {
     @Override
     @Transactional
     public Integer increaseViewCount(Long bookId) throws Exception {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+    	Book book = bookRepository
+    	        .findByIdAndStatusNot(bookId, BookStatus.DELETED)
+    	        .orElseThrow(() ->
+    	                new CustomException(CommonErrorCode.BOOK_NOT_FOUND)
+    	        );
 
         book.setViewCount(book.getViewCount() + 1);
         book.setWeekViewCount(book.getWeekViewCount() + 1);
@@ -379,8 +426,11 @@ public class BookServiceImpl implements BookService {
      */
     @Override
     public BookContentsResponseDto getContents(Long bookId) throws Exception {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+    	Book book = bookRepository
+    	        .findByIdAndStatusNot(bookId, BookStatus.DELETED)
+    	        .orElseThrow(() ->
+    	                new CustomException(CommonErrorCode.BOOK_NOT_FOUND)
+    	        );
 
         List<BookPage> pages = bookPageRepository.findByBookOrderByPageNoAsc(book);
 
@@ -394,6 +444,7 @@ public class BookServiceImpl implements BookService {
                     .contentType(page.getContentType())
                     .contentTextKo(page.getContentTextKo())
                     .contentTextEn(page.getContentTextEn())
+                    .contentFontSizeEn(page.getContentFontSizeEn())
                     .imageUrl(page.getImageUrl())
                     .build());
         }
@@ -410,8 +461,11 @@ public class BookServiceImpl implements BookService {
      */
     @Override
     public BookRecommendResponseDto getRecommendations(Long bookId, int size) throws Exception {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new CustomException(CommonErrorCode.BOOK_NOT_FOUND));
+    	Book book = bookRepository
+    	        .findByIdAndStatusNot(bookId, BookStatus.DELETED)
+    	        .orElseThrow(() ->
+    	                new CustomException(CommonErrorCode.BOOK_NOT_FOUND)
+    	        );
 
         // 1. 협업 필터링으로 추천
         List<Book> recommended = myReadingRepository.findCollaborativeRecommendations(
@@ -467,13 +521,20 @@ public class BookServiceImpl implements BookService {
             throw new CustomException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        List<Book> myBooks = bookRepository.findByMember_IdAndStatus(memberId, BookStatus.PUBLISHED);
+        Page<Book> myBooksPage =
+                bookRepository.findByMember_IdOrderByCreatedAtDesc(
+                        memberId,
+                        PageRequest.of(0, 20)
+                );
 
         List<BookListItemDto> items = new ArrayList<>();
 
-        for (Book book : myBooks) {
+        for (Book book : myBooksPage.getContent()) {
             String coverImageUrl = bookImageRepository
-                    .findByBookAndImageTypeAndDeletedAtIsNull(book, BookImage.ImageType.COVER)
+                    .findByBookAndImageTypeAndDeletedAtIsNull(
+                            book,
+                            BookImage.ImageType.COVER
+                    )
                     .map(BookImage::getFileUrl)
                     .orElse(null);
 
@@ -482,21 +543,26 @@ public class BookServiceImpl implements BookService {
                     .authorId(book.getMember().getId())
                     .title(book.getTitle())
                     .author(book.getMember().getNickname())
-                    .bookType(book.getBookType() != null ? book.getBookType().name() : null)
+                    .bookType(
+                            book.getBookType() != null
+                                    ? book.getBookType().name()
+                                    : null
+                    )
                     .coverImageUrl(coverImageUrl)
                     .description(book.getDescription())
                     .viewCount(book.getViewCount())
                     .likeCount(book.getLikeCount())
                     .commentCount(book.getCommentCount())
                     .isLikedByMe(false)
+                    .isBookmarkedByMe(false)
                     .build());
         }
 
         return BookListResponseDto.builder()
                 .items(items)
-                .totalCount((long) items.size())
-                .page(1)
-                .hasNext(false)
+                .totalCount(myBooksPage.getTotalElements())
+                .page(myBooksPage.getNumber() + 1)
+                .hasNext(myBooksPage.hasNext())
                 .build();
     }
 }

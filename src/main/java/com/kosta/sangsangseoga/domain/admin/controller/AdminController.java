@@ -44,8 +44,7 @@ public class AdminController implements AdminApi {
             ReportStatus status, int page, int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        ReportStatus targetStatus = status != null ? status : ReportStatus.PENDING;
-        return ResponseEntity.ok(ApiResponse.success(adminService.getReports(targetStatus, pageable)));
+        return ResponseEntity.ok(ApiResponse.success(adminService.getReports(status, pageable)));
     }
 
     @Override
@@ -85,8 +84,9 @@ public class AdminController implements AdminApi {
     }
 
     @Override
-    public ResponseEntity<ApiResponse<List<AdminTokenTrendItemDto>>> getTokenTrends(String unit) {
-        return ResponseEntity.ok(ApiResponse.success(adminService.getTokenTrends(unit)));
+    public ResponseEntity<ApiResponse<List<AdminTokenTrendItemDto>>> getTokenTrends(
+            String unit, Integer year, Integer month, Integer months) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getTokenTrends(unit, year, month, months)));
     }
 
     @Override

@@ -29,4 +29,5 @@ public class BookDetailDto {
     private Boolean isBookmarkedByMe;
     private LocalDateTime createdAt;
     private List<String> tags;
+    private String status;
 }

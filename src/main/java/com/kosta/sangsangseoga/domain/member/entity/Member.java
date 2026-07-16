@@ -40,11 +40,9 @@ public class Member extends BaseEntity {
     private Long id;
 
     /**
-     * 낙관적 락. 구독 시작/전환/해지/재개/자동갱신, 상태 변경(정지/탈퇴/복원), 무료체험 소진처럼
-     * 같은 회원 row를 동시에 읽고 쓸 수 있는 흐름(API 중복 호출, 배치와 API 동시 실행,
-     * 관리자 처리와 회원 요청 동시 발생 등)에서 마지막에 커밋되는 쪽만 반영되고 나머지는
-     * ObjectOptimisticLockingFailureException으로 실패하도록 막아준다.
-     * 동시 수정 충돌에 안전한 프로필/뷰어 설정 등은 @OptimisticLock(excluded = true)로 제외했다.
+     * 낙관적 락. 구독/상태 변경처럼 같은 회원 row를 동시에 읽고 쓸 수 있는 흐름에서 나중에 커밋되는
+     * 쪽만 ObjectOptimisticLockingFailureException으로 막는다. 프로필/뷰어 설정 등 동시 수정 충돌에
+     * 안전한 필드는 @OptimisticLock(excluded = true)로 제외했다.
      */
     @Version
     private Long version;
@@ -65,6 +63,7 @@ public class Member extends BaseEntity {
     private String nickname;
 
     @OptimisticLock(excluded = true)
+    @Lob
     private String profileImageUrl;
 
     @OptimisticLock(excluded = true)
@@ -170,6 +169,20 @@ public class Member extends BaseEntity {
     }
 
     /**
+     * 보호자 동의 거절로 최초 가입 게이트를 통과하지 못해 가입 자체가 취소될 때 호출한다. 일반 탈퇴
+     * (withdraw)와 달리 email/nickname/oauthProviderId에 실제 DB unique 제약이 걸려 있어서 상태만
+     * DELETED로 바꾸는 것으로는 같은 정보로 재가입할 수 없다. 로그인을 한 번도 못 해본 미완성 가입이라
+     * 원본 식별자를 보존할 실익이 없으므로, 값 자체를 풀어(mangle) 재가입이 가능하게 한다.
+     */
+    public void cancelPendingSignup() {
+        this.status = MemberStatus.DELETED;
+        this.withdrawnAt = LocalDateTime.now();
+        this.email = "cancelled-" + this.id + "-" + this.email;
+        this.nickname = null;
+        this.oauthProviderId = null;
+    }
+
+    /**
      * 탈퇴에 따른 구독 즉시 해지. 환불/잔여 기간 보상 없이 즉시 종료한다.
      * ERD에 해지 사유 컬럼이 없어 사유는 별도로 남기지 않는다.
      */
@@ -258,6 +271,22 @@ public class Member extends BaseEntity {
 
     public void decrementDailyImage() {
         this.dailyImageRemaining = this.dailyImageRemaining - 1;
+    }
+
+    /**
+     * 회원정보 수정(닉네임/프로필 이미지/소개). null인 필드는 건드리지 않는다.
+     * 닉네임 중복 검사는 호출하는 서비스에서 먼저 확인해야 한다.
+     */
+    public void updateProfile(String nickname, String profileImageUrl, String introduction) {
+        if (nickname != null) {
+            this.nickname = nickname;
+        }
+        if (profileImageUrl != null) {
+            this.profileImageUrl = profileImageUrl;
+        }
+        if (introduction != null) {
+            this.introduction = introduction;
+        }
     }
 
     /**

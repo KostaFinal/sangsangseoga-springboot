@@ -4,6 +4,9 @@ import com.kosta.sangsangseoga.domain.friendLibrary.dto.AuthorFollowDto;
 import com.kosta.sangsangseoga.domain.friendLibrary.dto.AuthorListResponseDto;
  
 public interface AuthorFollowService {
+	
+	int MAX_PAGE_SIZE = 100;
+
  
     // 팔로우 - 팔로우 후 결과 반환
     AuthorFollowDto follow(Long followerId, Long authorId) throws Exception;

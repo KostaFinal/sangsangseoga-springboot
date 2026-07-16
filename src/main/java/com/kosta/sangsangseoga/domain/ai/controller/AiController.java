@@ -49,7 +49,7 @@ public class AiController {
     )
     @PostMapping("/generate")
     public ResponseEntity<ApiResponse<AiGenerateResponseDto>> generate(
-            Authentication authentication, @RequestBody AiGenerateRequestDto request,
+            Authentication authentication, @Valid @RequestBody AiGenerateRequestDto request,
             @RequestHeader(value = "X-Request-ID", required = false) String requestIdHeader) {
         String requestId = resolveRequestId(requestIdHeader);
         MDC.put("requestId", requestId);
@@ -74,7 +74,7 @@ public class AiController {
     )
     @PostMapping(value = "/generate/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter generateStream(
-            @RequestBody AiGenerateRequestDto request,
+            @Valid @RequestBody AiGenerateRequestDto request,
             @RequestHeader(value = "X-Request-ID", required = false) String requestIdHeader) {
         // 스트리밍은 별도 ExecutorService 스레드에서 실행되어 MDC가 전달되지 않으므로,
         // requestId를 MDC 대신 메서드 인자로 명시적으로 넘긴다.
