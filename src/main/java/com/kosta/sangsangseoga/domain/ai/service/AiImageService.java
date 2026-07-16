@@ -107,18 +107,26 @@ public class AiImageService {
             resLen = jsonLength(response);
 
             if (response != null && response.isSuccess()) {
-                String replicateUrl = response.getImageUrl();
-                if (replicateUrl == null || replicateUrl.isBlank()) {
-                    // Python이 success=true인데 imageUrl이 없는 건 응답 계약 위반이다.
-                    // Replicate URL도 없는 상태로 "성공"만 돌려주면 화면에 이미지가 안 뜨는데 원인도
-                    // 안 남으니, 여기서 명시적으로 실패 처리한다.
-                    errorType = "MissingImageUrl";
-                    throw new CustomException(CommonErrorCode.IMAGE_SAVE_FAILED);
+                long tSave = System.nanoTime();
+                AiImageStorageService.StoredImage storedImage;
+
+                String imageBase64 = response.getImageBase64();
+                if (imageBase64 != null && !imageBase64.isBlank()) {
+                    // Gemini 전환 이후 Python의 유일한 이미지 전달 방식(data URI). Replicate 시절의
+                    // imageUrl 방식은 더 이상 오지 않지만, 혹시 모를 회귀에 대비해 아래 폴백은 남겨둔다.
+                    storedImage = aiImageStorageService.storeFromDataUri(imageBase64, request.getImageType());
+                } else {
+                    String replicateUrl = response.getImageUrl();
+                    if (replicateUrl == null || replicateUrl.isBlank()) {
+                        // Python이 success=true인데 imageBase64/imageUrl 둘 다 없는 건 응답 계약 위반이다.
+                        // 이미지도 없이 "성공"만 돌려주면 화면에 이미지가 안 뜨는데 원인도 안 남으니,
+                        // 여기서 명시적으로 실패 처리한다.
+                        errorType = "MissingImageData";
+                        throw new CustomException(CommonErrorCode.IMAGE_SAVE_FAILED);
+                    }
+                    storedImage = aiImageStorageService.downloadAndStore(replicateUrl, request.getImageType());
                 }
 
-                long tSave = System.nanoTime();
-                AiImageStorageService.StoredImage storedImage =
-                        aiImageStorageService.downloadAndStore(replicateUrl, request.getImageType());
                 long saveMs = elapsedMs(tSave);
                 log.info("[AI-PERF] requestId={} imageSaveMs={}", requestId, saveMs);
 
@@ -127,6 +135,8 @@ public class AiImageService {
                         .toUriString();
                 response.setImageUrl(localAbsoluteUrl);
                 response.setMessage("이미지 생성 및 로컬 저장 완료");
+                // 로컬 저장을 마쳤으니 응답에 굳이 몇 MB짜리 base64를 그대로 실어 보낼 필요가 없다.
+                response.setImageBase64(null);
 
                 long t2 = System.nanoTime();
                 try {
