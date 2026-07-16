@@ -31,6 +31,8 @@ public class BookPage extends BaseEntity {
 
     private String title;
 
+    private String titleEn;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ContentType contentType;

@@ -26,6 +26,7 @@ public class BookPublishRequestDto {
     public static class PageRequest {
         private Integer pageNo;
         private String title;
+        private String titleEn;         // 소제목 영어 번역 (없으면 null/빈 문자열)
         private String contentType;     // "TEXT" | "IMAGE" | "TEXT_IMAGE"
         private String contentTextKo;   // 본문 텍스트
         private String contentTextEn;   // 본문 텍스트 영어 번역 (없으면 null/빈 문자열)

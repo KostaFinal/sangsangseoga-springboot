@@ -15,6 +15,7 @@ public class BookPageDto {
     private Long id;
     private Integer pageNo;
     private String title;
+    private String titleEn;
     private BookPage.ContentType contentType;
     private String contentTextKo;
     private String contentTextEn;
