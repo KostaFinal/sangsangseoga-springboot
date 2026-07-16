@@ -1,9 +1,9 @@
 package com.kosta.sangsangseoga.domain.myLibrary.service;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.stream.Collectors;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -147,31 +147,33 @@ public class ReadingMemoServiceImpl implements ReadingMemoService {
     
     @Override
     @Transactional(readOnly = true)
-    public List<ReadingMemoDto> getMemosByBook(
+    public Slice<ReadingMemoDto> getMemosByBook(
             Long memberId,
-            Long bookId
+            Long bookId,
+            int page,
+            int size
     ) throws Exception {
 
-        Member member = memberRepository.findById(memberId)
+        memberRepository.findById(memberId)
                 .orElseThrow(() ->
                         new CustomException(CommonErrorCode.MEMBER_NOT_FOUND)
                 );
 
-        Book book = bookRepository.findById(bookId)
+        bookRepository.findById(bookId)
                 .orElseThrow(() ->
                         new CustomException(CommonErrorCode.BOOK_NOT_FOUND)
                 );
 
         return readingMemoRepository
                 .findByMember_IdAndBook_IdOrderByPageNoAsc(
-                        member.getId(),
-                        book.getId()
+                        memberId,
+                        bookId,
+                        PageRequest.of(page - 1, size)
                 )
-                .stream()
                 .map(memo ->
                         ReadingMemoDto.builder()
                                 .id(memo.getId())
-                                .bookId(book.getId())
+                                .bookId(bookId)
                                 .pageNo(memo.getPageNo())
                                 .content(memo.getContent())
                                 .posX(memo.getPosX())
@@ -179,7 +181,6 @@ public class ReadingMemoServiceImpl implements ReadingMemoService {
                                 .createdAt(memo.getCreatedAt())
                                 .updatedAt(memo.getUpdatedAt())
                                 .build()
-                )
-                .collect(Collectors.toList());
+                );
     }
 }

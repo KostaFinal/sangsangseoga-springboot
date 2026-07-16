@@ -1,12 +1,12 @@
 package com.kosta.sangsangseoga.domain.myLibrary.controller;
 
-import java.util.List;
-
+import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingMemoDto;
@@ -21,14 +21,21 @@ import lombok.RequiredArgsConstructor;
 public class ReadingMemoListController {
 	private final ReadingMemoService readingMemoService;
 
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<ReadingMemoDto>>> getMemosByBook(
+	@GetMapping
+    public ResponseEntity<ApiResponse<Slice<ReadingMemoDto>>> getMemosByBook(
             @PathVariable Long bookId,
-            @AuthenticationPrincipal Long memberId
+            @AuthenticationPrincipal Long memberId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size
     ) throws Exception {
 
-        List<ReadingMemoDto> result =
-                readingMemoService.getMemosByBook(memberId, bookId);
+        Slice<ReadingMemoDto> result =
+                readingMemoService.getMemosByBook(
+                        memberId,
+                        bookId,
+                        page,
+                        size
+                );
 
         return ResponseEntity.ok(ApiResponse.success(result));
     }

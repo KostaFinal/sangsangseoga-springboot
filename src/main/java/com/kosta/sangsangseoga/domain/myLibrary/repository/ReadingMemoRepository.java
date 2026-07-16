@@ -1,8 +1,9 @@
 package com.kosta.sangsangseoga.domain.myLibrary.repository;
 
-import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.kosta.sangsangseoga.domain.book.entity.Book;
@@ -20,8 +21,9 @@ public interface ReadingMemoRepository extends JpaRepository<ReadingMemo, Long> 
     // 책 삭제 시 해당 책의 메모 전체 삭제
     void deleteAllByBook(Book book);
     
-    List<ReadingMemo> findByMember_IdAndBook_IdOrderByPageNoAsc(
+    Slice<ReadingMemo> findByMember_IdAndBook_IdOrderByPageNoAsc(
             Long memberId,
-            Long bookId
+            Long bookId,
+            Pageable pageable
     );
 }

@@ -3,10 +3,13 @@ package com.kosta.sangsangseoga.domain.myLibrary.controller;
 import java.util.List;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -17,7 +20,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportStatus;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.FinishedBookResponseDto;
+import com.kosta.sangsangseoga.domain.myLibrary.dto.MyReportHistoryResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.MyWrittenBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingBookResponseDto;
 import com.kosta.sangsangseoga.domain.myLibrary.dto.ReadingProgressRequestDto;
@@ -36,6 +41,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/bookshelves")
 @RequiredArgsConstructor
+@Validated
 public class MyLibraryController {
 
 	private final MyLibraryService myLibraryService;
@@ -73,9 +79,18 @@ public class MyLibraryController {
 
 	// 읽는 중 목록 조회
 	@GetMapping("/reading")
-	public ResponseEntity<ApiResponse<List<ReadingBookResponseDto>>> getReadingList(Authentication authentication) {
-		Long memberId = getMemberId(authentication);
-		return ResponseEntity.ok(ApiResponse.success(myLibraryService.getReadingList(memberId)));
+	public ResponseEntity<ApiResponse<Slice<ReadingBookResponseDto>>> getReadingList(
+	        Authentication authentication,
+	        @RequestParam(defaultValue = "1") int page,
+	        @RequestParam(defaultValue = "20") int size
+	) {
+	    Long memberId = getMemberId(authentication);
+
+	    return ResponseEntity.ok(
+	            ApiResponse.success(
+	                    myLibraryService.getReadingList(memberId, page, size)
+	            )
+	    );
 	}
 
 	// 읽기 완료 목록 조회
@@ -191,5 +206,48 @@ public class MyLibraryController {
 	    myLibraryService.deleteMyWrittenBook(memberId, bookId);
 
 	    return ResponseEntity.ok(ApiResponse.success(null));
+	}
+	
+	// 내가 신고한 내역 조회
+	@GetMapping("/reports/submitted")
+	public ResponseEntity<ApiResponse<MyReportHistoryResponseDto>> getSubmittedReports(
+	        Authentication authentication,
+	        @RequestParam(required = false) ReportStatus status,
+	        @RequestParam(defaultValue = "1") @Min(1) int page,
+	        @RequestParam(defaultValue = "20") @Min(1) int size
+	) {
+	    Long memberId = getMemberId(authentication);
+
+	    return ResponseEntity.ok(
+	            ApiResponse.success(
+	                    myLibraryService.getSubmittedReports(
+	                            memberId,
+	                            status,
+	                            page,
+	                            size
+	                    )
+	            )
+	    );
+	}
+
+	// 내가 신고당한 내역 조회
+	@GetMapping("/reports/received")
+	public ResponseEntity<ApiResponse<MyReportHistoryResponseDto>>
+	getReceivedReports(
+	        Authentication authentication,
+	        @RequestParam(defaultValue = "1") int page,
+	        @RequestParam(defaultValue = "20") int size
+	) {
+	    Long memberId = getMemberId(authentication);
+
+	    return ResponseEntity.ok(
+	            ApiResponse.success(
+	                    myLibraryService.getReceivedReports(
+	                            memberId,
+	                            page,
+	                            size
+	                    )
+	            )
+	    );
 	}
 }

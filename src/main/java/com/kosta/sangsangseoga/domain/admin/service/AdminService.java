@@ -89,31 +89,17 @@ public class AdminService {
 		Page<Report> reports = reportRepository.findByStatusOrderByCreatedAtDesc(targetStatus, pageable);
 		List<Report> content = reports.getContent();
 
-		Map<Long, String> authorNicknames = resolveAuthorNicknames(content);
 		Map<Long, Long> commentParentBookIds = resolveCommentParentBookIds(content);
 		Map<Long, AdminActionLog> resolutionByReportId = resolveResolutionByReportId(content);
 
 		List<AdminReportListItemDto> items = content.stream()
-				.map(report -> toListItemDto(report, authorNicknames, commentParentBookIds, resolutionByReportId))
+				.map(report -> toListItemDto(report, commentParentBookIds, resolutionByReportId))
 				.collect(Collectors.toList());
 
 		return AdminReportListResponseDto.builder().items(items).totalCount(reports.getTotalElements())
 				.page(reports.getNumber()).hasNext(reports.hasNext()).build();
 	}
 
-	/**
-	 * targetType=AUTHOR인 신고들의 targetId(memberId)를 배치 조회해 닉네임 맵을 만든다. FE의 "신고 대상 확인"
-	 * 이동 기능이 항목마다 회원 조회를 따로 하지 않도록 목록 응답에 미리 채워준다.
-	 */
-	private Map<Long, String> resolveAuthorNicknames(List<Report> reports) {
-		List<Long> authorIds = reports.stream().filter(report -> report.getTargetType() == ReportTargetType.AUTHOR)
-				.map(Report::getTargetId).distinct().collect(Collectors.toList());
-		if (authorIds.isEmpty()) {
-			return Collections.emptyMap();
-		}
-		return memberRepository.findAllById(authorIds).stream()
-				.collect(Collectors.toMap(Member::getId, Member::getNickname));
-	}
 
 	/**
 	 * targetType=COMMENT인 신고들의 targetId(commentId)를 배치 조회해 원본 도서 ID 맵을 만든다. 댓글은 도서
@@ -186,17 +172,6 @@ public class AdminService {
 			Comment comment = commentRepository.findById(report.getTargetId())
 					.orElseThrow(() -> new CustomException(AdminErrorCode.ACTION_TARGET_NOT_FOUND));
 			comment.setIsDeleted(true);
-			break;
-		case AUTHOR_SUSPEND:
-			requireTargetType(report, ReportTargetType.AUTHOR);
-			Member author = memberRepository.findById(report.getTargetId())
-					.orElseThrow(() -> new CustomException(AdminErrorCode.ACTION_TARGET_NOT_FOUND));
-			// 이미 탈퇴(DELETED)한 회원은 정지로 되돌리지 않는다 (탈퇴 시 정리된 데이터와 상태가 어긋나는 것 방지)
-			if (author.getStatus() == MemberStatus.DELETED) {
-				throw new CustomException(MemberErrorCode.ALREADY_DELETED_MEMBER);
-			}
-			author.suspend();
-			invalidateSessionsAfterCommit(author.getId());
 			break;
 		case REPORT_REJECT:
 			// 대상에는 아무 조치도 하지 않고 신고만 기각 처리한다.
@@ -288,11 +263,10 @@ public class AdminService {
 				: adminActionLogRepository.findAllByOrderByCreatedAtDesc(pageable);
 		List<Report> reports = logs.getContent().stream().map(AdminActionLog::getReport).collect(Collectors.toList());
 
-		Map<Long, String> authorNicknames = resolveAuthorNicknames(reports);
 		Map<Long, Long> commentParentBookIds = resolveCommentParentBookIds(reports);
 
 		List<AdminActionLogListItemDto> items = logs.getContent().stream()
-				.map(actionLog -> toActionLogListItemDto(actionLog, authorNicknames, commentParentBookIds))
+				.map(actionLog -> toActionLogListItemDto(actionLog, commentParentBookIds))
 				.collect(Collectors.toList());
 
 		return AdminActionLogListResponseDto.builder().items(items).totalCount(logs.getTotalElements())
@@ -300,14 +274,12 @@ public class AdminService {
 	}
 
 	private AdminActionLogListItemDto toActionLogListItemDto(AdminActionLog actionLog,
-			Map<Long, String> authorNicknames, Map<Long, Long> commentParentBookIds) {
+			 Map<Long, Long> commentParentBookIds) {
 		Report report = actionLog.getReport();
 		Member admin = actionLog.getAdmin();
 		ReportTargetType targetType = report.getTargetType();
 		return AdminActionLogListItemDto.builder().actionLogId(actionLog.getId()).reportId(report.getId())
 				.targetType(targetType).targetId(report.getTargetId())
-				.targetNickname(
-						targetType == ReportTargetType.AUTHOR ? authorNicknames.get(report.getTargetId()) : null)
 				.targetParentBookId(
 						targetType == ReportTargetType.COMMENT ? commentParentBookIds.get(report.getTargetId()) : null)
 				.adminId(admin.getId()).adminNickname(admin.getNickname()).actionType(actionLog.getActionType())
@@ -465,15 +437,13 @@ public class AdminService {
 				.withdrawnAt(member.getWithdrawnAt()).build();
 	}
 
-	private AdminReportListItemDto toListItemDto(Report report, Map<Long, String> authorNicknames,
+	private AdminReportListItemDto toListItemDto(Report report, 
 			Map<Long, Long> commentParentBookIds, Map<Long, AdminActionLog> resolutionByReportId) {
 		Member reporter = report.getReporter();
 		ReportTargetType targetType = report.getTargetType();
 		AdminActionLog resolution = resolutionByReportId.get(report.getId());
 		return AdminReportListItemDto.builder().reportId(report.getId()).targetType(targetType)
 				.targetId(report.getTargetId())
-				.targetNickname(
-						targetType == ReportTargetType.AUTHOR ? authorNicknames.get(report.getTargetId()) : null)
 				.targetParentBookId(
 						targetType == ReportTargetType.COMMENT ? commentParentBookIds.get(report.getTargetId()) : null)
 				.reason(report.getReason()).reasonDetail(report.getReasonDetail()).status(report.getStatus())

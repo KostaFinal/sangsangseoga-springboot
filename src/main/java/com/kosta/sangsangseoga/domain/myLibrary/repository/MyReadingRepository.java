@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -81,9 +82,10 @@ public interface MyReadingRepository extends JpaRepository<MyReading, Long> {
     
  // 삭제되지 않은 읽는 중 책 목록
     @EntityGraph(attributePaths = "book")
-    List<MyReading> findByMember_IdAndReadingStatusAndBook_StatusNotOrderByRecentReadAtDesc(
+    Slice<MyReading> findByMember_IdAndReadingStatusAndBook_StatusNotOrderByRecentReadAtDesc(
             Long memberId,
             ReadingStatus readingStatus,
-            BookStatus bookStatus
+            BookStatus bookStatus,
+            Pageable pageable
     );
 }
