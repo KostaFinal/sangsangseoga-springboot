@@ -62,7 +62,6 @@ public class Member extends BaseEntity {
     @Column(unique = true)
     private String nickname;
 
-    /** 소셜 로그인 프로필 이미지 URL은 300자를 넘기도 해서 varchar(255) 기본값 대신 길이 제약을 없앴다. */
     @OptimisticLock(excluded = true)
     @Lob
     private String profileImageUrl;
