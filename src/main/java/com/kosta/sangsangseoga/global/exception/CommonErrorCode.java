@@ -20,7 +20,10 @@ public enum CommonErrorCode implements ErrorCode {
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."),
  
     // ===== Book =====
-    BOOK_NOT_FOUND(HttpStatus.NOT_FOUND, "책을 찾을 수 없습니다.");
+    BOOK_NOT_FOUND(HttpStatus.NOT_FOUND, "책을 찾을 수 없습니다."),
+
+    // ===== AI Image =====
+    IMAGE_SAVE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "생성된 이미지를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");
 	
     private final HttpStatus status;
     private final String message;

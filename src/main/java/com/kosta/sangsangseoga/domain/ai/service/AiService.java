@@ -12,6 +12,8 @@ import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
+import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.HikariPoolMXBean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import javax.sql.DataSource;
 import java.util.Map;
 
 /**
@@ -44,49 +47,115 @@ public class AiService {
 	private final AiGenerationUsageRepository aiGenerationUsageRepository;
 	private final MemberRepository memberRepository;
 	private final BookRepository bookRepository;
+	private final DataSource dataSource;
 
 	private final RestTemplate restTemplate = new RestTemplate();
 
-	public AiGenerateResponseDto generate(AiGenerateRequestDto request, Long memberId) {
-		String url = fastApiBaseUrl + "/api/ai/generate";
+	public AiGenerateResponseDto generate(AiGenerateRequestDto request, Long memberId, String requestId) {
+		long methodStartNs = System.nanoTime();
+		String taskType = request.getStage();
+		boolean success = false;
+		int httpStatus = 0;
+		String errorType = null;
+		long mappingMs = 0L;
+		long pythonCallMs = 0L;
+		long usageRecordMs = 0L;
+		int reqLen = 0;
+		int resLen = 0;
 
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
-
-		Map<String, Object> pythonRequestBody = aiPythonRequestMapper.buildPythonRequestBody(request);
-
-		log.info("Python AI 요청 URL: {}", url);
-		log.info("Python AI 요청 Body: {}", pythonRequestBody);
-
-		Map<String, Object> fastApiResponse;
 		try {
-			ResponseEntity<Map> response = restTemplate.postForEntity(
-					url, new HttpEntity<>(pythonRequestBody, headers), Map.class);
-			fastApiResponse = response.getBody();
-			log.info("Python AI 응답 Body: {}", fastApiResponse);
-		} catch (RestClientException e) {
-			log.error("AI 생성 처리 중 실제 오류 발생", e);
-			throw new CustomException(CommonErrorCode.INTERNAL_SERVER_ERROR);
+			String url = fastApiBaseUrl + "/api/ai/generate";
+
+			long t0 = System.nanoTime();
+			Map<String, Object> pythonRequestBody = aiPythonRequestMapper.buildPythonRequestBody(request);
+			mappingMs = elapsedMs(t0);
+			reqLen = jsonLength(pythonRequestBody);
+
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_JSON);
+			headers.set("X-Request-ID", requestId);
+
+			log.debug("Python AI 요청 URL: {}", url);
+			log.debug("Python AI 요청 Body: {}", pythonRequestBody);
+
+			logHikariStatus("beforePythonCall", requestId);
+
+			Map<String, Object> fastApiResponse;
+			long t1 = System.nanoTime();
+			try {
+				ResponseEntity<Map> response = restTemplate.postForEntity(
+						url, new HttpEntity<>(pythonRequestBody, headers), Map.class);
+				pythonCallMs = elapsedMs(t1);
+				httpStatus = response.getStatusCodeValue();
+				fastApiResponse = response.getBody();
+				log.debug("Python AI 응답 Body: {}", fastApiResponse);
+			} catch (RestClientException e) {
+				pythonCallMs = elapsedMs(t1);
+				errorType = e.getClass().getSimpleName();
+				log.error("AI 생성 처리 중 실제 오류 발생", e);
+				throw new CustomException(CommonErrorCode.INTERNAL_SERVER_ERROR);
+			}
+
+			logHikariStatus("afterPythonCall", requestId);
+			resLen = jsonLength(fastApiResponse);
+
+			long t2 = System.nanoTime();
+			recordUsage(memberId, request, reqLen, resLen);
+			usageRecordMs = elapsedMs(t2);
+
+			logHikariStatus("afterUsageRecord", requestId);
+
+			success = true;
+			return AiGenerateResponseDto.builder()
+					.bookId(request.getBookId())
+					.stage(request.getStage())
+					.result(fastApiResponse)
+					.build();
+		} catch (CustomException e) {
+			if (errorType == null) {
+				errorType = e.getClass().getSimpleName();
+			}
+			throw e;
 		} catch (Exception e) {
+			errorType = e.getClass().getSimpleName();
 			log.error("AI 생성 처리 중 실제 오류 발생", e);
 			throw new CustomException(CommonErrorCode.INTERNAL_SERVER_ERROR);
+		} finally {
+			long springTotalMs = elapsedMs(methodStartNs);
+			long springProcessingMs = springTotalMs - pythonCallMs;
+			log.info("[AI-PERF] requestId={} taskType={} success={} httpStatus={} errorType={} reqLen={} resLen={} "
+							+ "mappingMs={} pythonCallMs={} usageRecordMs={} springProcessingMs={} springTotalMs={}",
+					requestId, taskType, success, httpStatus, errorType == null ? "" : errorType,
+					reqLen, resLen, mappingMs, pythonCallMs, usageRecordMs, springProcessingMs, springTotalMs);
 		}
+	}
 
-		recordUsage(memberId, request, pythonRequestBody, fastApiResponse);
+	private long elapsedMs(long startNs) {
+		return (System.nanoTime() - startNs) / 1_000_000;
+	}
 
-		return AiGenerateResponseDto.builder()
-				.bookId(request.getBookId())
-				.stage(request.getStage())
-				.result(fastApiResponse)
-				.build();
+	/**
+	 * @Transactional 메서드가 Python 응답 대기 중에도 JDBC 커넥션을 점유하는지는 코드만 봐서는
+	 * 단정할 수 없다(Hibernate의 connection handling mode에 따라 lazy acquisition일 수 있음).
+	 * 그래서 실제 HikariCP pool 지표를 단계별로 찍어 실측한다.
+	 */
+	private void logHikariStatus(String phase, String requestId) {
+		if (dataSource instanceof HikariDataSource) {
+			HikariDataSource hikariDataSource = (HikariDataSource) dataSource;
+			HikariPoolMXBean pool = hikariDataSource.getHikariPoolMXBean();
+			if (pool != null) {
+				log.info("[AI-PERF-HIKARI] requestId={} phase={} active={} idle={} total={} awaiting={}",
+						requestId, phase, pool.getActiveConnections(), pool.getIdleConnections(),
+						pool.getTotalConnections(), pool.getThreadsAwaitingConnection());
+			}
+		}
 	}
 
 	/**
 	 * Gemini 실제 토큰 수는 FastAPI 응답에 포함되지 않아 알 수 없다. 대신 요청/응답을 JSON으로
 	 * 직렬화한 문자 길이를 입출력 크기의 근사치로 저장한다(정확한 토큰 수가 아님에 유의).
 	 */
-	private void recordUsage(Long memberId, AiGenerateRequestDto request,
-							  Map<String, Object> pythonRequestBody, Map<String, Object> fastApiResponse) {
+	private void recordUsage(Long memberId, AiGenerateRequestDto request, int inputLength, int outputLength) {
 		Member member = memberRepository.findById(memberId)
 				.orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
 		Book book = request.getBookId() != null ? bookRepository.findById(request.getBookId()).orElse(null) : null;
@@ -95,8 +164,8 @@ public class AiService {
 				.member(member)
 				.book(book)
 				.callType(CallType.TEXT)
-				.inputTokenCount(jsonLength(pythonRequestBody))
-				.outputTokenCount(jsonLength(fastApiResponse))
+				.inputTokenCount(inputLength)
+				.outputTokenCount(outputLength)
 				.build());
 	}
 

@@ -46,33 +46,61 @@ public class AiStreamService {
 
 	private final ExecutorService executor = Executors.newFixedThreadPool(4);
 
-	public SseEmitter streamGenerate(AiGenerateRequestDto request) {
+	public SseEmitter streamGenerate(AiGenerateRequestDto request, String requestId) {
+		long t0 = System.nanoTime();
 		Map<String, Object> pythonRequestBody = aiPythonRequestMapper.buildPythonRequestBody(request);
+		long mappingMs = elapsedMs(t0);
 		String url = fastApiBaseUrl + "/api/ai/generate/stream";
+		String taskType = request.getStage();
 
-		log.info("Python AI 스트리밍 요청 URL: {}", url);
-		log.info("Python AI 스트리밍 요청 Body: {}", pythonRequestBody);
+		log.debug("Python AI 스트리밍 요청 URL: {}", url);
+		log.debug("Python AI 스트리밍 요청 Body: {}", pythonRequestBody);
 
 		SseEmitter emitter = new SseEmitter(60_000L);
 		emitter.onTimeout(emitter::complete);
 		emitter.onError(e -> log.warn("SSE emitter 오류: {}", e.getMessage()));
 
-		executor.submit(() -> proxyPythonStream(emitter, url, pythonRequestBody));
+		long submitNs = System.nanoTime();
+		executor.submit(() -> proxyPythonStream(emitter, url, pythonRequestBody, requestId, taskType, mappingMs, submitNs));
 
 		return emitter;
 	}
 
-	private void proxyPythonStream(SseEmitter emitter, String url, Map<String, Object> pythonRequestBody) {
+	private void proxyPythonStream(SseEmitter emitter, String url, Map<String, Object> pythonRequestBody,
+									String requestId, String taskType, long mappingMs, long submitNs) {
+		boolean success = false;
+		int httpStatus = 0;
+		String errorType = null;
+		int eventCount = 0;
+		Long ttfbMs = null;
+		int reqLen = 0;
+		int resLen = 0;
+
 		try {
 			String requestJson = objectMapper.writeValueAsString(pythonRequestBody);
+			reqLen = requestJson.length();
 
 			HttpRequest httpRequest = HttpRequest.newBuilder()
 					.uri(URI.create(url))
 					.header("Content-Type", "application/json")
+					.header("X-Request-ID", requestId)
 					.POST(HttpRequest.BodyPublishers.ofString(requestJson, StandardCharsets.UTF_8))
 					.build();
 
+			long sendStartNs = System.nanoTime();
 			HttpResponse<InputStream> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofInputStream());
+			httpStatus = response.statusCode();
+
+			if (httpStatus != 200) {
+				// 정상 SSE가 아닌 경우(Python이 4xx/5xx를 반환) 원인 진단을 위해 원문을 임시로 남긴다.
+				String rawBody = new String(response.body().readAllBytes(), StandardCharsets.UTF_8);
+				log.warn("[AI-PERF] requestId={} Python 스트리밍 응답이 200이 아님(httpStatus={}): {}",
+						requestId, httpStatus, rawBody);
+				errorType = "PythonNon200Response";
+				emitter.send(SseEmitter.event().name("error").data("{\"message\":\"AI 서버 응답 오류\"}"));
+				emitter.complete();
+				return;
+			}
 
 			try (BufferedReader reader = new BufferedReader(
 					new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {
@@ -84,10 +112,19 @@ public class AiStreamService {
 					if (line.startsWith("event:")) {
 						eventName = line.substring("event:".length()).trim();
 					} else if (line.startsWith("data:") && eventName != null) {
+						if (ttfbMs == null) {
+							ttfbMs = elapsedMs(sendStartNs);
+						}
 						String data = line.substring("data:".length()).trim();
 						emitter.send(SseEmitter.event().name(eventName).data(data));
+						eventCount++;
 
 						if ("done".equals(eventName) || "error".equals(eventName)) {
+							resLen = data.length();
+							success = "done".equals(eventName);
+							if ("error".equals(eventName)) {
+								errorType = "PythonStreamError";
+							}
 							break;
 						}
 					}
@@ -96,6 +133,7 @@ public class AiStreamService {
 
 			emitter.complete();
 		} catch (Exception e) {
+			errorType = e.getClass().getSimpleName();
 			log.error("AI 스트리밍 처리 중 실제 오류 발생", e);
 			try {
 				emitter.send(SseEmitter.event().name("error").data("{\"message\":\"AI 스트리밍 처리 중 오류가 발생했습니다.\"}"));
@@ -103,7 +141,17 @@ public class AiStreamService {
 				// emitter가 이미 완료/타임아웃된 경우 무시한다.
 			}
 			emitter.completeWithError(e);
+		} finally {
+			long springTotalMs = elapsedMs(submitNs);
+			log.info("[AI-PERF] requestId={} taskType={} success={} httpStatus={} errorType={} reqLen={} resLen={} "
+							+ "mappingMs={} eventCount={} ttfbMs={} springTotalMs={}",
+					requestId, taskType, success, httpStatus, errorType == null ? "" : errorType,
+					reqLen, resLen, mappingMs, eventCount, ttfbMs == null ? "" : ttfbMs, springTotalMs);
 		}
+	}
+
+	private long elapsedMs(long startNs) {
+		return (System.nanoTime() - startNs) / 1_000_000;
 	}
 
 	@PreDestroy
