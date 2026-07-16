@@ -235,15 +235,40 @@ public class AuthService {
     }
 
     /**
+     * 비밀번호 재설정 토큰 사전 검증(소비하지 않음). FE가 "토큰 입력" 단계에서 새 비밀번호를 받기 전에
+     * 미리 유효성을 확인할 수 있도록 별도로 둔다. 실제 소비(consume)는 completePasswordReset에서만
+     * 일어나므로, 이 메서드를 여러 번 호출해도 토큰이 무효화되지 않는다.
+     */
+    public void verifyPasswordResetToken(String token) {
+        decodeAndValidatePasswordResetToken(token);
+    }
+
+    /**
      * 비밀번호 재설정 완료. 토큰 발급 시점의 비밀번호 지문(pwv)을 함께 검증해
      * 같은 토큰이 재사용(replay)되는 것을 막는다 (DB에 사용 여부를 별도로 저장하지 않음).
      */
     public void completePasswordReset(PasswordResetCompleteDto request) {
         validatePassword(request.getNewPassword());
 
+        DecodedJWT decoded = decodeAndValidatePasswordResetToken(request.getToken());
+        Long memberId = actionTokenProvider.getSubjectId(decoded);
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        try {
+            actionTokenProvider.consume(decoded);
+        } catch (ActionTokenInvalidException e) {
+            throw new CustomException(AuthErrorCode.INVALID_RESET_TOKEN);
+        }
+
+        member.changePassword(passwordEncoder.encode(request.getNewPassword()));
+    }
+
+    /** 서명/만료(purpose 포함)와 발급 시점 비밀번호 지문(pwv)까지 검증한다. 토큰을 소비하지는 않는다. */
+    private DecodedJWT decodeAndValidatePasswordResetToken(String token) {
         DecodedJWT decoded;
         try {
-            decoded = actionTokenProvider.verify(request.getToken(), PASSWORD_RESET_TOKEN_PURPOSE);
+            decoded = actionTokenProvider.verify(token, PASSWORD_RESET_TOKEN_PURPOSE);
         } catch (ActionTokenExpiredException e) {
             throw new CustomException(AuthErrorCode.EXPIRED_RESET_TOKEN);
         } catch (ActionTokenInvalidException e) {
@@ -260,12 +285,6 @@ public class AuthService {
             throw new CustomException(AuthErrorCode.INVALID_RESET_TOKEN);
         }
 
-        try {
-            actionTokenProvider.consume(decoded);
-        } catch (ActionTokenInvalidException e) {
-            throw new CustomException(AuthErrorCode.INVALID_RESET_TOKEN);
-        }
-
-        member.changePassword(passwordEncoder.encode(request.getNewPassword()));
+        return decoded;
     }
 }

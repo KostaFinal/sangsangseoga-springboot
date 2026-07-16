@@ -19,10 +19,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
@@ -79,6 +81,16 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> requestPasswordReset(@RequestBody PasswordResetRequestDto request) {
         authService.requestPasswordReset(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(null));
+    }
+
+    @Operation(summary = "비밀번호 재설정 토큰 사전 검증", description = "새 비밀번호를 입력받기 전에 토큰 자체의 유효성만 먼저 "
+            + "확인한다. 이 호출로는 토큰이 소비되지 않으므로, 이후 PATCH /api/auth/password/reset을 그대로 호출해야 실제로 반영된다.")
+    @ApiErrorCodes({"EXPIRED_RESET_TOKEN", "INVALID_RESET_TOKEN", "MEMBER_NOT_FOUND"})
+    @SecurityRequirements
+    @GetMapping("/password/reset/verify")
+    public ResponseEntity<ApiResponse<Void>> verifyPasswordResetToken(@RequestParam String token) {
+        authService.verifyPasswordResetToken(token);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @Operation(summary = "비밀번호 재설정 완료")
