@@ -54,6 +54,7 @@ GET /api/notifications/stream?ticket=발급받은값
 | 관리자의 신고 처리(승인/반려) | 신고한 사람 | `AdminService.processReport` |
 | 관리자의 신고 조치(책 숨김/댓글 삭제/작가 정지) | 조치당한 콘텐츠 소유자 | `AdminService.applyAction` |
 | 관리자의 회원 상태 변경(정지/탈퇴/복구) | 해당 회원 | 사유(`reason`)도 같이 전달 |
+| 보호자 동의 요청 | 보호자(이미 우리 서비스 회원인 경우만) | 비회원 이메일이면 이메일만 발송(알림 없음) |
 | 보호자 동의 승인/거절/철회 | 자녀 회원 | 계정 상태(PENDING↔ACTIVE)가 걸린 결정이라 특히 중요 |
 | 구독 자동갱신 | 해당 회원 | `SubscriptionService.reconcileIfExpired` |
 | 구독 만료로 FREE 다운그레이드 | 해당 회원 | 위와 같은 진입점, 스케줄러와 API가 공유 |
