@@ -170,6 +170,18 @@ public class BookServiceImpl implements BookService {
                             .contentTextEn(pageRequest.getContentTextEn())
                             .imageUrl(pageRequest.getImageUrl())
                             .build());
+            for (BookPublishRequestDto.PageRequest pageRequest : request.getPages()) {
+                BookPage page = bookPageRepository.save(BookPage.builder()
+                        .book(book)
+                        .pageNo(pageRequest.getPageNo())
+                        .title(pageRequest.getTitle())
+                        .titleEn(pageRequest.getTitleEn())
+                        .contentType(contentType)
+                        .contentTextKo(pageRequest.getContentTextKo())
+                        .contentTextEn(pageRequest.getContentTextEn())
+                        .contentFontSizeEn(pageRequest.getContentFontSizeEn())
+                        .imageUrl(pageRequest.getImageUrl())
+                        .build());
 
                     if (pageRequest.getImageUrl() != null && !pageRequest.getImageUrl().isBlank()) {
                         bookImageRepository.save(
@@ -231,8 +243,14 @@ public class BookServiceImpl implements BookService {
                 .build();
     }
 
-    // Replicate 임시 delivery URL(예: .../out-0.webp)에서 file_name/file_extension을 뽑아낸다.
+    // 호스팅 URL(예: .../out-0.webp)에서는 file_name/file_extension을 경로에서 뽑아내고,
+    // Gemini의 data URI("data:image/png;base64,...")는 경로가 없어 mime 타입으로 대신 만든다.
     private String extractFileName(String url) {
+        if (url.startsWith("data:")) {
+            String extension = extractExtensionFromDataUri(url);
+            return extension != null ? "image." + extension : "image";
+        }
+
         String path = url.contains("?") ? url.substring(0, url.indexOf('?')) : url;
         int slashIdx = path.lastIndexOf('/');
         String name = slashIdx >= 0 ? path.substring(slashIdx + 1) : path;
@@ -242,6 +260,17 @@ public class BookServiceImpl implements BookService {
     private String extractExtension(String fileName) {
         int dotIdx = fileName.lastIndexOf('.');
         return dotIdx >= 0 ? fileName.substring(dotIdx + 1) : null;
+    }
+
+    // "data:image/png;base64,..." -> "png"
+    private String extractExtensionFromDataUri(String dataUri) {
+        int colonIdx = dataUri.indexOf(':');
+        int semicolonIdx = dataUri.indexOf(';');
+        if (colonIdx < 0 || semicolonIdx < 0 || semicolonIdx <= colonIdx) return null;
+
+        String mimeType = dataUri.substring(colonIdx + 1, semicolonIdx);
+        int slashIdx = mimeType.indexOf('/');
+        return slashIdx >= 0 ? mimeType.substring(slashIdx + 1) : null;
     }
 
     private <E extends Enum<E>> E parseEnum(Class<E> enumClass, String value) {
@@ -260,7 +289,7 @@ public class BookServiceImpl implements BookService {
      * - bookType 필터, 키워드 검색, 정렬, 페이징 지원
      */
     @Override
-    public BookListResponseDto getBooks(String bookType, String sort, String keyword, int page, int size, Long memberId) throws Exception {
+    public BookListResponseDto getBooks(String bookType, String sort, String keyword, Long authorId, int page, int size, Long memberId) throws Exception {
         if (sort != null && !VALID_SORTS.contains(sort)) {
             throw new CustomException(BookErrorCode.INVALID_SORT);
         }
@@ -287,8 +316,8 @@ public class BookServiceImpl implements BookService {
 
         PageRequest pageRequest = PageRequest.of(page - 1, size, sortCondition);
         Page<Book> bookPage = "popular".equals(sort)
-                ? bookRepository.findBooksByPopular(bookTypeEnum, keywordFilter, pageRequest)
-                : bookRepository.findBooks(bookTypeEnum, keywordFilter, pageRequest);
+                ? bookRepository.findBooksByPopular(bookTypeEnum, keywordFilter, authorId, pageRequest)
+                : bookRepository.findBooks(bookTypeEnum, keywordFilter, authorId, pageRequest);
 
         Member member = (memberId != null) ? memberRepository.findById(memberId).orElse(null) : null;
 
@@ -300,6 +329,7 @@ public class BookServiceImpl implements BookService {
                     .orElse(null);
 
             boolean isLikedByMe = member != null && bookLikeRepository.existsByMemberAndBook(member, book);
+            boolean isBookmarkedByMe = member != null && bookmarkRepository.existsByMemberAndBook(member, book);
 
             items.add(BookListItemDto.builder()
                     .id(book.getId())
@@ -313,6 +343,7 @@ public class BookServiceImpl implements BookService {
                     .likeCount(book.getLikeCount())
                     .commentCount(book.getCommentCount())
                     .isLikedByMe(isLikedByMe)
+                    .isBookmarkedByMe(isBookmarkedByMe)
                     .build());
         }
 
@@ -418,9 +449,11 @@ public class BookServiceImpl implements BookService {
                     .id(page.getId())
                     .pageNo(page.getPageNo())
                     .title(page.getTitle())
+                    .titleEn(page.getTitleEn())
                     .contentType(page.getContentType())
                     .contentTextKo(page.getContentTextKo())
                     .contentTextEn(page.getContentTextEn())
+                    .contentFontSizeEn(page.getContentFontSizeEn())
                     .imageUrl(page.getImageUrl())
                     .build());
         }
@@ -530,6 +563,7 @@ public class BookServiceImpl implements BookService {
                     .likeCount(book.getLikeCount())
                     .commentCount(book.getCommentCount())
                     .isLikedByMe(false)
+                    .isBookmarkedByMe(false)
                     .build());
         }
 

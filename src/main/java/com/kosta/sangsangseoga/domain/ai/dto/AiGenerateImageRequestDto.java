@@ -25,4 +25,7 @@ public class AiGenerateImageRequestDto {
 
     @Schema(description = "이미지 비율", example = "3:4")
     private String aspectRatio;
+
+    @Schema(description = "책 장르. FAIRY_TALE이면 아동 삽화용 안전/캐릭터 일관성 조건이 프롬프트에 추가로 붙는다.", allowableValues = {"NOVEL", "POEM", "ESSAY", "FAIRY_TALE", "NONFICTION"})
+    private String bookType;
 }

@@ -20,17 +20,20 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 	// 회원 탈퇴 시 처리 대상인 본인 소유 책 목록 조회
 	List<Book> findAllByMember(Member member);
 
-	// bookType/키워드 필터 + 페이징
+	// bookType/키워드/작가 필터 + 페이징
 	@Query("SELECT b FROM Book b WHERE b.status = 'PUBLISHED'" + " AND (:bookType IS NULL OR b.bookType = :bookType)"
-			+ " AND (:keyword IS NULL OR b.title LIKE %:keyword% OR b.member.nickname LIKE %:keyword%)")
-	Page<Book> findBooks(@Param("bookType") BookType bookType, @Param("keyword") String keyword, Pageable pageable);
+			+ " AND (:keyword IS NULL OR b.title LIKE %:keyword% OR b.member.nickname LIKE %:keyword%)"
+			+ " AND (:authorId IS NULL OR b.member.id = :authorId)")
+	Page<Book> findBooks(@Param("bookType") BookType bookType, @Param("keyword") String keyword,
+			@Param("authorId") Long authorId, Pageable pageable);
 
 	// popular 정렬 (조회수×1 + 좋아요×3)
 	@Query("SELECT b FROM Book b WHERE b.status = 'PUBLISHED'" + " AND (:bookType IS NULL OR b.bookType = :bookType)"
 			+ " AND (:keyword IS NULL OR b.title LIKE %:keyword% OR b.member.nickname LIKE %:keyword%)"
+			+ " AND (:authorId IS NULL OR b.member.id = :authorId)"
 			+ " ORDER BY (b.viewCount * 1 + b.likeCount * 3) DESC")
 	Page<Book> findBooksByPopular(@Param("bookType") BookType bookType, @Param("keyword") String keyword,
-			Pageable pageable);
+			@Param("authorId") Long authorId, Pageable pageable);
 
 	// 같은 bookType에서 해당 책 제외, 좋아요 순 상위 N개 (추천용)
 	@Query("SELECT b FROM Book b WHERE b.status = 'PUBLISHED' AND b.bookType = :bookType AND b.id != :excludeId ORDER BY b.likeCount DESC")

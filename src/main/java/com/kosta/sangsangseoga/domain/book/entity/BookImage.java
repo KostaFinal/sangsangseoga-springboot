@@ -41,7 +41,10 @@ public class BookImage {
     // 한 페이지에 이미지가 여러 개일 경우 순서
     private Integer imageOrder;
 
-    @Column(nullable = false)
+    // Gemini 이미지 생성은 호스팅 URL이 아니라 data URI(base64)를 그대로 주기 때문에
+    // 일반 URL보다 훨씬 길다. LONGTEXT로 넓혀서 저장 시 길이 초과 에러가 나지 않게 한다.
+    @Lob
+    @Column(nullable = false, columnDefinition = "LONGTEXT")
     private String fileUrl;
 
     @Column(nullable = false)
