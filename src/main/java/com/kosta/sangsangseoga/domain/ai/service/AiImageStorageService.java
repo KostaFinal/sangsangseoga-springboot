@@ -18,16 +18,22 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Base64;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
- * Replicate가 반환하는 imageUrl은 일정 시간이 지나면 만료되는 임시 delivery URL이라, DB에 그대로
- * 저장하면 나중에 이미지가 깨진다. 여기서 그 URL의 바이트를 즉시 내려받아 app.upload.image-dir
- * 아래 영구 저장하고, app.upload.image-url 기준 상대 경로(WebConfig가 정적 리소스로 서빙)를 돌려준다.
+ * AI 이미지 생성 응답을 app.upload.image-dir 아래 영구 저장하고, app.upload.image-url 기준
+ * 상대 경로(WebConfig가 정적 리소스로 서빙)를 돌려준다.
  *
- * 로컬 저장이 실패하면 Replicate URL로 대충 응답하지 않고 예외를 던져 요청 전체를 실패로 처리한다 -
- * 만료될 URL을 성공으로 감춰 돌려주면 나중에 이미지가 사라지는 문제가 그대로 재현되기 때문이다.
+ * Python이 Gemini로 전환된 뒤로는 imageBase64(data URI)로 이미지가 오고, imageUrl은 항상 비어 있다
+ * (예전 Replicate 시절에는 반대였다 - imageUrl만 오고 imageBase64는 없었음). downloadAndStore는
+ * Replicate URL 방식이 다시 쓰일 가능성에 대비해 남겨두고, storeFromDataUri를 주 경로로 쓴다.
+ *
+ * 로컬 저장이 실패하면 대충 응답하지 않고 예외를 던져 요청 전체를 실패로 처리한다 - 저장 안 된 이미지를
+ * 성공으로 감춰 돌려주면 나중에 이미지가 안 보이는 문제가 원인도 없이 재현되기 때문이다.
  */
 @Slf4j
 @Service
@@ -35,6 +41,7 @@ import java.util.UUID;
 public class AiImageStorageService {
 
     private static final String DEFAULT_EXTENSION = "webp";
+    private static final Pattern DATA_URI_PATTERN = Pattern.compile("^data:([^;,]+);base64,(.+)$", Pattern.DOTALL);
 
     private final AppProperties appProperties;
     private final RestTemplate restTemplate = new RestTemplate();
@@ -69,6 +76,45 @@ public class AiImageStorageService {
         }
 
         String extension = resolveExtension(contentType, remoteUrl);
+        StoredImage stored = writeToDisk(body, extension, imageType);
+
+        log.info("Replicate 이미지 로컬 저장 완료: remoteUrl={}, file={}, size={}", remoteUrl, stored.getFile(), body.length);
+        return stored;
+    }
+
+    /**
+     * Gemini가 돌려주는 "data:{mimeType};base64,{data}" 형식의 이미지를 디코딩해 로컬에 저장한다.
+     * imageUrl 대신 이 방식이 Python의 현재(그리고 유일한) 이미지 전달 계약이다.
+     */
+    public StoredImage storeFromDataUri(String dataUri, String imageType) {
+        Matcher matcher = DATA_URI_PATTERN.matcher(dataUri);
+        if (!matcher.matches()) {
+            log.error("이미지 data URI 형식이 올바르지 않습니다: prefixLen={}", Math.min(dataUri.length(), 30));
+            throw new CustomException(CommonErrorCode.IMAGE_SAVE_FAILED);
+        }
+
+        String mimeType = matcher.group(1);
+        byte[] body;
+        try {
+            body = Base64.getDecoder().decode(matcher.group(2));
+        } catch (IllegalArgumentException e) {
+            log.error("이미지 base64 디코딩 실패", e);
+            throw new CustomException(CommonErrorCode.IMAGE_SAVE_FAILED);
+        }
+
+        if (body.length == 0) {
+            log.error("디코딩된 이미지가 0바이트입니다");
+            throw new CustomException(CommonErrorCode.IMAGE_SAVE_FAILED);
+        }
+
+        String extension = resolveExtensionFromMimeType(mimeType);
+        StoredImage stored = writeToDisk(body, extension, imageType);
+
+        log.info("이미지(base64) 로컬 저장 완료: file={}, size={}", stored.getFile(), body.length);
+        return stored;
+    }
+
+    private StoredImage writeToDisk(byte[] body, String extension, String imageType) {
         String subDir = "COVER".equalsIgnoreCase(imageType) ? "cover" : "page";
 
         Path targetDir = Paths.get(appProperties.getUpload().getImageDir(), subDir).toAbsolutePath().normalize();
@@ -89,8 +135,6 @@ public class AiImageStorageService {
             deleteQuietly(targetFile);
             throw new CustomException(CommonErrorCode.IMAGE_SAVE_FAILED);
         }
-
-        log.info("Replicate 이미지 로컬 저장 완료: remoteUrl={}, file={}, size={}", remoteUrl, targetFile, body.length);
 
         String relativeUrl = appProperties.getUpload().getImageUrl() + "/" + subDir + "/" + fileName;
         return new StoredImage(targetFile, relativeUrl);
@@ -130,6 +174,15 @@ public class AiImageStorageService {
             if (ext.equals("png") || ext.equals("jpg") || ext.equals("webp")) return ext;
         }
 
+        return DEFAULT_EXTENSION;
+    }
+
+    /** data URI의 mimeType(예: image/png)에서 확장자를 뽑는다. Gemini 응답의 inline_data.mime_type을 그대로 쓴다. */
+    private String resolveExtensionFromMimeType(String mimeType) {
+        int slashIdx = mimeType.indexOf('/');
+        String subtype = (slashIdx >= 0 ? mimeType.substring(slashIdx + 1) : mimeType).toLowerCase(Locale.ROOT);
+        if (subtype.equals("jpeg")) return "jpg";
+        if (subtype.equals("png") || subtype.equals("webp")) return subtype;
         return DEFAULT_EXTENSION;
     }
 }
