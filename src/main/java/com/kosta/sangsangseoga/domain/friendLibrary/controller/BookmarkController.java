@@ -9,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -21,8 +20,9 @@ public class BookmarkController {
 
     /**
      * POST /api/books/:id/bookmarks
-     * 북마크 등록 - 201
+     * 북마크 등록/이동 - 201
      * Request Body: { "pageNo": 5 }
+     * 책당 북마크가 하나뿐이라 이미 있으면 이 페이지로 옮겨진다.
      */
     @PostMapping("/{id}/bookmarks")
     public ResponseEntity<ApiResponse<BookmarkDto>> addBookmark(
@@ -35,27 +35,26 @@ public class BookmarkController {
     }
 
     /**
-     * DELETE /api/books/:id/bookmarks?pageNo=5
-     * 북마크 취소 - 204
+     * DELETE /api/books/:id/bookmarks
+     * 북마크 취소 - 204 (책당 북마크가 하나뿐이라 페이지 구분 불필요)
      */
     @DeleteMapping("/{id}/bookmarks")
     public ResponseEntity<Void> removeBookmark(
             @PathVariable Long id,
-            @RequestParam Integer pageNo,
             @AuthenticationPrincipal Long memberId) throws Exception {
-        bookmarkService.removeBookmark(memberId, id, pageNo);
+        bookmarkService.removeBookmark(memberId, id);
         return ResponseEntity.noContent().build();
     }
 
     /**
      * GET /api/books/:id/bookmarks
-     * 내가 북마크한 페이지 번호 목록 조회
+     * 내가 북마크한 페이지 조회 (없으면 isBookmarkedByMe=false, pageNo=null)
      */
     @GetMapping("/{id}/bookmarks")
-    public ResponseEntity<ApiResponse<List<Integer>>> getBookmarkedPages(
+    public ResponseEntity<ApiResponse<BookmarkDto>> getBookmark(
             @PathVariable Long id,
             @AuthenticationPrincipal Long memberId) throws Exception {
-        List<Integer> pages = bookmarkService.getBookmarkedPages(memberId, id);
-        return ResponseEntity.ok(ApiResponse.success(pages));
+        BookmarkDto result = bookmarkService.getBookmark(memberId, id);
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 }
