@@ -108,10 +108,12 @@ public class MemberService {
         LocalDateTime requestedAt = LocalDateTime.now();
         LocalDateTime expiresAt = requestedAt.plusDays(7);
 
+        Member guardian = memberRepository.findByEmail(request.getGuardianEmail()).orElse(null);
+
         GuardianConsent consent = GuardianConsent.builder()
                 .member(member)
                 .guardianEmail(request.getGuardianEmail())
-                .guardian(memberRepository.findByEmail(request.getGuardianEmail()).orElse(null))
+                .guardian(guardian)
                 .status(GuardianConsentStatus.REQUESTED)
                 .requestedAt(requestedAt)
                 .expiresAt(expiresAt)
@@ -125,6 +127,12 @@ public class MemberService {
         );
 
         mailService.sendGuardianConsentEmail(request.getGuardianEmail(), member.getNickname(), consent.getId(), token);
+
+        // 보호자가 이미 우리 서비스 회원이면 이메일과 별개로 앱 내 알림도 보낸다.
+        if (guardian != null) {
+            notificationService.notify(guardian,
+                    String.format("%s님이 보호자 동의를 요청했습니다.", member.getNickname()));
+        }
 
         return toResponseDto(consent);
     }
