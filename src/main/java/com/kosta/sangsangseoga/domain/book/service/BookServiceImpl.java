@@ -138,6 +138,7 @@ public class BookServiceImpl implements BookService {
                             .book(book)
                             .pageNo(displaySeq++)
                             .title(pageRequest.getTitle())
+                            .titleEn(pageRequest.getTitleEn())
                             .contentType(contentType)
                             .contentTextKo(null)
                             .contentTextEn(null)
@@ -153,6 +154,7 @@ public class BookServiceImpl implements BookService {
                             .book(book)
                             .pageNo(displaySeq++)
                             .title(pageRequest.getTitle())
+                            .titleEn(pageRequest.getTitleEn())
                             .contentType(contentType)
                             .contentTextKo(pageRequest.getContentTextKo())
                             .contentTextEn(pageRequest.getContentTextEn())
@@ -169,7 +171,6 @@ public class BookServiceImpl implements BookService {
                             .contentType(contentType)
                             .contentTextKo(pageRequest.getContentTextKo())
                             .contentTextEn(pageRequest.getContentTextEn())
-                            .contentFontSizeEn(pageRequest.getContentFontSizeEn())
                             .imageUrl(pageRequest.getImageUrl())
                             .build());
 
