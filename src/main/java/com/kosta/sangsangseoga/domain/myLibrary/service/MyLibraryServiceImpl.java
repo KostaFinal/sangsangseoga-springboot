@@ -1,9 +1,7 @@
 package com.kosta.sangsangseoga.domain.myLibrary.service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -106,7 +104,9 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	
 	private MyReportHistoryItemDto toMyReportHistoryItemDto(
 	        Report report,
-	        AdminActionLog actionLog
+	        AdminActionLog actionLog,
+	        Map<Long, Book> bookMap,
+	        Map<Long, Comment> commentMap
 	) {
 	    ReportTargetType targetType = report.getTargetType();
 
@@ -116,8 +116,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 
 	    switch (targetType) {
 	        case BOOK:
-	            Book book = bookRepository.findById(report.getTargetId())
-	                    .orElse(null);
+	            Book book = bookMap.get(report.getTargetId());
 
 	            if (book != null) {
 	                targetTitle = book.getTitle();
@@ -126,9 +125,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	            break;
 
 	        case COMMENT:
-	            Comment comment = commentRepository
-	                    .findById(report.getTargetId())
-	                    .orElse(null);
+	            Comment comment = commentMap.get(report.getTargetId());
 
 	            if (comment != null) {
 	                targetContent = comment.getContent();
@@ -139,7 +136,6 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	                }
 	            }
 	            break;
-
 	    }
 
 	    return MyReportHistoryItemDto.builder()
@@ -165,6 +161,48 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	            .createdAt(report.getCreatedAt())
 	            .processedAt(report.getProcessedAt())
 	            .build();
+	}
+	
+	private Map<Long, Book> getReportBookMap(List<Report> reports) {
+	    List<Long> bookIds = reports.stream()
+	            .filter(report ->
+	                    report.getTargetType() == ReportTargetType.BOOK
+	            )
+	            .map(Report::getTargetId)
+	            .distinct()
+	            .collect(Collectors.toList());
+
+	    if (bookIds.isEmpty()) {
+	        return Collections.emptyMap();
+	    }
+
+	    return bookRepository.findAllById(bookIds)
+	            .stream()
+	            .collect(Collectors.toMap(
+	                    Book::getId,
+	                    book -> book
+	            ));
+	}
+
+	private Map<Long, Comment> getReportCommentMap(List<Report> reports) {
+	    List<Long> commentIds = reports.stream()
+	            .filter(report ->
+	                    report.getTargetType() == ReportTargetType.COMMENT
+	            )
+	            .map(Report::getTargetId)
+	            .distinct()
+	            .collect(Collectors.toList());
+
+	    if (commentIds.isEmpty()) {
+	        return Collections.emptyMap();
+	    }
+
+	    return commentRepository.findAllById(commentIds)
+	            .stream()
+	            .collect(Collectors.toMap(
+	                    Comment::getId,
+	                    comment -> comment
+	            ));
 	}
 
 	@Override
@@ -597,12 +635,20 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 
 	    Map<Long, AdminActionLog> actionLogMap =
 	            getActionLogMap(reports);
+	    
+	    Map<Long, Book> bookMap =
+	            getReportBookMap(reports);
+
+	    Map<Long, Comment> commentMap =
+	            getReportCommentMap(reports);
 
 	    List<MyReportHistoryItemDto> items = reports.stream()
 	            .map(report ->
 	                    toMyReportHistoryItemDto(
 	                            report,
-	                            actionLogMap.get(report.getId())
+	                            actionLogMap.get(report.getId()),
+	                            bookMap,
+	                            commentMap
 	                    )
 	            )
 	            .collect(Collectors.toList());
@@ -622,54 +668,45 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	        int page,
 	        int size
 	) {
-	    List<Report> reports = new ArrayList<>();
+	    PageRequest pageable = PageRequest.of(page - 1, size);
 
-	    reports.addAll(reportRepository.findReceivedBookReports(memberId));
-	    reports.addAll(reportRepository.findReceivedCommentReports(memberId));
+	    Page<Report> reportPage =
+	            reportRepository.findReceivedReports(
+	                    memberId,
+	                    ReportStatus.RESOLVED,
+	                    ReportTargetType.BOOK,
+	                    ReportTargetType.COMMENT,
+	                    pageable
+	            );
 
-	    reports = reports.stream()
-	            .filter(report -> report.getStatus() == ReportStatus.RESOLVED)
-	            .sorted(
-	                    Comparator.comparing(
-	                            Report::getProcessedAt,
-	                            Comparator.nullsLast(
-	                                    Comparator.reverseOrder()
-	                            )
-	                    )
-	            )
-	            .collect(Collectors.toList());
-
-	    int fromIndex = Math.min(
-	            (page - 1) * size,
-	            reports.size()
-	    );
-
-	    int toIndex = Math.min(
-	            fromIndex + size,
-	            reports.size()
-	    );
-
-	    List<Report> pageReports =
-	            reports.subList(fromIndex, toIndex);
+	    List<Report> reports = reportPage.getContent();
 
 	    Map<Long, AdminActionLog> actionLogMap =
-	            getActionLogMap(pageReports);
+	            getActionLogMap(reports);
+
+	    Map<Long, Book> bookMap =
+	            getReportBookMap(reports);
+
+	    Map<Long, Comment> commentMap =
+	            getReportCommentMap(reports);
 
 	    List<MyReportHistoryItemDto> items =
-	            pageReports.stream()
+	            reports.stream()
 	                    .map(report ->
 	                            toMyReportHistoryItemDto(
 	                                    report,
-	                                    actionLogMap.get(report.getId())
+	                                    actionLogMap.get(report.getId()),
+	                                    bookMap,
+	                                    commentMap
 	                            )
 	                    )
 	                    .collect(Collectors.toList());
 
 	    return MyReportHistoryResponseDto.builder()
 	            .items(items)
-	            .totalCount((long) reports.size())
-	            .page(page)
-	            .hasNext(toIndex < reports.size())
+	            .totalCount(reportPage.getTotalElements())
+	            .page(reportPage.getNumber() + 1)
+	            .hasNext(reportPage.hasNext())
 	            .build();
 	}
 

@@ -1,16 +1,17 @@
 package com.kosta.sangsangseoga.domain.friendLibrary.repository;
 
-import com.kosta.sangsangseoga.domain.member.entity.Member;
-import com.kosta.sangsangseoga.domain.friendLibrary.entity.Report;
-import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportStatus;
-import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportTargetType;
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
+import com.kosta.sangsangseoga.domain.friendLibrary.entity.Report;
+import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportStatus;
+import com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportTargetType;
+import com.kosta.sangsangseoga.domain.member.entity.Member;
 
 public interface ReportRepository extends JpaRepository<Report, Long> {
 
@@ -31,37 +32,68 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
 	// 내가 신고한 내역 상태별 조회
 	Page<Report> findByReporter_IdAndStatusOrderByCreatedAtDesc(Long reporterId, ReportStatus status,
 			Pageable pageable);
-	// 내 책이 신고당한 내역
-	@Query(
-	    "SELECT r " +
-	    "FROM Report r " +
-	    "WHERE r.targetType = com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportTargetType.BOOK " +
-	    "AND r.targetId IN (" +
-	    "   SELECT b.id " +
-	    "   FROM Book b " +
-	    "   WHERE b.member.id = :memberId" +
-	    ") " +
-	    "ORDER BY r.createdAt DESC"
-	)
-	List<Report> findReceivedBookReports(
-	        @Param("memberId") Long memberId
-	);
 	
-	// 내가 작성한 댓글이 신고당한 내역
+	
 	@Query(
-	    "SELECT r " +
-	    "FROM Report r " +
-	    "WHERE r.targetType = com.kosta.sangsangseoga.domain.friendLibrary.enums.ReportTargetType.COMMENT " +
-	    "AND r.targetId IN (" +
-	    "   SELECT c.id " +
-	    "   FROM Comment c " +
-	    "   WHERE c.member.id = :memberId" +
-	    ") " +
-	    "ORDER BY r.createdAt DESC"
-	)
-	List<Report> findReceivedCommentReports(
-	        @Param("memberId") Long memberId
-	);
+		    value =
+		        "SELECT r " +
+		        "FROM Report r " +
+		        "WHERE r.status = :status " +
+		        "AND (" +
+		        "   (" +
+		        "       r.targetType = :bookType " +
+		        "       AND EXISTS (" +
+		        "           SELECT b.id " +
+		        "           FROM Book b " +
+		        "           WHERE b.id = r.targetId " +
+		        "           AND b.member.id = :memberId" +
+		        "       )" +
+		        "   ) " +
+		        "   OR " +
+		        "   (" +
+		        "       r.targetType = :commentType " +
+		        "       AND EXISTS (" +
+		        "           SELECT c.id " +
+		        "           FROM Comment c " +
+		        "           WHERE c.id = r.targetId " +
+		        "           AND c.member.id = :memberId" +
+		        "       )" +
+		        "   )" +
+		        ") " +
+		        "ORDER BY r.processedAt DESC",
+		    countQuery =
+		        "SELECT COUNT(r) " +
+		        "FROM Report r " +
+		        "WHERE r.status = :status " +
+		        "AND (" +
+		        "   (" +
+		        "       r.targetType = :bookType " +
+		        "       AND EXISTS (" +
+		        "           SELECT b.id " +
+		        "           FROM Book b " +
+		        "           WHERE b.id = r.targetId " +
+		        "           AND b.member.id = :memberId" +
+		        "       )" +
+		        "   ) " +
+		        "   OR " +
+		        "   (" +
+		        "       r.targetType = :commentType " +
+		        "       AND EXISTS (" +
+		        "           SELECT c.id " +
+		        "           FROM Comment c " +
+		        "           WHERE c.id = r.targetId " +
+		        "           AND c.member.id = :memberId" +
+		        "       )" +
+		        "   )" +
+		        ")"
+		)
+		Page<Report> findReceivedReports(
+		        @Param("memberId") Long memberId,
+		        @Param("status") ReportStatus status,
+		        @Param("bookType") ReportTargetType bookType,
+		        @Param("commentType") ReportTargetType commentType,
+		        Pageable pageable
+		);
 	
 	
 }
