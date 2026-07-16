@@ -29,6 +29,14 @@ public class NotificationSseRegistry {
         emitter.onTimeout(() -> remove(memberId, emitter));
         emitter.onError(e -> remove(memberId, emitter));
 
+        // 실제 알림이 올 때까지 아무것도 안 보내면 서버가 응답 헤더 자체를 flush하지 않아 클라이언트가
+        // 연결 성공 여부를 알 수 없다. 연결 직후 바로 코멘트 이벤트를 보내 헤더를 강제로 내보낸다.
+        try {
+            emitter.send(SseEmitter.event().comment("connected"));
+        } catch (IOException e) {
+            remove(memberId, emitter);
+        }
+
         return emitter;
     }
 

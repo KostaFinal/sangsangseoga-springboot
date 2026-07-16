@@ -32,7 +32,7 @@ import java.util.Map;
 public class NotificationStreamListener implements StreamListener<String, MapRecord<String, String, String>> {
 
     private final NotificationSseRegistry sseRegistry;
-    private final RedisConnectionFactory redisConnectionFactory;
+    private final RedisConnectionFactory notificationStreamConnectionFactory;
 
     private StreamMessageListenerContainer<String, MapRecord<String, String, String>> container;
 
@@ -43,7 +43,7 @@ public class NotificationStreamListener implements StreamListener<String, MapRec
                         .pollTimeout(Duration.ofSeconds(2))
                         .build();
 
-        container = StreamMessageListenerContainer.create(redisConnectionFactory, options);
+        container = StreamMessageListenerContainer.create(notificationStreamConnectionFactory, options);
         container.receive(StreamOffset.create(NotificationStreamPublisher.STREAM_KEY, ReadOffset.latest()), this);
         container.start();
     }
