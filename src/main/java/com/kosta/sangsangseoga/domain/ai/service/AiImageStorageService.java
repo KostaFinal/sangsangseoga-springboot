@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -52,6 +53,53 @@ public class AiImageStorageService {
         // 실패 시 정리(deleteQuietly)할 수 있도록 실제 파일 경로를 들고 있는다.
         private final Path file;
         private final String relativeUrl;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class ReferenceImage {
+        private final byte[] data;
+        private final String mimeType;
+    }
+
+    /**
+     * writeToDisk가 만든 relativeUrl(/uploads/ai-images/{cover|page}/{uuid}.{ext}, 또는 그 앞에
+     * 스킴/호스트가 붙은 절대 URL)을 역으로 로컬 파일 경로로 되돌려 바이트를 읽는다.
+     * 캐릭터 일관성용 레퍼런스 이미지(예: 이미 생성된 표지)를 다시 읽어 Python에 넘길 때 쓴다.
+     * 파일을 못 찾거나 읽기를 실패하면 예외를 던지지 않고 빈 Optional을 반환한다 - 레퍼런스 하나
+     * 때문에 전체 이미지 생성 요청을 막을 이유는 없고, 호출부가 레퍼런스 없이 계속 진행하면 된다.
+     */
+    public Optional<ReferenceImage> readReferenceImage(String relativeUrl) {
+        if (relativeUrl == null || relativeUrl.isBlank()) {
+            return Optional.empty();
+        }
+
+        String imageUrlPrefix = appProperties.getUpload().getImageUrl();
+        int prefixIdx = relativeUrl.indexOf(imageUrlPrefix);
+        if (prefixIdx < 0) {
+            log.warn("레퍼런스 이미지 URL이 예상 형식이 아닙니다: {}", relativeUrl);
+            return Optional.empty();
+        }
+
+        String afterPrefix = relativeUrl.substring(prefixIdx + imageUrlPrefix.length()).replaceFirst("^/+", "");
+        Path targetFile = Paths.get(appProperties.getUpload().getImageDir()).toAbsolutePath().normalize()
+                .resolve(afterPrefix).normalize();
+
+        // uploadDir 밖을 가리키는 경로(../ 등)로 조작된 URL은 거부한다.
+        Path uploadDir = Paths.get(appProperties.getUpload().getImageDir()).toAbsolutePath().normalize();
+        if (!targetFile.startsWith(uploadDir) || !Files.exists(targetFile)) {
+            log.warn("레퍼런스 이미지 파일을 찾을 수 없습니다: url={}, file={}", relativeUrl, targetFile);
+            return Optional.empty();
+        }
+
+        try {
+            byte[] bytes = Files.readAllBytes(targetFile);
+            String mimeType = Files.probeContentType(targetFile);
+            return Optional.of(new ReferenceImage(bytes, mimeType != null ? mimeType : "image/png"));
+        } catch (IOException e) {
+            log.warn("레퍼런스 이미지 읽기 실패: file={}", targetFile, e);
+            return Optional.empty();
+        }
     }
 
     public StoredImage downloadAndStore(String remoteUrl, String imageType) {

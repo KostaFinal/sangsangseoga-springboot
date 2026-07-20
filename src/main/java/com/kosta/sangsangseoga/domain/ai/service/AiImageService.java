@@ -27,6 +27,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.sql.DataSource;
+import java.util.Base64;
+import java.util.Optional;
 
 /**
  * Python이 돌려주는 imageUrl은 Replicate의 임시 delivery URL이라, 여기서 받은 직후
@@ -61,11 +63,30 @@ public class AiImageService {
         String errorType = null;
         long pythonCallMs = 0L;
         long usageRecordMs = 0L;
-        int reqLen = jsonLength(request);
+        int reqLen = 0;
         int resLen = 0;
 
         try {
             String url = fastApiBaseUrl + "/api/ai/generate-image";
+
+            // 캐릭터 일관성용 레퍼런스 이미지(예: 이미 생성된 표지)의 로컬 URL이 왔으면, 그 파일을
+            // 읽어 base64로 채운 뒤 같은 request 객체를 그대로 Python에 넘긴다(request는 이미
+            // Python의 필드명과 1:1로 맞춰 만들어진 DTO라 별도 매핑 없이 재사용한다).
+            // 파일을 못 읽어도 요청 전체를 실패시키지 않고, 레퍼런스 없이(텍스트만으로) 진행한다.
+            if (request.getReferenceImageUrl() != null && !request.getReferenceImageUrl().isBlank()) {
+                Optional<AiImageStorageService.ReferenceImage> reference =
+                        aiImageStorageService.readReferenceImage(request.getReferenceImageUrl());
+                if (reference.isPresent()) {
+                    request.setReferenceImageBase64(Base64.getEncoder().encodeToString(reference.get().getData()));
+                    request.setReferenceImageMimeType(reference.get().getMimeType());
+                } else {
+                    log.warn("레퍼런스 이미지를 읽지 못해 레퍼런스 없이 진행합니다: requestId={} referenceImageUrl={}",
+                            requestId, request.getReferenceImageUrl());
+                }
+            }
+
+            // reqLen은 레퍼런스 base64까지 채운 뒤(=Python에 실제로 보내는 최종 페이로드 기준)에 잰다.
+            reqLen = jsonLength(request);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
