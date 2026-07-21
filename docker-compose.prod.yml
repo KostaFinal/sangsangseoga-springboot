@@ -1,0 +1,51 @@
+# EC2 인스턴스에서 실행하는 운영용 구성.
+# https 종료는 이 compose 밖(ALB + ACM)에서 처리하므로, 여기서는 backend를 8080으로 평문 노출한다.
+# ALB → 이 EC2의 8080 포트로 HTTP 포워딩 (TLS는 ALB가 ACM 인증서로 종료).
+#
+# python-llm 컨테이너는 외부에 포트를 열지 않는다 - backend가 도커 네트워크 내부에서만
+# http://python-llm:8000 으로 호출하고(application.yml의 FASTAPI_BASE_URL), 외부 인바운드는 불필요.
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sangsangseoga-backend
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      FASTAPI_BASE_URL: http://python-llm:8000
+      PROD_REDIS_HOST: redis
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+      - python-llm
+    networks:
+      - sangsangseoga-net
+
+  python-llm:
+    # 별도 리포지토리(파이썬 LLM 서버)를 이 EC2에 함께 clone해두고 상대 경로로 build하거나,
+    # ECR에 미리 push해둔 이미지를 image: <ECR_URI>:<tag> 로 대체해도 된다.
+    build:
+      context: ../python-llm-server
+    container_name: sangsangseoga-python-llm
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    networks:
+      - sangsangseoga-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: sangsangseoga-redis
+    restart: unless-stopped
+    networks:
+      - sangsangseoga-net
+
+networks:
+  sangsangseoga-net:
+    driver: bridge
