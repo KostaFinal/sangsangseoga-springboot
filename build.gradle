@@ -19,7 +19,10 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -39,6 +42,16 @@ dependencies {
 	annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jpa'
 	annotationProcessor 'javax.annotation:javax.annotation-api'
 	annotationProcessor 'javax.persistence:javax.persistence-api'
+
+	// Swagger (springdoc-openapi) - Spring Boot 2.7 호환 버전
+	implementation 'org.springdoc:springdoc-openapi-ui:1.7.0'
+
+	// 프로필 이미지 등 업로드 파일을 나중에 S3로 옮길 때 쓰는 클라이언트.
+	// app.storage.type=s3로 바꾸기 전까지는 관련 빈이 생성되지 않아 자격증명 없이도 기동에 문제없다.
+	implementation 'software.amazon.awssdk:s3:2.25.60'
+
+    // Swagger 에러코드 어노테이션 검증 테스트용 (런타임엔 포함 안 됨)
+    testImplementation 'org.reflections:reflections:0.10.2'
 }
 
 def querydslSrcDir = 'src/main/generated'
@@ -55,6 +68,16 @@ compileJava.options.annotationProcessorGeneratedSourcesDirectory = file(querydsl
 
 clean {
 	delete file(querydslSrcDir)
+}
+
+// 자바 컴파일 시 인코딩을 UTF-8로 강제 지정합니다.
+tasks.withType(JavaCompile) {
+	options.encoding = 'UTF-8'
+}
+
+// 리소스 파일(properties, yml 등)을 복사할 때도 인코딩을 UTF-8로 지정합니다.
+tasks.withType(ProcessResources) {
+	filteringCharset = 'UTF-8'
 }
 
 tasks.named('test') {

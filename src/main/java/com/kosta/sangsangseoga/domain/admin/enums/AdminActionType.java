@@ -1,5 +1,5 @@
 package com.kosta.sangsangseoga.domain.admin.enums;
 
 public enum AdminActionType {
-    SUSPEND, UNSUSPEND
+    BOOK_HIDE, COMMENT_DELETE, REPORT_REJECT
 }
