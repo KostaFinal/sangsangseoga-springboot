@@ -6,6 +6,7 @@ import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.subscription.SubscriptionPolicy;
 import com.kosta.sangsangseoga.domain.subscription.dto.UsageResponseDto;
+import com.kosta.sangsangseoga.domain.subscription.exception.SubscriptionErrorCode;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
@@ -86,25 +87,68 @@ public class UsageService {
                 < SubscriptionPolicy.FREE_TRIAL_IMAGE_CALL_LIMIT;
     }
 
-    /** PREMIUM 회원의 텍스트 생성 1회 차감. 잔여량이 없으면 예외를 던진다. */
+    /**
+     * PREMIUM 회원의 텍스트 생성 1회 차감. FREE 회원은 AiGenerationUsage insert(recordUsage) 자체가
+     * 생애 호출 횟수 소진 처리라 여기서는 할 일이 없어 조용히 반환한다. 잔여량이 없으면 예외를 던진다.
+     */
     public void consumeText(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
-        subscriptionService.reconcileIfExpired(member);
+        if (!member.getSubscriptionPlan().isPremium()) {
+            return;
+        }
         if (member.getDailyTextRemaining() == null || member.getDailyTextRemaining() <= 0) {
-            throw new CustomException(CommonErrorCode.BAD_REQUEST);
+            throw new CustomException(SubscriptionErrorCode.DAILY_QUOTA_EXCEEDED);
         }
         member.decrementDailyText();
     }
 
-    /** PREMIUM 회원의 이미지 생성 1회 차감. 잔여량이 없으면 예외를 던진다. */
+    /** PREMIUM 회원의 이미지 생성 1회 차감. {@link #consumeText} 참고. 잔여량이 없으면 예외를 던진다. */
     public void consumeImage(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
-        subscriptionService.reconcileIfExpired(member);
+        if (!member.getSubscriptionPlan().isPremium()) {
+            return;
+        }
         if (member.getDailyImageRemaining() == null || member.getDailyImageRemaining() <= 0) {
-            throw new CustomException(CommonErrorCode.BAD_REQUEST);
+            throw new CustomException(SubscriptionErrorCode.DAILY_QUOTA_EXCEEDED);
         }
         member.decrementDailyImage();
+    }
+
+    /**
+     * AI 텍스트 생성 전에 호출해 쿼터가 남아있는지만 확인한다(차감은 하지 않는다).
+     * Python 호출은 비용이 드는 작업이라, 어차피 거절될 요청이면 호출 전에 걸러내기 위한 것이다.
+     * 실제 차감은 Python 호출과 로컬 처리가 모두 끝난 뒤 {@link #consumeText}로 한다.
+     */
+    public void assertCanGenerateText(Long memberId) {
+        assertCanGenerate(memberId, CallType.TEXT);
+    }
+
+    /** AI 이미지 생성 전에 호출해 쿼터가 남아있는지만 확인한다. {@link #assertCanGenerateText} 참고. */
+    public void assertCanGenerateImage(Long memberId) {
+        assertCanGenerate(memberId, CallType.IMAGE);
+    }
+
+    private void assertCanGenerate(Long memberId, CallType callType) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+        subscriptionService.reconcileIfExpired(member);
+
+        if (member.getSubscriptionPlan().isPremium()) {
+            Integer remaining = callType == CallType.TEXT
+                    ? member.getDailyTextRemaining()
+                    : member.getDailyImageRemaining();
+            if (remaining == null || remaining <= 0) {
+                throw new CustomException(SubscriptionErrorCode.DAILY_QUOTA_EXCEEDED);
+            }
+        } else {
+            boolean available = callType == CallType.TEXT
+                    ? canGenerateFreeTrialText(memberId)
+                    : canGenerateFreeTrialImage(memberId);
+            if (!available) {
+                throw new CustomException(SubscriptionErrorCode.FREE_TRIAL_CALL_LIMIT_EXCEEDED);
+            }
+        }
     }
 }

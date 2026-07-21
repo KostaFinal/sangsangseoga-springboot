@@ -8,6 +8,7 @@ import com.kosta.sangsangseoga.domain.ai.enums.CallType;
 import com.kosta.sangsangseoga.domain.ai.repository.AiGenerationUsageRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
+import com.kosta.sangsangseoga.domain.subscription.service.UsageService;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import com.zaxxer.hikari.HikariDataSource;
@@ -36,7 +37,9 @@ import java.util.Optional;
  * (Replicate URL은 DB/응답 어디에도 남기지 않는다).
  * book_image 저장, book.cover_image_id 갱신은 여전히 이번 범위 밖이다
  * (AiGenerateImageRequestDto에 bookId가 없어 어느 책의 이미지인지도 알 수 없다).
- * 여기서는 관리자 AI 사용량 대시보드가 쓸 수 있도록 호출 이력(AiGenerationUsage, callType=IMAGE)만 기록한다.
+ * 관리자 AI 사용량 대시보드가 쓸 호출 이력(AiGenerationUsage, callType=IMAGE)을 기록하는 것과 별개로,
+ * Python 호출 전에는 UsageService.assertCanGenerateImage로 쿼터를 확인하고 저장까지 끝난 뒤에는
+ * consumeImage로 실제 차감한다(AiService의 텍스트 경로와 동일한 패턴).
  */
 @Slf4j
 @Service
@@ -52,6 +55,7 @@ public class AiImageService {
     private final ObjectMapper objectMapper;
     private final DataSource dataSource;
     private final AiImageStorageService aiImageStorageService;
+    private final UsageService usageService;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -67,6 +71,8 @@ public class AiImageService {
         int resLen = 0;
 
         try {
+            usageService.assertCanGenerateImage(memberId);
+
             String url = fastApiBaseUrl + "/api/ai/generate-image";
 
             // 캐릭터 일관성용 레퍼런스 이미지(예: 이미 생성된 표지)의 로컬 URL이 왔으면, 그 파일을
@@ -162,8 +168,9 @@ public class AiImageService {
                 long t2 = System.nanoTime();
                 try {
                     recordUsage(memberId);
+                    usageService.consumeImage(memberId);
                 } catch (RuntimeException e) {
-                    // 파일 저장은 이미 끝났는데 사용량 기록이 실패해 요청 전체가 실패로 되돌아가면,
+                    // 파일 저장은 이미 끝났는데 사용량 기록/차감이 실패해 요청 전체가 실패로 되돌아가면,
                     // 그 파일은 DB 어디에도 참조되지 않는 고아 파일로 디스크에 영원히 남는다.
                     // 원래 예외는 그대로 던지되, 방금 저장한 파일은 여기서 지워 정리한다.
                     aiImageStorageService.deleteQuietly(storedImage);

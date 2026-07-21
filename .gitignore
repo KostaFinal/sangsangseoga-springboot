@@ -11,6 +11,14 @@ src/main/generated/
 ### 로컬 업로드 파일(프로필 사진 등) ###
 /uploads/
 
+### 애플리케이션 로그 ###
+/logs/
+
+### 배포 환경변수(DB 비밀번호, JWT 시크릿 등 실제 값이 들어감) ###
+.env
+.env.*
+!.env.*.example
+
 ### Claude Code ###
 .claude/
 

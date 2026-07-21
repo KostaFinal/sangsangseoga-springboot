@@ -1,0 +1,76 @@
+# EC2 인스턴스에서 실행하는 운영용 구성.
+# https 종료는 이 compose 밖(ALB + ACM)에서 처리하므로, 여기서는 backend를 8080으로 평문 노출한다.
+# ALB → 이 EC2의 8080 포트로 HTTP 포워딩 (TLS는 ALB가 ACM 인증서로 종료).
+#
+# python-llm 컨테이너는 외부에 포트를 열지 않는다 - backend가 도커 네트워크 내부에서만
+# http://python-llm:8000 으로 호출하고(application.yml의 FASTAPI_BASE_URL), 외부 인바운드는 불필요.
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sangsangseoga-backend
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      FASTAPI_BASE_URL: http://python-llm:8000
+      PROD_REDIS_HOST: redis
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+      python-llm:
+        condition: service_healthy
+    networks:
+      - sangsangseoga-net
+
+  python-llm:
+    # 별도 리포지토리(파이썬 LLM 서버)를 이 EC2에 함께 clone해두고 상대 경로로 build하거나,
+    # ECR에 미리 push해둔 이미지를 image: <ECR_URI>:<tag> 로 대체해도 된다.
+    build:
+      context: ../python-llm-server
+    container_name: sangsangseoga-python-llm
+    restart: unless-stopped
+    # backend와 같은 .env.prod를 통째로 공유하면 DB 비밀번호 등 이 컨테이너가
+    # 쓸 일 없는 값까지 넘어가므로, 이 서비스가 실제로 필요한 키만 별도 파일로 분리한다.
+    env_file:
+      - .env.python-llm
+    # /health 엔드포인트가 파이썬 서버에 실제로 있는지는 그 리포 기준으로 확인 필요.
+    # 없다면 실제 응답 가능한 경로로 바꿀 것.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - sangsangseoga-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: sangsangseoga-redis
+    restart: unless-stopped
+    # refresh token 화이트리스트/블랙리스트가 여기 저장되므로, 컨테이너가 재생성돼도
+    # 로그인 세션이 전부 끊기지 않도록 AOF로 영속화하고 볼륨에 남긴다.
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - sangsangseoga-net
+
+networks:
+  sangsangseoga-net:
+    driver: bridge
+
+volumes:
+  redis-data:
