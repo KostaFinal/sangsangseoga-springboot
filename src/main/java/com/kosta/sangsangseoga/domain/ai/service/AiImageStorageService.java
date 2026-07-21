@@ -164,7 +164,6 @@ public class AiImageStorageService {
 
     private StoredImage writeToDisk(byte[] body, String extension, String imageType) {
         String subDir = "COVER".equalsIgnoreCase(imageType) ? "cover" : "page";
-
         Path targetDir = Paths.get(appProperties.getUpload().getImageDir(), subDir).toAbsolutePath().normalize();
         try {
             Files.createDirectories(targetDir);
