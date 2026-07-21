@@ -131,8 +131,8 @@ flowchart TD
 - [ ] 인스턴스 생성 시 1단계에서 만든 IAM Role 연결
 - [ ] 보안그룹 인바운드: ALB 보안그룹에서 8080만 허용, SSH(22)는 관리자 IP만
 - [ ] Docker, Docker Compose 설치
-- [ ] 이 리포 + 파이썬 LLM 서버 리포를 EC2에 clone (`docker-compose.prod.yml`이 `../python-llm-server` 상대 경로로 빌드하므로 두 리포를 같은 부모 디렉터리 아래 나란히 clone)
-- [ ] `.env.prod.example`을 참고해 `.env.prod` 작성 (실제 비밀번호/키 채움, git에는 올리지 않음 — `.gitignore`에 이미 등록됨)
+- [ ] 이 리포(`be`) + [`sangsangseoga-python`](https://github.com/KostaFinal/sangsangseoga-python) 리포를 EC2에 clone (`docker-compose.prod.yml`이 `../sangsangseoga-python` 상대 경로로 빌드하므로 두 리포를 같은 부모 디렉터리 아래 나란히 clone)
+- [ ] `.env.prod.example`을 참고해 `.env.prod` 작성, `.env.python-llm.example`을 참고해 `.env.python-llm` 작성 (실제 비밀번호/키 채움, git에는 올리지 않음 — `.gitignore`에 이미 등록됨)
 - [ ] `docker compose -f docker-compose.prod.yml up -d --build`
 - [ ] ALB 생성 후 대상 그룹에 이 EC2를 8080 포트로 등록, 리스너에 4단계 ACM 인증서 연결 (443 → 8080)
 
