@@ -176,6 +176,7 @@ public class AiImageService {
                     aiImageStorageService.deleteQuietly(storedImage);
                     throw e;
                 }
+                
                 usageRecordMs = elapsedMs(t2);
                 logHikariStatus("afterUsageRecord", requestId);
             }
