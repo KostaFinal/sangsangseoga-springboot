@@ -28,6 +28,7 @@ public class WeeklyBookRankingDto {
         private String title;
         private String authorNickname;
         private String coverImageUrl;
+        private String bookType;
         private Integer viewCount;
         private Integer likeCount;
         private Integer score;
