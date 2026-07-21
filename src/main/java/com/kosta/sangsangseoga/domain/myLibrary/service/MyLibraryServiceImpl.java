@@ -289,6 +289,7 @@ public class MyLibraryServiceImpl implements MyLibraryService {
 	                .description(book.getDescription())
 	                .category(book.getCategory())
 	                .bookType(book.getBookType().name())
+	                .authorNickname(book.getMember().getNickname())
 	                .coverImageUrl(coverImageUrlMap.get(book.getId()))
 	                .currentPage(myReading.getCurrentPage())
 	                .progress(myReading.getProgress())
