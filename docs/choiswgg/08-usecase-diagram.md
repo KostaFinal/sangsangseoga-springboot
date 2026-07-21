@@ -45,8 +45,8 @@ flowchart LR
     Admin --> D8
     Admin --> D1
 
-    D1 -.연동.- OAuth
-    D3 -.호출.- AiServer
+    D1 -.연동.-> OAuth
+    D3 -.호출.-> AiServer
 
     classDef guest fill:transparent,stroke:#8A7A50,stroke-width:2px;
     classDef member fill:transparent,stroke:#3B5BA0,stroke-width:2px;
@@ -77,8 +77,8 @@ flowchart LR
     Guest --> UC2
     Guest --> UC3
     Guest --> UC5
-    UC2 -.연동.- OAuth
-    UC1 -.include.- UC6
+    UC2 -.연동.-> OAuth
+    UC1 -.include.-> UC6
 
     Member --> UC4
     Member --> UC7
@@ -131,10 +131,10 @@ flowchart LR
     Member --> UC1
     Member --> UC2
     Member --> UC3
-    UC1 -.include.- UC4
-    UC2 -.include.- UC4
-    UC1 -.호출.- AiServer
-    UC2 -.호출.- AiServer
+    UC1 -.include.-> UC4
+    UC2 -.include.-> UC4
+    UC1 -.호출.-> AiServer
+    UC2 -.호출.-> AiServer
 
     classDef member fill:transparent,stroke:#3B5BA0,stroke-width:2px;
     classDef system fill:transparent,stroke-dasharray:4 3;
@@ -162,7 +162,7 @@ flowchart LR
     Member --> UC1
     Member --> UC2
     Member --> UC4
-    UC2 -.include.- UC3
+    UC2 -.include.-> UC3
 
     classDef guest fill:transparent,stroke:#8A7A50,stroke-width:2px;
     classDef member fill:transparent,stroke:#3B5BA0,stroke-width:2px;
@@ -192,7 +192,7 @@ flowchart LR
     Member --> UC6
     Member --> UC7
     Member --> UC8
-    UC4 -.extend.- UC5
+    UC4 -.extend.-> UC5
 
     classDef member fill:transparent,stroke:#3B5BA0,stroke-width:2px;
 ```

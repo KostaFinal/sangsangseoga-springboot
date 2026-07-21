@@ -25,8 +25,11 @@ WORKDIR /app
 # war 플러그인이 붙어 있지만 embedded Tomcat을 포함하므로 java -jar로 그대로 실행 가능하다.
 COPY --from=build /workspace/build/libs/*.war app.war
 
+# 컨테이너가 뚫려도 호스트/다른 컨테이너에 영향이 적도록 root가 아닌 전용 계정으로 실행한다.
+RUN groupadd -r app && useradd -r -g app app
 # 로컬 디스크 업로드 경로(STORAGE_TYPE=local일 때만 실사용, prod는 S3라 볼륨 없어도 됨).
-RUN mkdir -p /app/uploads
+RUN mkdir -p /app/uploads && chown -R app:app /app
+USER app
 
 EXPOSE 8080
 
