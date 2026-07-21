@@ -10,6 +10,9 @@
 | [04-subscription.md](./04-subscription.md) | 구독 플랜/결제(Mock), 만료 정리(reconcile) 패턴, 배치 스케줄러 |
 | [05-admin.md](./05-admin.md) | 신고 처리, 회원 관리(목록/상태 변경) |
 | [06-notification-realtime.md](./06-notification-realtime.md) | Redis Streams + SSE 실시간 알림 구조, 알림 발생 지점 전체 목록 |
+| [07-cloud-deployment.md](./07-cloud-deployment.md) | AWS 배포 아키텍처, 서비스별 개념 설명(IAM/S3/RDS/CloudFront/ACM/ALB/Route53/Docker), 진행 순서, Dockerfile/docker-compose.prod.yml 구성 |
+| [08-usecase-diagram.md](./08-usecase-diagram.md) | 전체 시스템 유스케이스 다이어그램(액터: 비회원/회원/관리자, 도메인별 8개 mermaid 다이어그램) |
+| [09-deployment-config.md](./09-deployment-config.md) | 로컬 vs 클라우드 실행 방식 비교, `.env.prod`/`.env.python-llm` 환경변수 전체 목록, GitHub Secrets 필요 여부 |
 
 ## 요청 처리 흐름 (공통)
 

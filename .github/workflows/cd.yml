@@ -1,0 +1,35 @@
+name: CD
+
+# main은 배포 브랜치라 develop에서 PR로 병합되는 시점에만 push가 발생한다(README 브랜치 전략 참고).
+# push를 직접 트리거로 쓰지 않고, 같은 커밋에서 CI(ci.yml, compileJava/compileTestJava)가
+# 성공적으로 끝난 뒤에만 배포하도록 workflow_run으로 체이닝한다 - 검증 없이 곧장 배포되는 걸 막기 위함.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Pull latest code on EC2 and redeploy
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" '
+            set -e
+            # python-llm(sangsangseoga-python)도 같이 최신화한다 -
+            # docker-compose.prod.yml이 ../sangsangseoga-python을 빌드 컨텍스트로 쓰기 때문에,
+            # be 저장소만 pull하면 python 쪽 변경이 반영 안 된 채로 재빌드될 수 있다.
+            cd ~/sangsangseoga-python && git pull origin main
+            cd ~/be && git pull origin main
+            docker compose -f docker-compose.prod.yml up -d --build
+            docker image prune -f
+          '

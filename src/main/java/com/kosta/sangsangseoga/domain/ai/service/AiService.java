@@ -10,6 +10,7 @@ import com.kosta.sangsangseoga.domain.book.entity.Book;
 import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
+import com.kosta.sangsangseoga.domain.subscription.service.UsageService;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import com.zaxxer.hikari.HikariDataSource;
@@ -30,8 +31,10 @@ import javax.sql.DataSource;
 import java.util.Map;
 
 /**
- * 쿼터 차감(consumeText/canGenerateFreeTrialText 등)은 이번 범위에 포함하지 않는다.
- * 여기서는 관리자 AI 사용량 대시보드가 쓸 수 있도록 호출 이력(AiGenerationUsage)만 기록한다.
+ * Python 호출 전에 UsageService.assertCanGenerateText로 쿼터가 남아있는지 먼저 확인해 어차피 거절될
+ * 요청이 Python 원가를 쓰지 않게 막고, 호출과 로컬 처리가 모두 끝난 뒤 consumeText로 실제 차감한다.
+ * recordUsage가 남기는 AiGenerationUsage 이력은 관리자 대시보드 집계용이면서 동시에 FREE 회원의
+ * 생애 호출 횟수 집계 기준이기도 하다(UsageService.canGenerateFreeTrialText 참고).
  */
 @Slf4j
 @Service
@@ -48,6 +51,7 @@ public class AiService {
 	private final MemberRepository memberRepository;
 	private final BookRepository bookRepository;
 	private final DataSource dataSource;
+	private final UsageService usageService;
 
 	private final RestTemplate restTemplate = new RestTemplate();
 
@@ -64,6 +68,8 @@ public class AiService {
 		int resLen = 0;
 
 		try {
+			usageService.assertCanGenerateText(memberId);
+
 			String url = fastApiBaseUrl + "/api/ai/generate";
 
 			long t0 = System.nanoTime();
@@ -101,6 +107,7 @@ public class AiService {
 
 			long t2 = System.nanoTime();
 			recordUsage(memberId, request, pythonRequestBody, fastApiResponse);
+			usageService.consumeText(memberId);
 			usageRecordMs = elapsedMs(t2);
 
 			logHikariStatus("afterUsageRecord", requestId);

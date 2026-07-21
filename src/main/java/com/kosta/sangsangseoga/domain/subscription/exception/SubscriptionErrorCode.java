@@ -14,7 +14,10 @@ public enum SubscriptionErrorCode implements ErrorCode {
     UNSUPPORTED_PLAN_TYPE(HttpStatus.BAD_REQUEST, "구매할 수 없는 플랜입니다."),
     ALREADY_YEARLY_PLAN(HttpStatus.CONFLICT, "이미 연간 구독 중입니다."),
     DOWNGRADE_NOT_SUPPORTED(HttpStatus.BAD_REQUEST,
-            "연간에서 월간으로의 다운그레이드는 즉시 전환을 지원하지 않습니다. 해지 예약 후 만료되면 월간으로 다시 구독해 주세요.");
+            "연간에서 월간으로의 다운그레이드는 즉시 전환을 지원하지 않습니다. 해지 예약 후 만료되면 월간으로 다시 구독해 주세요."),
+    DAILY_QUOTA_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "오늘의 AI 생성 한도를 모두 사용했습니다. 내일 다시 이용해 주세요."),
+    FREE_TRIAL_CALL_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS,
+            "무료 체험 AI 생성 횟수를 모두 사용했습니다. 프리미엄으로 구독하면 계속 이용할 수 있습니다.");
 
     private final HttpStatus status;
     private final String message;
