@@ -168,7 +168,7 @@ public class AiImageService {
                 long t2 = System.nanoTime();
                 try {
                     recordUsage(memberId);
-                    usageService.consumeImage(memberId);
+                    //usageService.consumeImage(memberId);
                 } catch (RuntimeException e) {
                     // 파일 저장은 이미 끝났는데 사용량 기록/차감이 실패해 요청 전체가 실패로 되돌아가면,
                     // 그 파일은 DB 어디에도 참조되지 않는 고아 파일로 디스크에 영원히 남는다.
