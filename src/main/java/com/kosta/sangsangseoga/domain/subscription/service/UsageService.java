@@ -97,10 +97,9 @@ public class UsageService {
         if (!member.getSubscriptionPlan().isPremium()) {
             return;
         }
-        if (member.getDailyTextRemaining() == null || member.getDailyTextRemaining() <= 0) {
+        if (memberRepository.decrementDailyTextIfAvailable(memberId) == 0) {
             throw new CustomException(SubscriptionErrorCode.DAILY_QUOTA_EXCEEDED);
         }
-        member.decrementDailyText();
     }
 
     /** PREMIUM 회원의 이미지 생성 1회 차감. {@link #consumeText} 참고. 잔여량이 없으면 예외를 던진다. */
@@ -110,10 +109,9 @@ public class UsageService {
         if (!member.getSubscriptionPlan().isPremium()) {
             return;
         }
-        if (member.getDailyImageRemaining() == null || member.getDailyImageRemaining() <= 0) {
+        if (memberRepository.decrementDailyImageIfAvailable(memberId) == 0) {
             throw new CustomException(SubscriptionErrorCode.DAILY_QUOTA_EXCEEDED);
         }
-        member.decrementDailyImage();
     }
 
     /**
