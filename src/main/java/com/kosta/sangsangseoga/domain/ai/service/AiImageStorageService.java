@@ -1,8 +1,8 @@
 package com.kosta.sangsangseoga.domain.ai.service;
 
-import com.kosta.sangsangseoga.global.config.AppProperties;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
+import com.kosta.sangsangseoga.global.infra.storage.FileStorageService;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -14,26 +14,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * AI 이미지 생성 응답을 app.upload.image-dir 아래 영구 저장하고, app.upload.image-url 기준
- * 상대 경로(WebConfig가 정적 리소스로 서빙)를 돌려준다.
+ * AI 이미지 생성 응답을 FileStorageService(app.storage.type에 따라 local/s3)로 영구 저장하고,
+ * 클라이언트가 바로 쓸 수 있는 절대 URL을 돌려준다.
  *
  * Python이 Gemini로 전환된 뒤로는 imageBase64(data URI)로 이미지가 오고, imageUrl은 항상 비어 있다
  * (예전 Replicate 시절에는 반대였다 - imageUrl만 오고 imageBase64는 없었음). downloadAndStore는
  * Replicate URL 방식이 다시 쓰일 가능성에 대비해 남겨두고, storeFromDataUri를 주 경로로 쓴다.
  *
- * 로컬 저장이 실패하면 대충 응답하지 않고 예외를 던져 요청 전체를 실패로 처리한다 - 저장 안 된 이미지를
+ * 저장이 실패하면 대충 응답하지 않고 예외를 던져 요청 전체를 실패로 처리한다 - 저장 안 된 이미지를
  * 성공으로 감춰 돌려주면 나중에 이미지가 안 보이는 문제가 원인도 없이 재현되기 때문이다.
  */
 @Slf4j
@@ -44,15 +39,14 @@ public class AiImageStorageService {
     private static final String DEFAULT_EXTENSION = "webp";
     private static final Pattern DATA_URI_PATTERN = Pattern.compile("^data:([^;,]+);base64,(.+)$", Pattern.DOTALL);
 
-    private final AppProperties appProperties;
+    private final FileStorageService fileStorageService;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Getter
     @AllArgsConstructor
     public static class StoredImage {
-        // 실패 시 정리(deleteQuietly)할 수 있도록 실제 파일 경로를 들고 있는다.
-        private final Path file;
-        private final String relativeUrl;
+        // 저장 실패로 되돌려야 할 때(deleteQuietly) FileStorageService.delete에 그대로 넘길 URL.
+        private final String url;
     }
 
     @Getter
@@ -63,41 +57,29 @@ public class AiImageStorageService {
     }
 
     /**
-     * writeToDisk가 만든 relativeUrl(/uploads/ai-images/{cover|page}/{uuid}.{ext}, 또는 그 앞에
-     * 스킴/호스트가 붙은 절대 URL)을 역으로 로컬 파일 경로로 되돌려 바이트를 읽는다.
-     * 캐릭터 일관성용 레퍼런스 이미지(예: 이미 생성된 표지)를 다시 읽어 Python에 넘길 때 쓴다.
-     * 파일을 못 찾거나 읽기를 실패하면 예외를 던지지 않고 빈 Optional을 반환한다 - 레퍼런스 하나
-     * 때문에 전체 이미지 생성 요청을 막을 이유는 없고, 호출부가 레퍼런스 없이 계속 진행하면 된다.
+     * 캐릭터 일관성용 레퍼런스 이미지(예: 이미 생성된 표지)의 URL을 그대로 HTTP GET해서 바이트를 읽는다.
+     * store()가 반환하는 URL은 local/s3 어느 쪽이든 항상 실제로 접근 가능한 절대 URL이므로, 저장소
+     * 종류를 몰라도(로컬 디스크를 직접 열어보지 않아도) 이 방식으로 동일하게 동작한다.
+     * 읽기를 실패하면 예외를 던지지 않고 빈 Optional을 반환한다 - 레퍼런스 하나 때문에 전체 이미지
+     * 생성 요청을 막을 이유는 없고, 호출부가 레퍼런스 없이 계속 진행하면 된다.
      */
-    public Optional<ReferenceImage> readReferenceImage(String relativeUrl) {
-        if (relativeUrl == null || relativeUrl.isBlank()) {
-            return Optional.empty();
-        }
-
-        String imageUrlPrefix = appProperties.getUpload().getImageUrl();
-        int prefixIdx = relativeUrl.indexOf(imageUrlPrefix);
-        if (prefixIdx < 0) {
-            log.warn("레퍼런스 이미지 URL이 예상 형식이 아닙니다: {}", relativeUrl);
-            return Optional.empty();
-        }
-
-        String afterPrefix = relativeUrl.substring(prefixIdx + imageUrlPrefix.length()).replaceFirst("^/+", "");
-        Path targetFile = Paths.get(appProperties.getUpload().getImageDir()).toAbsolutePath().normalize()
-                .resolve(afterPrefix).normalize();
-
-        // uploadDir 밖을 가리키는 경로(../ 등)로 조작된 URL은 거부한다.
-        Path uploadDir = Paths.get(appProperties.getUpload().getImageDir()).toAbsolutePath().normalize();
-        if (!targetFile.startsWith(uploadDir) || !Files.exists(targetFile)) {
-            log.warn("레퍼런스 이미지 파일을 찾을 수 없습니다: url={}, file={}", relativeUrl, targetFile);
+    public Optional<ReferenceImage> readReferenceImage(String url) {
+        if (url == null || url.isBlank()) {
             return Optional.empty();
         }
 
         try {
-            byte[] bytes = Files.readAllBytes(targetFile);
-            String mimeType = Files.probeContentType(targetFile);
-            return Optional.of(new ReferenceImage(bytes, mimeType != null ? mimeType : "image/png"));
-        } catch (IOException e) {
-            log.warn("레퍼런스 이미지 읽기 실패: file={}", targetFile, e);
+            ResponseEntity<byte[]> response = restTemplate.getForEntity(url, byte[].class);
+            byte[] body = response.getBody();
+            if (body == null || body.length == 0) {
+                log.warn("레퍼런스 이미지가 비어 있습니다: url={}", url);
+                return Optional.empty();
+            }
+            MediaType contentType = response.getHeaders().getContentType();
+            String mimeType = contentType != null ? contentType.toString() : "image/png";
+            return Optional.of(new ReferenceImage(body, mimeType));
+        } catch (RestClientException e) {
+            log.warn("레퍼런스 이미지 읽기 실패: url={}", url, e);
             return Optional.empty();
         }
     }
@@ -124,14 +106,15 @@ public class AiImageStorageService {
         }
 
         String extension = resolveExtension(contentType, remoteUrl);
-        StoredImage stored = writeToDisk(body, extension, imageType);
+        StoredImage stored = storeImage(body, contentType != null ? contentType.toString() : "image/" + extension,
+                extension, imageType);
 
-        log.info("Replicate 이미지 로컬 저장 완료: remoteUrl={}, file={}, size={}", remoteUrl, stored.getFile(), body.length);
+        log.info("Replicate 이미지 저장 완료: remoteUrl={}, url={}, size={}", remoteUrl, stored.getUrl(), body.length);
         return stored;
     }
 
     /**
-     * Gemini가 돌려주는 "data:{mimeType};base64,{data}" 형식의 이미지를 디코딩해 로컬에 저장한다.
+     * Gemini가 돌려주는 "data:{mimeType};base64,{data}" 형식의 이미지를 디코딩해 저장한다.
      * imageUrl 대신 이 방식이 Python의 현재(그리고 유일한) 이미지 전달 계약이다.
      */
     public StoredImage storeFromDataUri(String dataUri, String imageType) {
@@ -156,35 +139,16 @@ public class AiImageStorageService {
         }
 
         String extension = resolveExtensionFromMimeType(mimeType);
-        StoredImage stored = writeToDisk(body, extension, imageType);
+        StoredImage stored = storeImage(body, mimeType, extension, imageType);
 
-        log.info("이미지(base64) 로컬 저장 완료: file={}, size={}", stored.getFile(), body.length);
+        log.info("이미지(base64) 저장 완료: url={}, size={}", stored.getUrl(), body.length);
         return stored;
     }
 
-    private StoredImage writeToDisk(byte[] body, String extension, String imageType) {
-        String subDir = "COVER".equalsIgnoreCase(imageType) ? "cover" : "page";
-        Path targetDir = Paths.get(appProperties.getUpload().getImageDir(), subDir).toAbsolutePath().normalize();
-        try {
-            Files.createDirectories(targetDir);
-        } catch (IOException e) {
-            log.error("이미지 저장 디렉터리 생성 실패: dir={}", targetDir, e);
-            throw new CustomException(CommonErrorCode.IMAGE_SAVE_FAILED);
-        }
-
-        String fileName = UUID.randomUUID() + "." + extension;
-        Path targetFile = targetDir.resolve(fileName);
-
-        try {
-            Files.write(targetFile, body);
-        } catch (IOException e) {
-            log.error("이미지 파일 저장 실패: file={}", targetFile, e);
-            deleteQuietly(targetFile);
-            throw new CustomException(CommonErrorCode.IMAGE_SAVE_FAILED);
-        }
-
-        String relativeUrl = appProperties.getUpload().getImageUrl() + "/" + subDir + "/" + fileName;
-        return new StoredImage(targetFile, relativeUrl);
+    private StoredImage storeImage(byte[] body, String contentType, String extension, String imageType) {
+        String subDir = "ai-images/" + ("COVER".equalsIgnoreCase(imageType) ? "cover" : "page");
+        String url = fileStorageService.store(body, contentType, extension, subDir);
+        return new StoredImage(url);
     }
 
     /**
@@ -195,14 +159,10 @@ public class AiImageStorageService {
         if (storedImage == null) {
             return;
         }
-        deleteQuietly(storedImage.getFile());
-    }
-
-    private void deleteQuietly(Path path) {
         try {
-            Files.deleteIfExists(path);
-        } catch (IOException e) {
-            log.warn("불완전한 이미지 파일 삭제 실패: file={}", path, e);
+            fileStorageService.delete(storedImage.getUrl());
+        } catch (RuntimeException e) {
+            log.warn("불완전한 이미지 삭제 실패: url={}", storedImage.getUrl(), e);
         }
     }
 

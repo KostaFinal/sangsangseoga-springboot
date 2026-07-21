@@ -20,6 +20,7 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 /**
@@ -89,10 +90,49 @@ public class S3FileStorageService implements FileStorageService {
             throw new CustomException(CommonErrorCode.INTERNAL_SERVER_ERROR);
         }
 
-        String baseUrl = (publicBaseUrlOverride != null && !publicBaseUrlOverride.isBlank())
+        return resolvePublicBaseUrl() + "/" + key;
+    }
+
+    @Override
+    public String store(byte[] content, String contentType, String extension, String subDir) {
+        String key = subDir + "/" + UUID.randomUUID() + (extension != null && !extension.isBlank() ? "." + extension : "");
+
+        try {
+            s3Client.putObject(
+                    PutObjectRequest.builder()
+                            .bucket(bucket)
+                            .key(key)
+                            .contentType(contentType)
+                            .build(),
+                    RequestBody.fromBytes(content));
+        } catch (SdkException e) {
+            log.error("S3 업로드 중 오류 발생", e);
+            throw new CustomException(CommonErrorCode.INTERNAL_SERVER_ERROR);
+        }
+
+        return resolvePublicBaseUrl() + "/" + key;
+    }
+
+    @Override
+    public void delete(String url) {
+        String prefix = resolvePublicBaseUrl() + "/";
+        if (!url.startsWith(prefix)) {
+            log.warn("삭제하려는 URL이 이 버킷의 base URL과 일치하지 않습니다: {}", url);
+            return;
+        }
+        String key = url.substring(prefix.length());
+
+        try {
+            s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+        } catch (SdkException e) {
+            log.warn("S3 객체 삭제 실패: key={}", key, e);
+        }
+    }
+
+    private String resolvePublicBaseUrl() {
+        return (publicBaseUrlOverride != null && !publicBaseUrlOverride.isBlank())
                 ? publicBaseUrlOverride
                 : String.format("https://%s.s3.%s.amazonaws.com", bucket, region);
-        return baseUrl + "/" + key;
     }
 
     private String extractExtension(String originalFilename) {
