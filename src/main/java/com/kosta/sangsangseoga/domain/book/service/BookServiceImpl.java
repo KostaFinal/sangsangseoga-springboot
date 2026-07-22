@@ -184,6 +184,10 @@ public class BookServiceImpl implements BookService {
 
         if (!isPremium) {
             usageService.markFreeTrialUsed(memberId);
+        } else if (!Boolean.TRUE.equals(member.getFreeTrialUsed()) && Boolean.TRUE.equals(member.getFreeTrialStarted())) {
+            // FREE 상태로 이 책을 만들다가(AI 생성 시작) 도중에 구독해서 PREMIUM으로 완성한 경우 -
+            // 무료체험 슬롯이 "안 쓴 것"으로 남아 나중에 또 쓸 수 있게 되는 걸 막는다.
+            usageService.markFreeTrialUsed(memberId);
         }
 
         notifyFollowersOfNewBook(member, book);
