@@ -26,6 +26,7 @@ import javax.persistence.PersistenceContext;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 @Service
 @RequiredArgsConstructor
@@ -93,7 +94,12 @@ public class SubscriptionService {
             throw new CustomException(SubscriptionErrorCode.ALREADY_PREMIUM_MEMBER);
         }
 
-        Member updated = chargeAndStartPremium(memberId, planType, request.getPaymentKey());
+        Member updated = chargeAndStartPremium(memberId, planType, request.getPaymentKey(), m -> {
+            if (m.getSubscriptionPlan().isPremium()) {
+                // 재시도 시점에 다시 확인: 동시에 들어온 다른 요청이 먼저 PREMIUM 전환에 성공했을 수 있다.
+                throw new CustomException(SubscriptionErrorCode.ALREADY_PREMIUM_MEMBER);
+            }
+        });
         return toMeResponseDto(updated);
     }
 
@@ -121,21 +127,36 @@ public class SubscriptionService {
             throw new CustomException(SubscriptionErrorCode.ALREADY_YEARLY_PLAN);
         }
 
-        Member updated = chargeAndStartPremium(memberId, PlanType.PREMIUM_YEARLY, request.getPaymentKey());
+        Member updated = chargeAndStartPremium(memberId, PlanType.PREMIUM_YEARLY, request.getPaymentKey(), m -> {
+            // 재시도 시점에 다시 확인: 동시에 들어온 다른 요청이 먼저 상태를 바꿨을 수 있다.
+            if (!m.getSubscriptionPlan().isPremium()) {
+                throw new CustomException(SubscriptionErrorCode.NOT_PREMIUM_MEMBER);
+            }
+            if (m.getSubscriptionPlan() == PlanType.PREMIUM_YEARLY) {
+                throw new CustomException(SubscriptionErrorCode.ALREADY_YEARLY_PLAN);
+            }
+        });
         return toMeResponseDto(updated);
     }
 
     /**
      * 회원 상태 변경을 먼저 재시도 가능한 형태로 저장에 성공시킨 뒤에 결제 기록을 남긴다. 순서가
      * 반대(결제 먼저)면, 낙관적 락 충돌로 회원 저장을 재시도할 때마다 결제 기록이 중복 생성된다.
+     *
+     * @param preconditionCheck saveWithRetry가 재시도마다 최신 Member로 다시 실행하는 전제 조건 검사.
+     *                          호출부에서 미리 한 번 검사해도, 재시도 사이에 동시 요청이 상태를 바꿨을
+     *                          수 있어 매 시도마다 다시 확인해야 한다.
      */
-    private Member chargeAndStartPremium(Long memberId, PlanType planType, String paymentKey) {
+    private Member chargeAndStartPremium(Long memberId, PlanType planType, String paymentKey,
+                                          Consumer<Member> preconditionCheck) {
         LocalDateTime startAt = LocalDateTime.now();
         LocalDateTime endAt = startAt.plusDays(SubscriptionPolicy.periodDaysOf(planType));
 
-        Member member = memberOptimisticRetrySupport.saveWithRetry(memberId,
-                m -> m.startPremiumSubscription(planType, startAt, endAt,
-                        SubscriptionPolicy.PREMIUM_DAILY_TEXT_LIMIT, SubscriptionPolicy.PREMIUM_DAILY_IMAGE_LIMIT));
+        Member member = memberOptimisticRetrySupport.saveWithRetry(memberId, m -> {
+            preconditionCheck.accept(m);
+            m.startPremiumSubscription(planType, startAt, endAt,
+                    SubscriptionPolicy.PREMIUM_DAILY_TEXT_LIMIT, SubscriptionPolicy.PREMIUM_DAILY_IMAGE_LIMIT);
+        });
 
         int price = SubscriptionPolicy.priceOf(planType);
         String pgTransactionId = paymentKey != null ? paymentKey : UUID.randomUUID().toString();

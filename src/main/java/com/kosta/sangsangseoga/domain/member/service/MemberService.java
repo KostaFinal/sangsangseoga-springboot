@@ -6,13 +6,9 @@ import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
@@ -76,7 +72,6 @@ public class MemberService {
 
     private static final String GUARDIAN_CONSENT_TOKEN_PURPOSE = "GUARDIAN_CONSENT";
     private static final long GUARDIAN_CONSENT_TOKEN_TTL_MILLIS = 7L * 24 * 60 * 60 * 1000; // 7일
-    private static final int MAX_OPTIMISTIC_RETRY_ATTEMPTS = 3;
 
     private final MemberRepository memberRepository;
     private final MemberOptimisticRetrySupport memberOptimisticRetrySupport;
@@ -96,9 +91,6 @@ public class MemberService {
     private final MailService mailService;
     private final FileStorageService fileStorageService;
     private final NotificationService notificationService;
-
-    @PersistenceContext
-    private EntityManager entityManager;
 
     private static final Set<String> ALLOWED_IMAGE_CONTENT_TYPES =
             Set.of("image/jpeg", "image/png", "image/gif", "image/webp");
@@ -393,34 +385,23 @@ public class MemberService {
      * 닉네임을 바꾸는 경우에만, 그리고 기존 닉네임과 실제로 다를 때만 중복 검사를 한다.
      */
     public MemberMeResponseDto updateMyInfo(Long memberId, MemberUpdateRequestDto request) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
-
         String newNickname = request.getNickname();
-        if (newNickname != null && !newNickname.equals(member.getNickname())
-                && memberRepository.existsByNickname(newNickname)) {
-            throw new CustomException(AuthErrorCode.DUPLICATE_NICKNAME);
-        }
 
-        member.updateProfile(newNickname, request.getProfileImageUrl(), request.getIntroduction());
-
-        // 중복확인-저장 사이 동시 요청 대비: DB 유니크 제약 위반도 DUPLICATE_NICKNAME으로 변환한다.
-        // 커밋 시점까지 미루면 500으로 새므로 여기서 강제로 flush해서 예외를 잡는다.
-        // 낙관적 락 충돌(다른 요청이 이 회원 행을 동시에 저장)이면, 방금 입력한 값을 잃지 않도록
-        // 최신 값을 다시 읽어 같은 변경을 재적용해서 몇 번 더 시도한다.
-        for (int attempt = 1; ; attempt++) {
-            try {
-                memberRepository.saveAndFlush(member);
-                break;
-            } catch (DataIntegrityViolationException e) {
-                throw new CustomException(AuthErrorCode.DUPLICATE_NICKNAME);
-            } catch (ObjectOptimisticLockingFailureException e) {
-                if (attempt >= MAX_OPTIMISTIC_RETRY_ATTEMPTS) {
-                    throw e;
+        // 닉네임 중복 검사는 saveWithRetry가 재시도할 때마다(최신 Member 기준으로) 다시 수행한다.
+        // 한 번만 검사하면, 재시도 사이에 다른 요청이 그 닉네임을 선점해도 놓치게 된다.
+        // 유니크 제약 위반(DataIntegrityViolationException)은 동시 요청이 검사 통과 직후 같은
+        // 닉네임으로 먼저 커밋한 경우로, DUPLICATE_NICKNAME으로 변환한다.
+        Member member;
+        try {
+            member = memberOptimisticRetrySupport.saveWithRetry(memberId, m -> {
+                if (newNickname != null && !newNickname.equals(m.getNickname())
+                        && memberRepository.existsByNickname(newNickname)) {
+                    throw new CustomException(AuthErrorCode.DUPLICATE_NICKNAME);
                 }
-                entityManager.refresh(member);
-                member.updateProfile(newNickname, request.getProfileImageUrl(), request.getIntroduction());
-            }
+                m.updateProfile(newNickname, request.getProfileImageUrl(), request.getIntroduction());
+            });
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(AuthErrorCode.DUPLICATE_NICKNAME);
         }
 
         return MemberMeResponseDto.builder()
