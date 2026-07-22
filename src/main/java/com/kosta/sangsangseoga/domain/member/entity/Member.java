@@ -1,17 +1,7 @@
 package com.kosta.sangsangseoga.domain.member.entity;
 
-import com.kosta.sangsangseoga.domain.member.enums.AuthProvider;
-import com.kosta.sangsangseoga.domain.member.enums.MemberRole;
-import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
-import com.kosta.sangsangseoga.domain.member.enums.ViewerFontSize;
-import com.kosta.sangsangseoga.domain.member.enums.ViewerViewType;
-import com.kosta.sangsangseoga.domain.subscription.enums.PlanType;
-import com.kosta.sangsangseoga.global.common.BaseEntity;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import org.hibernate.annotations.OptimisticLock;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -24,11 +14,26 @@ import javax.persistence.Lob;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 import javax.persistence.Version;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+
+import org.hibernate.annotations.OptimisticLock;
+
+import com.kosta.sangsangseoga.domain.member.enums.AuthProvider;
+import com.kosta.sangsangseoga.domain.member.enums.MemberRole;
+import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
+import com.kosta.sangsangseoga.domain.member.enums.ViewerFontSize;
+import com.kosta.sangsangseoga.domain.member.enums.ViewerViewType;
+import com.kosta.sangsangseoga.domain.subscription.enums.PlanType;
+import com.kosta.sangsangseoga.global.common.BaseEntity;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "member", uniqueConstraints = {
         @UniqueConstraint(name = "uk_member_auth_provider", columnNames = {"auth_provider", "oauth_provider_id"})
