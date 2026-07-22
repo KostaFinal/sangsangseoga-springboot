@@ -8,18 +8,22 @@ import com.kosta.sangsangseoga.domain.subscription.entity.Payment;
 import com.kosta.sangsangseoga.domain.subscription.enums.PaymentStatus;
 import com.kosta.sangsangseoga.domain.subscription.enums.PlanType;
 import com.kosta.sangsangseoga.domain.subscription.repository.PaymentRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import javax.persistence.EntityManager;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -35,9 +39,18 @@ class SubscriptionServiceTest {
     private PaymentRepository paymentRepository;
     @Mock
     private NotificationService notificationService;
+    @Mock
+    private EntityManager entityManager;
 
     @InjectMocks
     private SubscriptionService subscriptionService;
+
+    // @InjectMocks는 @RequiredArgsConstructor가 만든 생성자(final 필드 3개)까지만 채우고, 생성자에
+    // 안 잡히는 @PersistenceContext 필드(entityManager)는 채워주지 않아 수동으로 심어줘야 한다.
+    @BeforeEach
+    void setUpEntityManager() {
+        ReflectionTestUtils.setField(subscriptionService, "entityManager", entityManager);
+    }
 
     @Test
     void FREE_회원은_아무_처리도_하지_않는다() {
@@ -153,5 +166,48 @@ class SubscriptionServiceTest {
         // then
         assertThat(member.getDailyTextRemaining()).isEqualTo(SubscriptionPolicy.PREMIUM_DAILY_TEXT_LIMIT);
         assertThat(member.getDailyImageRemaining()).isEqualTo(SubscriptionPolicy.PREMIUM_DAILY_IMAGE_LIMIT);
+    }
+
+    /*
+     * 병렬 이미지 생성처럼 같은 회원에 대해 여러 요청이 동시에 reconcileIfExpired를 타는 상황을 재현한다.
+     * 실제로는 두 트랜잭션이 동시에 만료된 member row를 읽고 각자 갱신을 시도하면, 먼저 커밋한 쪽만
+     * 성공하고 나중 쪽은 Hibernate가 StaleStateException(-> ObjectOptimisticLockingFailureException)을
+     * 던진다. 여기서는 그 "늦게 도착한 쪽"의 입장에서 saveAndFlush가 그 예외를 던지도록 흉내 낸다.
+     */
+    @Test
+    void 동시_요청으로_낙관적_락_충돌이_나면_예외를_삼키고_최신값만_다시_읽는다_자동갱신() {
+        // given
+        Member member = Member.builder().email("g@test.com").password("pw").build();
+        member.startPremiumSubscription(PlanType.PREMIUM_MONTHLY,
+            LocalDateTime.now().minusDays(31), LocalDateTime.now().minusDays(1), 0, 0);
+        when(memberRepository.saveAndFlush(member))
+            .thenThrow(new ObjectOptimisticLockingFailureException(Member.class, member.getId()));
+
+        // when: 먼저 도착한 다른 요청이 이미 처리해버린 상황(=saveAndFlush 실패)에서도 예외가 밖으로 새면 안 된다
+        assertThatCode(() -> subscriptionService.reconcileIfExpired(member)).doesNotThrowAnyException();
+
+        // then: 결제기록/알림은 "이긴 쪽"에서만 남아야 하므로, 충돌한 이 요청에서는 절대 만들면 안 된다
+        verify(paymentRepository, never()).save(any());
+        verifyNoInteractions(notificationService);
+        // then: 낡은 값을 계속 들고 있지 않도록 DB에서 최신 상태를 다시 읽어와야 한다
+        verify(entityManager).refresh(member);
+    }
+
+    @Test
+    void 동시_요청으로_낙관적_락_충돌이_나면_예외를_삼키고_최신값만_다시_읽는다_해지예약() {
+        // given
+        Member member = Member.builder().email("h@test.com").password("pw").build();
+        member.startPremiumSubscription(PlanType.PREMIUM_MONTHLY,
+            LocalDateTime.now().minusDays(31), LocalDateTime.now().minusDays(1), 5, 2);
+        member.reserveCancellation();
+        when(memberRepository.saveAndFlush(member))
+            .thenThrow(new ObjectOptimisticLockingFailureException(Member.class, member.getId()));
+
+        // when
+        assertThatCode(() -> subscriptionService.reconcileIfExpired(member)).doesNotThrowAnyException();
+
+        // then
+        verifyNoInteractions(notificationService);
+        verify(entityManager).refresh(member);
     }
 }
