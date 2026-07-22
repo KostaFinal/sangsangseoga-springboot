@@ -30,6 +30,7 @@ flowchart TD
 
 - **연간→월간 다운그레이드는 지원하지 않는다** — 이미 결제한 잔여 기간을 환불 없이 날리는 셈이라 불공평하다고 판단. 해지 예약 후 만료를 기다렸다가 월간으로 재구독하는 흐름을 대신 쓴다.
 - 해지 예약(`cancelSubscription`)은 즉시 FREE로 내리지 않고 `autoRenew=false`만 켠다 — 이미 결제한 기간(`subscriptionEndAt`)까지는 계속 PREMIUM 혜택을 준다.
+- `chargeAndStartPremium`/`cancelSubscription`/`resumeSubscription`은 [03-member.md](./03-member.md)의 `MemberOptimisticRetrySupport.saveWithRetry`를 통해 저장한다. 동시 요청으로 낙관적 락 충돌이 나면 서버가 최신 상태를 다시 읽어 재시도하는데, 이때 `ALREADY_PREMIUM_MEMBER`/`NOT_PREMIUM_MEMBER`/`ALREADY_YEARLY_PLAN` 같은 전제 조건도 재시도마다(=최신 상태 기준으로) 다시 검사한다 — 첫 시도에만 검사하면, 재시도 사이에 동시 요청이 먼저 상태를 바꿔놓고도 뒤이은 요청이 그걸 못 보고 구독 시작 로직과 결제 기록을 중복 실행할 수 있기 때문이다.
 
 ## 만료 처리: "지연 정리(reconcile)" + 배치 이중 안전망
 

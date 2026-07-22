@@ -53,6 +53,13 @@ sequenceDiagram
 
 `Member`에는 구독 시작/전환/해지/재개/자동갱신, 상태 변경(정지/탈퇴/복원), 무료체험 소진처럼 같은 회원 row를 동시에 읽고 쓸 수 있는 흐름(API 중복 호출, 배치와 API 동시 실행, 관리자 처리와 회원 요청 동시 발생 등)을 보호하기 위한 `@Version`이 걸려 있다. 충돌 시 나중에 커밋을 시도한 쪽이 `ObjectOptimisticLockingFailureException`(409)으로 걸린다.
 
+### 재시도(`MemberOptimisticRetrySupport`)
+
+프로필/뷰어설정/닉네임 변경, 구독 전환/해지/재개, 무료체험 소진처럼 **사용자가 명시적으로 요청한 변경**은 충돌 났다고 그냥 409를 돌려주면 방금 입력한 값이 사라진 것처럼 보인다(`reconcileIfExpired`처럼 "충돌 나면 포기해도 되는" 로직과는 다르다). `MemberOptimisticRetrySupport.saveWithRetry(memberId, mutator)`가 이런 흐름에서 409를 사용자에게 노출하지 않고 서버가 대신 재시도한다.
+
+- 호출부는 대부분 클래스 레벨 `@Transactional` 서비스 메서드 안에서 이걸 부르는데, 그 트랜잭션을 그대로 쓰면서 재시도하면 레포지토리 저장 자체가 트랜잭션 경계라 첫 실패 시점에 물리 트랜잭션이 rollback-only로 마킹되어 이후 재시도가 겉보기엔 성공해도 커밋 시점에 통째로 롤백된다. 그래서 `TransactionTemplate` + `PROPAGATION_REQUIRES_NEW`로 시도마다(최대 3회) 완전히 독립된 트랜잭션을 새로 열고, 매번 `findById`로 최신 행을 다시 읽는다.
+- `mutator`는 재시도마다 최신 `Member`에 다시 적용되므로, 재시도 시점까지도 유효해야 하는 전제 조건(닉네임 중복, 이미 프리미엄인지 등)이 있으면 mutator 안에서 매번 다시 검사해야 한다 — 바깥에서 한 번만 검사하면 재시도 사이에 바뀐 상태를 놓친다.
+
 엔티티 전체가 아니라 **필드 단위로 락 적용 여부를 나눴다**(Hibernate `@OptimisticLock(excluded = true)`).
 
 | 락 대상 (버전 증가 O) | 제외 (버전 증가 X) |

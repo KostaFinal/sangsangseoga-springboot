@@ -29,6 +29,7 @@ flowchart LR
 - **트랜잭션 커밋 후 발행**: Redis 발행은 롤백이 안 된다. 신고 처리 같은 트랜잭션이 롤백되면 알림 자체가 없던 일이 되어야 하므로, `AfterCommitTask` 이벤트로 커밋 이후에만 Redis에 발행한다(DB row는 트랜잭션 안에서 정상적으로 같이 롤백된다).
 - **SSE 연결 직후 더미 이벤트 전송**: 진짜 알림이 오기 전까지 아무것도 안 보내면 Tomcat이 응답 헤더 자체를 flush하지 않아 클라이언트가 연결 성공 여부를 알 수 없다. `NotificationSseRegistry.register()`에서 연결 직후 `:connected` 코멘트 이벤트를 바로 보내 헤더를 강제로 내보낸다.
 - **SSE 인증은 JWT 대신 1회용 티켓**: 처음엔 `?token=`으로 AccessToken을 그대로 받았는데, 로그/리퍼러/브라우저 히스토리로 새는 위험이 있다. 그래서 `POST /api/notifications/stream-ticket`(헤더 인증)으로 TTL 30초짜리 1회용 티켓만 발급하고, SSE 연결은 그 티켓만 `?ticket=`으로 받아 `getAndDelete`로 한 번 쓰면 바로 무효화한다.
+- **하트비트로 CloudFront 타임아웃 우회**: 운영 환경은 CloudFront가 EC2 origin으로 프록시하는데, origin 응답 타임아웃(기본 30초) 동안 아무 데이터도 안 흐르면 CloudFront가 연결을 강제로 끊는다(실제로 알림이 뜸한 구간에 클라이언트가 `ERR_HTTP2_PROTOCOL_ERROR`로 끊기는 걸 겪었다). `NotificationSseRegistry.sendHeartbeat()`가 `@Scheduled(fixedRate = 15_000L)`로 연결된 모든 emitter에 15초마다 빈 코멘트 이벤트(`:heartbeat`)를 흘려보내 그 타임아웃보다 항상 먼저 트래픽이 발생하게 만든다. `EventSource`의 `onmessage`에는 코멘트 프레임이 안 잡히므로 클라이언트 로직에는 영향 없다.
 
 ## SSE 엔드포인트
 
