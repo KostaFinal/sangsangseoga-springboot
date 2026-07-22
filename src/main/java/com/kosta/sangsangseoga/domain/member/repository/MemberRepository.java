@@ -45,6 +45,15 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
             "WHERE m.id = :memberId AND m.dailyImageRemaining > 0")
     int decrementDailyImageIfAvailable(@Param("memberId") Long memberId);
 
+    // FREE 체험 AI 생성을 실제로 한 번이라도 시작했다는 표식만 남긴다(값 자체는 단순 플래그라 낙관적
+    // 락 충돌을 감수할 이유가 없어 daily 차감과 같은 방식으로 원자적 UPDATE 한 번으로 처리한다).
+    // 이미 무료체험을 다 쓴 회원이나 이미 시작 표식이 있는 회원에겐 조건에 안 맞아 아무 일도 안 한다.
+    @Modifying
+    @Query("UPDATE Member m SET m.freeTrialStarted = true " +
+            "WHERE m.id = :memberId AND m.freeTrialUsed = false " +
+            "AND (m.freeTrialStarted = false OR m.freeTrialStarted IS NULL)")
+    int markFreeTrialStartedIfNeeded(@Param("memberId") Long memberId);
+
     // 관리자 회원 목록 조회: 상태 필터(null이면 전체)와 이메일/닉네임 검색어(null이면 전체)를 조합한다.
     @Query("SELECT m FROM Member m WHERE " +
             "(:status IS NULL OR m.status = :status) AND " +

@@ -147,6 +147,9 @@ public class UsageService {
             if (!available) {
                 throw new CustomException(SubscriptionErrorCode.FREE_TRIAL_CALL_LIMIT_EXCEEDED);
             }
+            // FREE 상태로 실제 생성을 시작했다는 표식. 이 표식이 있으면, 이 호출 이후 도중에
+            // 구독해서 PREMIUM으로 책을 완성하더라도 book.publish()가 무료체험을 소진 처리한다.
+            memberRepository.markFreeTrialStartedIfNeeded(memberId);
         }
     }
 }
