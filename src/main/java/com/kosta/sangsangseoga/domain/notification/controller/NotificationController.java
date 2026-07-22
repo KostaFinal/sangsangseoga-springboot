@@ -92,8 +92,13 @@ public class NotificationController {
             + "?ticket= 쿼리 파라미터로 넘겨 인증한다(일반 JWT는 쿼리 파라미터로 받지 않는다).")
     @ApiErrorCodes({})
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter streamNotifications(Authentication authentication) {
+    public ResponseEntity<SseEmitter> streamNotifications(Authentication authentication) {
         Long memberId = AuthenticationHelper.resolveMemberId(authentication);
-        return sseRegistry.register(memberId);
+        // CloudFront가 이 응답을 캐싱/변형하지 않게 명시한다. Connection 헤더는 일부러 안 붙인다 -
+        // HTTP/2에서는 hop-by-hop 헤더인 Connection 자체가 금지돼 있어(RFC 7540), 붙이면 오히려
+        // ERR_HTTP2_PROTOCOL_ERROR를 유발할 수 있다.
+        return ResponseEntity.ok()
+                .header("Cache-Control", "no-cache, no-transform")
+                .body(sseRegistry.register(memberId));
     }
 }
