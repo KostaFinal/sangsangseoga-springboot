@@ -1,5 +1,7 @@
 package com.kosta.sangsangseoga.domain.notification.realtime;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -13,7 +15,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * 서버 인스턴스별로 "지금 이 회원이 SSE로 연결되어 있는지"를 들고 있는 로컬(메모리) 레지스트리.
  * 여러 서버가 떠 있으면 각자 자기한테 붙어있는 연결만 안다 - Redis Stream 리스너가 이 레지스트리를
  * 조회해서 자기 서버에 연결된 회원에게만 실제로 push한다.
+ *
+ * CloudFront가 EC2 origin으로 프록시할 때 origin 응답 타임아웃(기본 30초) 동안 아무 데이터도
+ * 안 흐르면 연결을 강제로 끊는다 - 실제 알림이 뜸하면 이 상태가 30초 넘게 지속돼 클라이언트가
+ * ERR_HTTP2_PROTOCOL_ERROR로 끊기는 걸 실제로 겪었다. sendHeartbeat가 그 타임아웃보다 짧은
+ * 주기로 빈 핑을 흘려보내 연결을 계속 "살아있는" 상태로 유지한다.
  */
+@Slf4j
 @Component
 public class NotificationSseRegistry {
 
@@ -50,6 +58,25 @@ public class NotificationSseRegistry {
                 emitter.send(SseEmitter.event().name(eventName).data(payload));
             } catch (IOException | IllegalStateException e) {
                 remove(memberId, emitter);
+            }
+        }
+    }
+
+    /**
+     * CloudFront origin 응답 타임아웃(기본 30초)보다 짧은 주기로 연결된 모든 emitter에 빈 핑을
+     * 보낸다. 실제 알림 이벤트가 아니라 코멘트 프레임이라 EventSource의 onmessage에는 안 잡히고,
+     * 그냥 "이 연결 아직 살아있음"을 CloudFront/브라우저 양쪽에 알리는 용도다.
+     */
+    @Scheduled(fixedRate = 15_000L)
+    public void sendHeartbeat() {
+        for (Map.Entry<Long, List<SseEmitter>> entry : emittersByMemberId.entrySet()) {
+            Long memberId = entry.getKey();
+            for (SseEmitter emitter : entry.getValue()) {
+                try {
+                    emitter.send(SseEmitter.event().comment("heartbeat"));
+                } catch (IOException | IllegalStateException e) {
+                    remove(memberId, emitter);
+                }
             }
         }
     }

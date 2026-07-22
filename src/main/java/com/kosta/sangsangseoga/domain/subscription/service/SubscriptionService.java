@@ -15,10 +15,13 @@ import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -31,6 +34,9 @@ public class SubscriptionService {
     private final MemberRepository memberRepository;
     private final PaymentRepository paymentRepository;
     private final NotificationService notificationService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Transactional(readOnly = true)
     public List<SubscriptionPlanDto> getPlans() {
@@ -188,8 +194,29 @@ public class SubscriptionService {
             return;
         }
 
-        if (Boolean.TRUE.equals(member.getSubscriptionAutoRenew())) {
-            PlanType planType = member.getSubscriptionPlan();
+        boolean autoRenew = Boolean.TRUE.equals(member.getSubscriptionAutoRenew());
+        PlanType planType = member.getSubscriptionPlan();
+        LocalDateTime startAt = LocalDateTime.now();
+        LocalDateTime endAt = startAt.plusDays(SubscriptionPolicy.periodDaysOf(planType));
+
+        if (autoRenew) {
+            member.renewPremiumSubscription(startAt, endAt,
+                    SubscriptionPolicy.PREMIUM_DAILY_TEXT_LIMIT, SubscriptionPolicy.PREMIUM_DAILY_IMAGE_LIMIT);
+        } else {
+            member.downgradeToFree();
+        }
+
+        // 같은 회원의 만료 정리를 여러 read 경로(구독조회/사용량조회/AI 생성 등)가 동시에 시도할 수 있다.
+        // 여기서 즉시 flush해 충돌 여부를 바로 확인하고, 먼저 커밋한 쪽이 있으면(=이미 정리됨) 실패를
+        // 정상 상황으로 보고 최신값만 다시 읽는다 - 그래야 아래 결제기록/알림도 승자 쪽에서만 한 번 남는다.
+        try {
+            memberRepository.saveAndFlush(member);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            entityManager.refresh(member);
+            return;
+        }
+
+        if (autoRenew) {
             Payment renewalPayment = Payment.builder()
                     .member(member)
                     .amount(SubscriptionPolicy.priceOf(planType))
@@ -199,14 +226,8 @@ public class SubscriptionService {
                     .paidAt(LocalDateTime.now())
                     .build();
             paymentRepository.save(renewalPayment);
-
-            LocalDateTime startAt = LocalDateTime.now();
-            LocalDateTime endAt = startAt.plusDays(SubscriptionPolicy.periodDaysOf(planType));
-            member.renewPremiumSubscription(startAt, endAt,
-                    SubscriptionPolicy.PREMIUM_DAILY_TEXT_LIMIT, SubscriptionPolicy.PREMIUM_DAILY_IMAGE_LIMIT);
             notificationService.notify(member, "구독이 자동 갱신되었습니다.");
         } else {
-            member.downgradeToFree();
             notificationService.notify(member, "구독 기간이 만료되어 FREE 요금제로 전환되었습니다.");
         }
     }
