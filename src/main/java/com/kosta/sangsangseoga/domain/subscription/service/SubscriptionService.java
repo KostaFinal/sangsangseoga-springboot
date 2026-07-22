@@ -2,6 +2,7 @@ package com.kosta.sangsangseoga.domain.subscription.service;
 
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
+import com.kosta.sangsangseoga.domain.member.service.MemberOptimisticRetrySupport;
 import com.kosta.sangsangseoga.domain.subscription.SubscriptionPolicy;
 import com.kosta.sangsangseoga.domain.subscription.dto.SubscriptionCreateRequestDto;
 import com.kosta.sangsangseoga.domain.subscription.dto.SubscriptionMeResponseDto;
@@ -34,6 +35,7 @@ public class SubscriptionService {
     private final MemberRepository memberRepository;
     private final PaymentRepository paymentRepository;
     private final NotificationService notificationService;
+    private final MemberOptimisticRetrySupport memberOptimisticRetrySupport;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -91,8 +93,8 @@ public class SubscriptionService {
             throw new CustomException(SubscriptionErrorCode.ALREADY_PREMIUM_MEMBER);
         }
 
-        chargeAndStartPremium(member, planType, request.getPaymentKey());
-        return toMeResponseDto(member);
+        Member updated = chargeAndStartPremium(memberId, planType, request.getPaymentKey());
+        return toMeResponseDto(updated);
     }
 
     /**
@@ -119,11 +121,22 @@ public class SubscriptionService {
             throw new CustomException(SubscriptionErrorCode.ALREADY_YEARLY_PLAN);
         }
 
-        chargeAndStartPremium(member, PlanType.PREMIUM_YEARLY, request.getPaymentKey());
-        return toMeResponseDto(member);
+        Member updated = chargeAndStartPremium(memberId, PlanType.PREMIUM_YEARLY, request.getPaymentKey());
+        return toMeResponseDto(updated);
     }
 
-    private void chargeAndStartPremium(Member member, PlanType planType, String paymentKey) {
+    /**
+     * 회원 상태 변경을 먼저 재시도 가능한 형태로 저장에 성공시킨 뒤에 결제 기록을 남긴다. 순서가
+     * 반대(결제 먼저)면, 낙관적 락 충돌로 회원 저장을 재시도할 때마다 결제 기록이 중복 생성된다.
+     */
+    private Member chargeAndStartPremium(Long memberId, PlanType planType, String paymentKey) {
+        LocalDateTime startAt = LocalDateTime.now();
+        LocalDateTime endAt = startAt.plusDays(SubscriptionPolicy.periodDaysOf(planType));
+
+        Member member = memberOptimisticRetrySupport.saveWithRetry(memberId,
+                m -> m.startPremiumSubscription(planType, startAt, endAt,
+                        SubscriptionPolicy.PREMIUM_DAILY_TEXT_LIMIT, SubscriptionPolicy.PREMIUM_DAILY_IMAGE_LIMIT));
+
         int price = SubscriptionPolicy.priceOf(planType);
         String pgTransactionId = paymentKey != null ? paymentKey : UUID.randomUUID().toString();
 
@@ -137,10 +150,7 @@ public class SubscriptionService {
                 .build();
         paymentRepository.save(payment);
 
-        LocalDateTime startAt = LocalDateTime.now();
-        LocalDateTime endAt = startAt.plusDays(SubscriptionPolicy.periodDaysOf(planType));
-        member.startPremiumSubscription(planType, startAt, endAt,
-                SubscriptionPolicy.PREMIUM_DAILY_TEXT_LIMIT, SubscriptionPolicy.PREMIUM_DAILY_IMAGE_LIMIT);
+        return member;
     }
 
     /**
@@ -159,7 +169,7 @@ public class SubscriptionService {
             throw new CustomException(SubscriptionErrorCode.SUBSCRIPTION_ALREADY_CANCELLED);
         }
 
-        member.reserveCancellation();
+        member = memberOptimisticRetrySupport.saveWithRetry(memberId, Member::reserveCancellation);
         return toMeResponseDto(member);
     }
 
@@ -178,7 +188,7 @@ public class SubscriptionService {
             throw new CustomException(SubscriptionErrorCode.SUBSCRIPTION_NOT_CANCELLED);
         }
 
-        member.resumeAutoRenew();
+        member = memberOptimisticRetrySupport.saveWithRetry(memberId, Member::resumeAutoRenew);
         return toMeResponseDto(member);
     }
 

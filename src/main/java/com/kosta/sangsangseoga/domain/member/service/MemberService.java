@@ -6,9 +6,13 @@ import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.kosta.sangsangseoga.domain.book.entity.Book;
@@ -72,8 +76,10 @@ public class MemberService {
 
     private static final String GUARDIAN_CONSENT_TOKEN_PURPOSE = "GUARDIAN_CONSENT";
     private static final long GUARDIAN_CONSENT_TOKEN_TTL_MILLIS = 7L * 24 * 60 * 60 * 1000; // 7일
+    private static final int MAX_OPTIMISTIC_RETRY_ATTEMPTS = 3;
 
     private final MemberRepository memberRepository;
+    private final MemberOptimisticRetrySupport memberOptimisticRetrySupport;
     private final GuardianConsentRepository guardianConsentRepository;
     private final ActionTokenProvider actionTokenProvider;
     private final PasswordEncoder passwordEncoder;
@@ -90,6 +96,9 @@ public class MemberService {
     private final MailService mailService;
     private final FileStorageService fileStorageService;
     private final NotificationService notificationService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private static final Set<String> ALLOWED_IMAGE_CONTENT_TYPES =
             Set.of("image/jpeg", "image/png", "image/gif", "image/webp");
@@ -336,10 +345,8 @@ public class MemberService {
      * 뷰어 환경설정(글자 크기/페이지 전환 방식) 저장.
      */
     public ViewerPreferenceDto updateViewerPreference(Long memberId, ViewerPreferenceDto request) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
-
-        member.updateViewerPreference(request.getViewerFontSize(), request.getViewerViewType());
+        Member member = memberOptimisticRetrySupport.saveWithRetry(memberId,
+                m -> m.updateViewerPreference(request.getViewerFontSize(), request.getViewerViewType()));
 
         return ViewerPreferenceDto.builder()
                 .viewerFontSize(member.getViewerFontSize())
@@ -399,10 +406,21 @@ public class MemberService {
 
         // 중복확인-저장 사이 동시 요청 대비: DB 유니크 제약 위반도 DUPLICATE_NICKNAME으로 변환한다.
         // 커밋 시점까지 미루면 500으로 새므로 여기서 강제로 flush해서 예외를 잡는다.
-        try {
-            memberRepository.saveAndFlush(member);
-        } catch (DataIntegrityViolationException e) {
-            throw new CustomException(AuthErrorCode.DUPLICATE_NICKNAME);
+        // 낙관적 락 충돌(다른 요청이 이 회원 행을 동시에 저장)이면, 방금 입력한 값을 잃지 않도록
+        // 최신 값을 다시 읽어 같은 변경을 재적용해서 몇 번 더 시도한다.
+        for (int attempt = 1; ; attempt++) {
+            try {
+                memberRepository.saveAndFlush(member);
+                break;
+            } catch (DataIntegrityViolationException e) {
+                throw new CustomException(AuthErrorCode.DUPLICATE_NICKNAME);
+            } catch (ObjectOptimisticLockingFailureException e) {
+                if (attempt >= MAX_OPTIMISTIC_RETRY_ATTEMPTS) {
+                    throw e;
+                }
+                entityManager.refresh(member);
+                member.updateProfile(newNickname, request.getProfileImageUrl(), request.getIntroduction());
+            }
         }
 
         return MemberMeResponseDto.builder()
