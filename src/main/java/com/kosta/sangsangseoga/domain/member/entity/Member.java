@@ -87,6 +87,13 @@ public class Member extends BaseEntity {
     @Column(nullable = false)
     private Boolean freeTrialUsed;
 
+    /**
+     * FREE 상태로 무료체험 AI 생성(텍스트/이미지)을 한 번이라도 시작했는지. book.publish() 시점에 이미
+     * PREMIUM으로 바뀌어 있어도, 이 책이 FREE 체험으로 시작됐다면 무료체험 슬롯을 소진 처리하기 위한
+     * 표식이다({@link com.kosta.sangsangseoga.domain.book.service.BookServiceImpl#publish} 참고).
+     */
+    private Boolean freeTrialStarted;
+
     /** 로컬(이메일/비밀번호) 가입이면 LOCAL, 소셜 로그인으로 가입했으면 KAKAO/NAVER. */
     @OptimisticLock(excluded = true)
     @Enumerated(EnumType.STRING)
@@ -265,6 +272,7 @@ public class Member extends BaseEntity {
      */
     public void useFreeTrial() {
         this.freeTrialUsed = true;
+        this.freeTrialStarted = false;
     }
 
     /**
