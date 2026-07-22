@@ -54,6 +54,50 @@ public class LocalFileStorageService implements FileStorageService {
                 .toUriString();
     }
 
+    @Override
+    public String store(byte[] content, String contentType, String extension, String subDir) {
+        String fileName = UUID.randomUUID() + (extension != null && !extension.isBlank() ? "." + extension : "");
+
+        Path targetDir = Path.of(appProperties.getUploadDir(), subDir);
+        Path targetPath = targetDir.resolve(fileName);
+
+        try {
+            Files.createDirectories(targetDir);
+            Files.write(targetPath, content);
+        } catch (IOException e) {
+            log.error("파일 저장 중 오류 발생", e);
+            throw new CustomException(CommonErrorCode.INTERNAL_SERVER_ERROR);
+        }
+
+        return ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/uploads/").path(subDir).path("/").path(fileName)
+                .toUriString();
+    }
+
+    @Override
+    public void delete(String url) {
+        String marker = "/uploads/";
+        int idx = url.indexOf(marker);
+        if (idx < 0) {
+            log.warn("삭제하려는 URL이 예상 형식이 아닙니다: {}", url);
+            return;
+        }
+
+        Path uploadDir = Path.of(appProperties.getUploadDir()).toAbsolutePath().normalize();
+        Path target = uploadDir.resolve(url.substring(idx + marker.length())).normalize();
+
+        if (!target.startsWith(uploadDir)) {
+            log.warn("uploadDir 밖을 가리키는 삭제 요청을 거부합니다: {}", target);
+            return;
+        }
+
+        try {
+            Files.deleteIfExists(target);
+        } catch (IOException e) {
+            log.warn("파일 삭제 실패: file={}", target, e);
+        }
+    }
+
     private String extractExtension(String originalFilename) {
         if (originalFilename == null) {
             return null;

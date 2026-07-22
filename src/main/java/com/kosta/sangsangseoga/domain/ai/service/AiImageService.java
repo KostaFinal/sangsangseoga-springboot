@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.sql.DataSource;
 import java.util.Base64;
@@ -33,8 +32,8 @@ import java.util.Optional;
 
 /**
  * Python이 돌려주는 imageUrl은 Replicate의 임시 delivery URL이라, 여기서 받은 직후
- * AiImageStorageService로 즉시 로컬에 내려받아 영구 URL로 바꿔치기한 뒤 응답/기록에 쓴다
- * (Replicate URL은 DB/응답 어디에도 남기지 않는다).
+ * AiImageStorageService로 즉시 영구 저장소(app.storage.type에 따라 local/s3)에 내려받아
+ * 영구 URL로 바꿔치기한 뒤 응답/기록에 쓴다(Replicate URL은 DB/응답 어디에도 남기지 않는다).
  * book_image 저장, book.cover_image_id 갱신은 여전히 이번 범위 밖이다
  * (AiGenerateImageRequestDto에 bookId가 없어 어느 책의 이미지인지도 알 수 없다).
  * 관리자 AI 사용량 대시보드가 쓸 호출 이력(AiGenerationUsage, callType=IMAGE)을 기록하는 것과 별개로,
@@ -157,12 +156,14 @@ public class AiImageService {
                 long saveMs = elapsedMs(tSave);
                 log.info("[AI-PERF] requestId={} imageSaveMs={}", requestId, saveMs);
 
-                String localAbsoluteUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-                        .path(storedImage.getRelativeUrl())
-                        .toUriString();
-                response.setImageUrl(localAbsoluteUrl);
-                response.setMessage("이미지 생성 및 로컬 저장 완료");
-                // 로컬 저장을 마쳤으니 응답에 굳이 몇 MB짜리 base64를 그대로 실어 보낼 필요가 없다.
+                // storedImage.getUrl()은 FileStorageService가 이미 완성해서 돌려준 절대 URL이라
+                // (local이면 정적 리소스 경로, s3면 실제 버킷/CloudFront 도메인) 여기서 다시 조립하지 않는다.
+                // 예전엔 ServletUriComponentsBuilder로 "현재 요청이 들어온 host"를 그대로 붙였는데,
+                // CloudFront가 EC2 origin으로 프록시할 때는 그 host가 CloudFront가 아니라 EC2 자신의
+                // 도메인이 되어버려서 브라우저에서 접근 불가능한 URL이 나가는 버그가 있었다.
+                response.setImageUrl(storedImage.getUrl());
+                response.setMessage("이미지 생성 및 저장 완료");
+                // 저장을 마쳤으니 응답에 굳이 몇 MB짜리 base64를 그대로 실어 보낼 필요가 없다.
                 response.setImageBase64(null);
 
                 long t2 = System.nanoTime();
