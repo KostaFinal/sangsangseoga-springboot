@@ -74,6 +74,7 @@ public class MemberService {
     private static final long GUARDIAN_CONSENT_TOKEN_TTL_MILLIS = 7L * 24 * 60 * 60 * 1000; // 7일
 
     private final MemberRepository memberRepository;
+    private final MemberOptimisticRetrySupport memberOptimisticRetrySupport;
     private final GuardianConsentRepository guardianConsentRepository;
     private final ActionTokenProvider actionTokenProvider;
     private final PasswordEncoder passwordEncoder;
@@ -336,10 +337,8 @@ public class MemberService {
      * 뷰어 환경설정(글자 크기/페이지 전환 방식) 저장.
      */
     public ViewerPreferenceDto updateViewerPreference(Long memberId, ViewerPreferenceDto request) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
-
-        member.updateViewerPreference(request.getViewerFontSize(), request.getViewerViewType());
+        Member member = memberOptimisticRetrySupport.saveWithRetry(memberId,
+                m -> m.updateViewerPreference(request.getViewerFontSize(), request.getViewerViewType()));
 
         return ViewerPreferenceDto.builder()
                 .viewerFontSize(member.getViewerFontSize())
@@ -386,21 +385,21 @@ public class MemberService {
      * 닉네임을 바꾸는 경우에만, 그리고 기존 닉네임과 실제로 다를 때만 중복 검사를 한다.
      */
     public MemberMeResponseDto updateMyInfo(Long memberId, MemberUpdateRequestDto request) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
-
         String newNickname = request.getNickname();
-        if (newNickname != null && !newNickname.equals(member.getNickname())
-                && memberRepository.existsByNickname(newNickname)) {
-            throw new CustomException(AuthErrorCode.DUPLICATE_NICKNAME);
-        }
 
-        member.updateProfile(newNickname, request.getProfileImageUrl(), request.getIntroduction());
-
-        // 중복확인-저장 사이 동시 요청 대비: DB 유니크 제약 위반도 DUPLICATE_NICKNAME으로 변환한다.
-        // 커밋 시점까지 미루면 500으로 새므로 여기서 강제로 flush해서 예외를 잡는다.
+        // 닉네임 중복 검사는 saveWithRetry가 재시도할 때마다(최신 Member 기준으로) 다시 수행한다.
+        // 한 번만 검사하면, 재시도 사이에 다른 요청이 그 닉네임을 선점해도 놓치게 된다.
+        // 유니크 제약 위반(DataIntegrityViolationException)은 동시 요청이 검사 통과 직후 같은
+        // 닉네임으로 먼저 커밋한 경우로, DUPLICATE_NICKNAME으로 변환한다.
+        Member member;
         try {
-            memberRepository.saveAndFlush(member);
+            member = memberOptimisticRetrySupport.saveWithRetry(memberId, m -> {
+                if (newNickname != null && !newNickname.equals(m.getNickname())
+                        && memberRepository.existsByNickname(newNickname)) {
+                    throw new CustomException(AuthErrorCode.DUPLICATE_NICKNAME);
+                }
+                m.updateProfile(newNickname, request.getProfileImageUrl(), request.getIntroduction());
+            });
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(AuthErrorCode.DUPLICATE_NICKNAME);
         }

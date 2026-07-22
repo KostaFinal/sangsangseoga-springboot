@@ -4,6 +4,7 @@ import com.kosta.sangsangseoga.domain.ai.enums.CallType;
 import com.kosta.sangsangseoga.domain.ai.repository.AiGenerationUsageRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
+import com.kosta.sangsangseoga.domain.member.service.MemberOptimisticRetrySupport;
 import com.kosta.sangsangseoga.domain.subscription.SubscriptionPolicy;
 import com.kosta.sangsangseoga.domain.subscription.dto.UsageResponseDto;
 import com.kosta.sangsangseoga.domain.subscription.exception.SubscriptionErrorCode;
@@ -21,6 +22,7 @@ public class UsageService {
     private final MemberRepository memberRepository;
     private final SubscriptionService subscriptionService;
     private final AiGenerationUsageRepository aiGenerationUsageRepository;
+    private final MemberOptimisticRetrySupport memberOptimisticRetrySupport;
 
     /** 조회만 하는 API지만 만료 정리에서 쓰기가 발생할 수 있어 readOnly로 두지 않는다. */
     public UsageResponseDto getUsage(Long memberId) {
@@ -67,9 +69,7 @@ public class UsageService {
 
     /** FREE 체험 소진 처리. 새 책 생성이 시작되는 시점에 book 도메인에서 호출한다. */
     public void markFreeTrialUsed(Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
-        member.useFreeTrial();
+        memberOptimisticRetrySupport.saveWithRetry(memberId, Member::useFreeTrial);
     }
 
     /**
