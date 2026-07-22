@@ -3,11 +3,15 @@ name: CD
 # main은 배포 브랜치라 develop에서 PR로 병합되는 시점에만 push가 발생한다(README 브랜치 전략 참고).
 # push를 직접 트리거로 쓰지 않고, 같은 커밋에서 CI(ci.yml, compileJava/compileTestJava)가
 # 성공적으로 끝난 뒤에만 배포하도록 workflow_run으로 체이닝한다 - 검증 없이 곧장 배포되는 걸 막기 위함.
+#
+# branches는 반드시 main만 남겨둘 것. 아래 배포 스크립트가 브랜치와 무관하게 항상
+# `git pull origin main`을 실행하므로, 여기에 develop을 넣으면 develop에 뭔가 머지될 때마다
+# main의 예전 코드를 의미 없이 다시 배포하게 된다(실제로 이 문제로 배포 순서가 꼬인 적이 있음).
 on:
   workflow_run:
     workflows: ["CI"]
     types: [completed]
-    branches: [main, develop]
+    branches: [main]
 
 jobs:
   deploy:
