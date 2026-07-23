@@ -16,6 +16,8 @@ spring:
       max-request-size: 5MB
 
 server:
+  address: 0.0.0.0   # 👈 이 부분을 추가해주세요!
+  port: 8080
   servlet:
     encoding:
       charset: UTF-8
@@ -76,7 +78,7 @@ spring:
 
   datasource:
     driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://localhost:3306/sangsangseoga
+    url: jdbc:mariadb://localhost:3306/final_sangsangseoga
     username: ${DB_USERNAME:root} # 환경변수 없으면 root 사용
     password: ${DB_PASSWORD:7564}     # 환경변수 없으면 빈값 사용
 
