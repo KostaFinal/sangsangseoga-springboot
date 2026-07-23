@@ -38,6 +38,9 @@ replicate:
 
 fastapi:
   base-url: ${FASTAPI_BASE_URL:http://localhost:8000}
+  # AI 생성 요청이 트랜잭션/락 없이도 무한정 매달리지 않도록 상한을 둔다(연결 5초, 응답 최대 2분).
+  connect-timeout-ms: ${FASTAPI_CONNECT_TIMEOUT_MS:5000}
+  read-timeout-ms: ${FASTAPI_READ_TIMEOUT_MS:120000}
 
 # 로컬 디스크에 저장하는 업로드 파일(프로필 사진 등)의 루트 경로. 정적 리소스 핸들러(/uploads/**)가 이 경로를 서빙한다.
 app:
