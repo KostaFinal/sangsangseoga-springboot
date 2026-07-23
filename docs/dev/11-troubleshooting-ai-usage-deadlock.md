@@ -32,7 +32,7 @@ usageService.consumeText(memberId); // member 테이블 UPDATE (사용권 차감
 
 같은 회원이 AI 생성을 동시에 두 번 요청하면 이렇게 된다.
 
-```
+```text
 요청A: 기록 INSERT → 회원 행에 공유 락 획득
 요청B: 기록 INSERT → 회원 행에 공유 락 획득 (공유 락끼리는 같이 걸 수 있어서 둘 다 성공)
 요청A: 차감 UPDATE → 강한 잠금 필요 → 요청B가 쥔 공유 락 때문에 대기
