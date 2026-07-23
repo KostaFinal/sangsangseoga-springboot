@@ -3,11 +3,6 @@ package com.kosta.sangsangseoga.domain.ai.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kosta.sangsangseoga.domain.ai.dto.AiGenerateImageRequestDto;
 import com.kosta.sangsangseoga.domain.ai.dto.AiGenerateImageResponseDto;
-import com.kosta.sangsangseoga.domain.ai.entity.AiGenerationUsage;
-import com.kosta.sangsangseoga.domain.ai.enums.CallType;
-import com.kosta.sangsangseoga.domain.ai.repository.AiGenerationUsageRepository;
-import com.kosta.sangsangseoga.domain.member.entity.Member;
-import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.subscription.service.UsageService;
 import com.kosta.sangsangseoga.global.exception.CommonErrorCode;
 import com.kosta.sangsangseoga.global.exception.CustomException;
@@ -20,12 +15,13 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
 import java.util.Base64;
 import java.util.Optional;
@@ -36,27 +32,39 @@ import java.util.Optional;
  * 영구 URL로 바꿔치기한 뒤 응답/기록에 쓴다(Replicate URL은 DB/응답 어디에도 남기지 않는다).
  * book_image 저장, book.cover_image_id 갱신은 여전히 이번 범위 밖이다
  * (AiGenerateImageRequestDto에 bookId가 없어 어느 책의 이미지인지도 알 수 없다).
- * 관리자 AI 사용량 대시보드가 쓸 호출 이력(AiGenerationUsage, callType=IMAGE)을 기록하는 것과 별개로,
- * Python 호출 전에는 UsageService.assertCanGenerateImage로 쿼터를 확인하고 저장까지 끝난 뒤에는
- * consumeImage로 실제 차감한다(AiService의 텍스트 경로와 동일한 패턴).
+ * Python 호출 전에는 UsageService.assertCanGenerateImage로 쿼터를 확인하고, 저장까지 끝난 뒤에는
+ * consumeImageAndRecordUsage로 차감과 AiGenerationUsage 기록(관리자 대시보드/생애 호출수 집계용)을
+ * 한 트랜잭션에서 원자적으로 처리한다(AiService의 텍스트 경로와 동일한 패턴). 이 클래스 자체는
+ * @Transactional을 붙이지 않는다 - Python 동기 호출 동안 member row 락/커넥션을 쥐지 않기 위해서다.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-//@Transactional
 public class AiImageService {
 
     @Value("${fastapi.base-url}")
     private String fastApiBaseUrl;
 
-    private final AiGenerationUsageRepository aiGenerationUsageRepository;
-    private final MemberRepository memberRepository;
+    @Value("${fastapi.connect-timeout-ms:5000}")
+    private int connectTimeoutMs;
+
+    @Value("${fastapi.read-timeout-ms:120000}")
+    private int readTimeoutMs;
+
     private final ObjectMapper objectMapper;
     private final DataSource dataSource;
     private final AiImageStorageService aiImageStorageService;
     private final UsageService usageService;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private RestTemplate restTemplate;
+
+    @PostConstruct
+    private void initRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(connectTimeoutMs);
+        factory.setReadTimeout(readTimeoutMs);
+        this.restTemplate = new RestTemplate(factory);
+    }
 
     public AiGenerateImageResponseDto generateImage(AiGenerateImageRequestDto request, Long memberId, String requestId) {
         long methodStartNs = System.nanoTime();
@@ -168,8 +176,7 @@ public class AiImageService {
 
                 long t2 = System.nanoTime();
                 try {
-                    recordUsage(memberId);
-                    usageService.consumeImage(memberId);
+                    usageService.consumeImageAndRecordUsage(memberId);
                 } catch (RuntimeException e) {
                     // 파일 저장은 이미 끝났는데 사용량 기록/차감이 실패해 요청 전체가 실패로 되돌아가면,
                     // 그 파일은 DB 어디에도 참조되지 않는 고아 파일로 디스크에 영원히 남는다.
@@ -221,16 +228,5 @@ public class AiImageService {
         } catch (Exception e) {
             return 0;
         }
-    }
-
-    private void recordUsage(Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
-
-        aiGenerationUsageRepository.save(AiGenerationUsage.builder()
-                .member(member)
-                .callType(CallType.IMAGE)
-                .imageCount(1)
-                .build());
     }
 }
