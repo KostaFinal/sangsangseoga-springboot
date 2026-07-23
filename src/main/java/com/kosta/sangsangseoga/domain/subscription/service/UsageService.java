@@ -1,7 +1,10 @@
 package com.kosta.sangsangseoga.domain.subscription.service;
 
+import com.kosta.sangsangseoga.domain.ai.entity.AiGenerationUsage;
 import com.kosta.sangsangseoga.domain.ai.enums.CallType;
 import com.kosta.sangsangseoga.domain.ai.repository.AiGenerationUsageRepository;
+import com.kosta.sangsangseoga.domain.book.entity.Book;
+import com.kosta.sangsangseoga.domain.book.repository.BookRepository;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.member.service.MemberOptimisticRetrySupport;
@@ -20,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UsageService {
 
     private final MemberRepository memberRepository;
+    private final BookRepository bookRepository;
     private final SubscriptionService subscriptionService;
     private final AiGenerationUsageRepository aiGenerationUsageRepository;
     private final MemberOptimisticRetrySupport memberOptimisticRetrySupport;
@@ -88,36 +92,54 @@ public class UsageService {
     }
 
     /**
-     * PREMIUM 회원의 텍스트 생성 1회 차감. FREE 회원은 AiGenerationUsage insert(recordUsage) 자체가
-     * 생애 호출 횟수 소진 처리라 여기서는 할 일이 없어 조용히 반환한다. 잔여량이 없으면 예외를 던진다.
+     * PREMIUM 회원의 텍스트 생성 1회 차감과 AiGenerationUsage 기록을 한 트랜잭션에서 원자적으로
+     * 처리한다. Python 호출과 로컬 저장이 모두 끝난 뒤, AiService.generate()가 한 번만 호출한다.
+     * FREE 회원은 AiGenerationUsage insert 자체가 생애 호출 횟수 소진 처리라 차감할 게 없다.
+     *
+     * member 차감(UPDATE)을 AiGenerationUsage insert(member FK 자식 행)보다 반드시 먼저 실행한다.
+     * 순서가 반대면, 같은 member를 동시에 건드리는 두 트랜잭션이 각각 자식 INSERT로 먼저 얻은
+     * S-lock을 쥔 채 UPDATE의 X-lock을 기다리게 되어 InnoDB 데드락(1213)이 난다.
      */
-    public void consumeText(Long memberId) {
+    @Transactional
+    public void consumeTextAndRecordUsage(Long memberId, Long bookId, Integer inputTokenCount, Integer outputTokenCount) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
-        if (!member.getSubscriptionPlan().isPremium()) {
-            return;
-        }
-        if (memberRepository.decrementDailyTextIfAvailable(memberId) == 0) {
+        if (member.getSubscriptionPlan().isPremium()
+                && memberRepository.decrementDailyTextIfAvailable(memberId) == 0) {
             throw new CustomException(SubscriptionErrorCode.DAILY_QUOTA_EXCEEDED);
         }
+
+        Book book = bookId != null ? bookRepository.findById(bookId).orElse(null) : null;
+        aiGenerationUsageRepository.save(AiGenerationUsage.builder()
+                .member(member)
+                .book(book)
+                .callType(CallType.TEXT)
+                .inputTokenCount(inputTokenCount)
+                .outputTokenCount(outputTokenCount)
+                .build());
     }
 
-    /** PREMIUM 회원의 이미지 생성 1회 차감. {@link #consumeText} 참고. 잔여량이 없으면 예외를 던진다. */
-    public void consumeImage(Long memberId) {
+    /** PREMIUM 회원의 이미지 생성 1회 차감과 사용 기록을 원자적으로 처리한다. {@link #consumeTextAndRecordUsage} 참고. */
+    @Transactional
+    public void consumeImageAndRecordUsage(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
-        if (!member.getSubscriptionPlan().isPremium()) {
-            return;
-        }
-        if (memberRepository.decrementDailyImageIfAvailable(memberId) == 0) {
+        if (member.getSubscriptionPlan().isPremium()
+                && memberRepository.decrementDailyImageIfAvailable(memberId) == 0) {
             throw new CustomException(SubscriptionErrorCode.DAILY_QUOTA_EXCEEDED);
         }
+
+        aiGenerationUsageRepository.save(AiGenerationUsage.builder()
+                .member(member)
+                .callType(CallType.IMAGE)
+                .imageCount(1)
+                .build());
     }
 
     /**
      * AI 텍스트 생성 전에 호출해 쿼터가 남아있는지만 확인한다(차감은 하지 않는다).
      * Python 호출은 비용이 드는 작업이라, 어차피 거절될 요청이면 호출 전에 걸러내기 위한 것이다.
-     * 실제 차감은 Python 호출과 로컬 처리가 모두 끝난 뒤 {@link #consumeText}로 한다.
+     * 실제 차감은 Python 호출과 로컬 처리가 모두 끝난 뒤 {@link #consumeTextAndRecordUsage}로 한다.
      */
     public void assertCanGenerateText(Long memberId) {
         assertCanGenerate(memberId, CallType.TEXT);

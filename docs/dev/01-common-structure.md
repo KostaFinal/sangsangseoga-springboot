@@ -4,7 +4,7 @@
 
 각 도메인(`domain/{도메인명}`)은 동일한 레이어 구조를 따른다.
 
-```
+```text
 domain/{도메인명}
  ├─ controller   # HTTP 요청/응답 (엔드포인트)
  ├─ service      # 비즈니스 로직
