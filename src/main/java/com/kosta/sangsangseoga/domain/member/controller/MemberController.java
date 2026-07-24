@@ -25,6 +25,7 @@ import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentDecisionRequestD
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentPendingResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentResponseDto;
+import com.kosta.sangsangseoga.domain.member.dto.GuardianMinorResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.MemberMeResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.MemberUpdateRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.NicknameCheckResponseDto;
@@ -138,6 +139,16 @@ public class MemberController {
             Authentication authentication) {
         Long memberId = AuthenticationHelper.resolveMemberId(authentication);
         List<GuardianConsentPendingResponseDto> response = memberService.getPendingGuardianConsents(memberId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @Operation(summary = "보호자 계정에 연결된 자녀 목록", description = "로그인한 보호자 계정 기준으로, 이미 동의(APPROVED)가 완료된 미성년 회원 목록을 조회한다.")
+    @ApiErrorCodes({"MEMBER_NOT_FOUND"})
+    @GetMapping("/api/members/me/guardian/minors")
+    public ResponseEntity<ApiResponse<List<GuardianMinorResponseDto>>> getMyGuardianMinors(
+            Authentication authentication) {
+        Long memberId = AuthenticationHelper.resolveMemberId(authentication);
+        List<GuardianMinorResponseDto> response = memberService.getMyGuardianMinors(memberId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
