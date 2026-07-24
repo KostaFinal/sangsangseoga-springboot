@@ -24,6 +24,7 @@ import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentDecisionRequestD
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentPendingResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentRequestDto;
 import com.kosta.sangsangseoga.domain.member.dto.GuardianConsentResponseDto;
+import com.kosta.sangsangseoga.domain.member.dto.GuardianMinorResponseDto;
 import com.kosta.sangsangseoga.domain.auth.exception.AuthErrorCode;
 import com.kosta.sangsangseoga.domain.member.dto.MemberMeResponseDto;
 import com.kosta.sangsangseoga.domain.member.dto.MemberUpdateRequestDto;
@@ -40,6 +41,7 @@ import com.kosta.sangsangseoga.domain.member.exception.MemberErrorCode;
 import com.kosta.sangsangseoga.domain.member.repository.GuardianConsentRepository;
 import com.kosta.sangsangseoga.domain.member.repository.MemberRepository;
 import com.kosta.sangsangseoga.domain.notification.service.NotificationService;
+import com.kosta.sangsangseoga.domain.subscription.enums.PlanType;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.MyReadingRepository;
 import com.kosta.sangsangseoga.domain.myLibrary.repository.ReadingMemoRepository;
 import com.kosta.sangsangseoga.global.event.AfterCommitTask;
@@ -155,6 +157,22 @@ public class MemberService {
                 .findByGuardianEmailAndStatusOrderByRequestedAtDesc(guardian.getEmail(), GuardianConsentStatus.REQUESTED)
                 .stream()
                 .map(this::toPendingResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 로그인한 보호자 계정 기준으로 이미 동의(APPROVED)가 완료돼 연결된 미성년 회원 목록을 조회한다.
+     * 마이페이지의 "연결된 자녀 목록" 화면용으로, 대기 중인 요청(getPendingGuardianConsents)과는 별개다.
+     */
+    @Transactional(readOnly = true)
+    public List<GuardianMinorResponseDto> getMyGuardianMinors(Long guardianMemberId) {
+        Member guardian = memberRepository.findById(guardianMemberId)
+                .orElseThrow(() -> new CustomException(CommonErrorCode.MEMBER_NOT_FOUND));
+
+        return guardianConsentRepository
+                .findByGuardianEmailAndStatusOrderByRequestedAtDesc(guardian.getEmail(), GuardianConsentStatus.APPROVED)
+                .stream()
+                .map(consent -> toMinorResponseDto(consent.getMember()))
                 .collect(Collectors.toList());
     }
 
@@ -373,7 +391,34 @@ public class MemberService {
                 .expiresAt(consent.getExpiresAt())
                 .build();
     }
-    
+
+    private GuardianMinorResponseDto toMinorResponseDto(Member minor) {
+        long bookCount = bookRepository.countByMemberAndStatus(minor, BookStatus.PUBLISHED);
+        return GuardianMinorResponseDto.builder()
+                .memberId(minor.getId())
+                .nickname(minor.getNickname())
+                .email(minor.getEmail())
+                .birthDate(minor.getBirthDate())
+                .bookCount(bookCount)
+                .subscriptionPlanLabel(resolvePlanLabel(minor.getSubscriptionPlan()))
+                .build();
+    }
+
+    private String resolvePlanLabel(PlanType planType) {
+        if (planType == null) {
+            return "무료";
+        }
+        switch (planType) {
+            case PREMIUM_MONTHLY:
+                return "프리미엄(월간)";
+            case PREMIUM_YEARLY:
+                return "프리미엄(연간)";
+            case FREE:
+            default:
+                return "무료";
+        }
+    }
+
     @Transactional(readOnly = true)
     public MemberMeResponseDto getMyInfo(Long memberId) {
         Member member = memberRepository.findById(memberId)
