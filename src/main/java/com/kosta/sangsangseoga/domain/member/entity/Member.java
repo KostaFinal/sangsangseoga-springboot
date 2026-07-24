@@ -175,9 +175,27 @@ public class Member extends BaseEntity {
         this.status = MemberStatus.PENDING;
     }
 
+    /**
+     * 관리자가 신고 처리 등으로 강제 탈퇴시킬 때 호출한다. email/nickname/oauthProviderId를
+     * 그대로 보존해 같은 정보로 재가입할 수 없게 막는다(제재 우회 방지) - 관리자 탈퇴는 영구 차단으로
+     * 취급한다({@link com.kosta.sangsangseoga.domain.admin.service.AdminService#changeMemberStatus} 참고).
+     * 본인이 직접 탈퇴하는 경우는 {@link #withdrawAndReleaseIdentifiers()}를 대신 쓴다.
+     */
     public void withdraw() {
         this.status = MemberStatus.DELETED;
         this.withdrawnAt = LocalDateTime.now();
+    }
+
+    /**
+     * 본인 탈퇴 전용. 관리자 강제 탈퇴와 달리 제재 우회를 걱정할 필요가 없으므로, email/nickname/
+     * oauthProviderId를 풀어(mangle) 같은 이메일/소셜 계정으로 재가입하면 기존 이력과 무관한 완전히
+     * 새 계정으로 시작할 수 있게 한다({@link com.kosta.sangsangseoga.domain.member.service.MemberService#withdraw} 참고).
+     */
+    public void withdrawAndReleaseIdentifiers() {
+        withdraw();
+        this.email = "withdrawn-" + this.id + "-" + this.email;
+        this.nickname = null;
+        this.oauthProviderId = null;
     }
 
     /**
