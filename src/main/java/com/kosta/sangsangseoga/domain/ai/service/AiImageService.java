@@ -55,6 +55,7 @@ public class AiImageService {
     private final DataSource dataSource;
     private final AiImageStorageService aiImageStorageService;
     private final UsageService usageService;
+    private final PythonCallRetrySupport pythonCallRetrySupport;
 
     private RestTemplate restTemplate;
 
@@ -113,8 +114,8 @@ public class AiImageService {
             AiGenerateImageResponseDto response;
             long t1 = System.nanoTime();
             try {
-                ResponseEntity<AiGenerateImageResponseDto> result = restTemplate.postForEntity(
-                        url, new HttpEntity<>(request, headers), AiGenerateImageResponseDto.class);
+                ResponseEntity<AiGenerateImageResponseDto> result = pythonCallRetrySupport.postForEntityWithRetry(
+                        restTemplate, url, new HttpEntity<>(request, headers), AiGenerateImageResponseDto.class, requestId);
                 pythonCallMs = elapsedMs(t1);
                 httpStatus = result.getStatusCodeValue();
                 response = result.getBody();
