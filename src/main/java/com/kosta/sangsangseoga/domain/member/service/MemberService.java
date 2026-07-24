@@ -33,6 +33,7 @@ import com.kosta.sangsangseoga.domain.member.dto.ViewerPreferenceDto;
 import com.kosta.sangsangseoga.domain.member.dto.WithdrawRequestDto;
 import com.kosta.sangsangseoga.domain.member.entity.GuardianConsent;
 import com.kosta.sangsangseoga.domain.member.entity.Member;
+import com.kosta.sangsangseoga.domain.member.enums.AuthProvider;
 import com.kosta.sangsangseoga.domain.member.enums.GuardianConsentStatus;
 import com.kosta.sangsangseoga.domain.member.enums.MemberStatus;
 import com.kosta.sangsangseoga.domain.member.exception.MemberErrorCode;
@@ -283,6 +284,9 @@ public class MemberService {
     /**
      * 회원 탈퇴. 상태만 DELETED로 바꾸는 소프트 삭제이며(별도 파기 배치는 없음), 세션 무효화,
      * 구독 즉시 해지, 좋아요/북마크/관심작가 삭제, 작성 댓글 익명화, 내가 쓴 책 비공개 전환을 함께 한다.
+     * email/nickname/oauthProviderId는 풀어줘(mangle) 같은 이메일/소셜 계정으로 재가입하면 완전히
+     * 새 계정으로 시작할 수 있다. 관리자 강제 탈퇴({@code AdminService#changeMemberStatus})는 제재
+     * 우회를 막기 위해 이 처리를 하지 않는다.
      */
     public void withdraw(Long memberId, WithdrawRequestDto request) {
         Member member = memberRepository.findById(memberId)
@@ -291,12 +295,15 @@ public class MemberService {
         if (member.getStatus() == MemberStatus.DELETED) {
             throw new CustomException(MemberErrorCode.ALREADY_DELETED_MEMBER);
         }
-        if (!passwordEncoder.matches(request.getPassword(), member.getPassword())) {
+        // 소셜 계정은 가입 시 무작위 UUID를 비밀번호로 채워둬(OAuthService.signup 참고) 본인도 알 수
+        // 없으므로, 이미 JWT로 본인 인증이 끝난 상태를 본인 확인으로 갈음하고 비밀번호 검증을 건너뛴다.
+        if (member.getAuthProvider() == AuthProvider.LOCAL
+                && !passwordEncoder.matches(request.getPassword(), member.getPassword())) {
             throw new CustomException(MemberErrorCode.WRONG_PASSWORD);
         }
 
         member.cancelSubscriptionImmediately();
-        member.withdraw();
+        member.withdrawAndReleaseIdentifiers();
         eventPublisher.publishEvent(new AfterCommitTask(this, () -> {
             tokenBlacklistService.invalidateTokensIssuedBefore(memberId, Instant.now());
             refreshTokenService.delete(memberId);
