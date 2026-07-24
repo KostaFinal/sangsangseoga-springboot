@@ -54,6 +54,7 @@ public class AiService {
 	private final ObjectMapper objectMapper;
 	private final DataSource dataSource;
 	private final UsageService usageService;
+	private final PythonCallRetrySupport pythonCallRetrySupport;
 
 	private RestTemplate restTemplate;
 
@@ -98,8 +99,8 @@ public class AiService {
 			Map<String, Object> fastApiResponse;
 			long t1 = System.nanoTime();
 			try {
-				ResponseEntity<Map> response = restTemplate.postForEntity(
-						url, new HttpEntity<>(pythonRequestBody, headers), Map.class);
+				ResponseEntity<Map> response = pythonCallRetrySupport.postForEntityWithRetry(
+						restTemplate, url, new HttpEntity<>(pythonRequestBody, headers), Map.class, requestId);
 				pythonCallMs = elapsedMs(t1);
 				httpStatus = response.getStatusCodeValue();
 				fastApiResponse = response.getBody();
